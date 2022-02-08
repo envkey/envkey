@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+LOCAL_PROXY_DIR=$(cd $SCRIPT_DIR/../resources/local_proxy; pwd)
+CERT_DIR=$LOCAL_PROXY_DIR/certs
+CONF_DIR=$LOCAL_PROXY_DIR/config
+
+if [ ! -d $CERT_DIR ]; then
+  mkdir $CERT_DIR
+  mkcert -install
+  mkcert localdev-community.envkey.com localhost 127.0.0.1 ::1
+  
+  mv localdev-*.envkey.com*-key.pem $CERT_DIR/localhost-key.pem
+  mv localdev-*.envkey.com*pem $CERT_DIR/localhost.pem
+fi
+
+docker kill nginx-https-local &>/dev/null
+docker rm nginx-https-local &>/dev/null
+rm $CONF_DIR/default.conf &>/dev/null
+
+docker run \
+  -d \
+  --name=nginx-https-local \
+  -p 2999:443 \
+  -e VIRTUAL_HOST=localdev-community.envkey.com \
+  -v $CERT_DIR:/etc/nginx/certs \
+  -v $CONF_DIR:/etc/nginx/conf.d \
+  -v /var/run/docker.sock:/tmp/docker.sock:ro \
+  jwilder/nginx-proxy >/dev/null

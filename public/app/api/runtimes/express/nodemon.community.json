@@ -1,0 +1,5 @@
+{
+  "watch": ["src", "../../shared/src", "../../../../../public/app/core/src"],
+  "ext": "ts",
+  "exec": "NODE_ENV=development node --inspect=9223 -r ts-node/register/transpile-only -r tsconfig-paths/register src/main_api_community.ts"
+}

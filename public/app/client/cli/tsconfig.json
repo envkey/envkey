@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["src"],
+  "exclude": ["node_modules", "build"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "lib": ["es6", "es2016.array.include", "dom"],
+    "noEmit": false,
+    "paths": {
+      "@core/*": ["../../core/src/*"],
+      "@core_proc/*": ["../core_process/src/*"],
+      "@infra/*": ["../../api/infra/src/*"]
+    }
+  }
+}

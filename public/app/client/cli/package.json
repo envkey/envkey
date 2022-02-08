@@ -1,0 +1,17 @@
+{
+  "name": "envkey-cli",
+  "version": "2.0.0",
+  "description": "EnvKey CLI--dispatches actions and retrieves state from core_process server",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "NODE_ENV=development node -r ts-node/register/transpile-only -r tsconfig-paths/register src/index.ts",
+    "start-core": "nodemon --config nodemon_core_proc.json",
+    "core-process": "node -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli_core_proc.ts",
+    "check-watch": "tsc --watch --noEmit -p tsconfig.json",
+    "build": "../../../../node_modules/.bin/webpack --config webpack.cli.ts",
+    "build-check": "WEBPACK_OUTPUT_DIR=$(pwd)/build/ ../../../../node_modules/.bin/webpack --config webpack.cli.ts && node build/envkey-cli.js -h"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

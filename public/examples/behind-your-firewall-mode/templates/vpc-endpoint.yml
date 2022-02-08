@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Connect to EnvKey in Behind-Your-Firwall-Mode via PrivateLink with a VPC endpoint"
+
+Parameters:
+  VPC:
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  EnvkeyVpcEndpointServiceName:
+    Type: String
+
+Resources:
+  EnvkeySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Self-hosted EnvKey access
+      VpcId: !Ref VPC
+
+  EnvkeyVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      # First need to approve the endpoint connection request in the EnvKey AWS account, then can set PrivateDnsEnabled to true
+      # PrivateDnsEnabled: true
+      ServiceName: !Ref EnvkeyVpcEndpointServiceName
+      VpcId: !Ref VPC
+      SubnetIds: !Ref Subnets
+      SecurityGroupIds:
+        - !Ref EnvkeySecurityGroup
+
+Outputs:
+  EnvkeySecurityGroup:
+    Value: !Ref EnvkeySecurityGroup
+  EnvkeyVpcEndpoint:
+    Value: !Ref EnvkeyVpcEndpoint

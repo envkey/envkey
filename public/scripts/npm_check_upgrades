@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+cd $SCRIPT_DIR/../..
+echo "checking SHARED npm deps for available upgrades..."
+echo $(pwd)
+sleep 2
+ncu
+echo ""
+echo "--------"
+echo ""
+
+cd $SCRIPT_DIR/../app
+echo "checking PUBLIC npm deps for available upgrades..."
+echo $(pwd)
+sleep 2
+ncu

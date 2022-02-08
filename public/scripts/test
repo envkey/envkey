@@ -1,0 +1,11 @@
+#!/bin/bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+$SCRIPT_DIR/build_worker
+$SCRIPT_DIR/build_envkey_source
+
+echo "Running envkey-source tests..."
+(cd $SCRIPT_DIR/../sdks/envkey-source && go test ./...)
+
+echo "Running public typescript tests..."
+(cd $SCRIPT_DIR/../app/tests && npm test)

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+if [[ -z "${COMMUNITY_AUTH_HASH}" ]]; then
+  echo "missing env var COMMUNITY_AUTH_HASH"
+  exit 1
+fi
+
+if [[ -z "${SENDER_EMAIL}" ]]; then
+  echo "missing env var SENDER_EMAIL"
+  exit 1
+fi
+
+if [[ -z "${DATABASE_HOST}" ]]; then
+  echo "missing env var DATABASE_HOST"
+  exit 1
+fi
+
+if [[ -z "${DATABASE_NAME}" ]]; then
+  echo "missing env var DATABASE_NAME"
+  exit 1
+fi
+
+if [[ -z "${DATABASE_CREDENTIALS_JSON}" ]]; then
+  echo "missing env var DATABASE_CREDENTIALS_JSON"
+  exit 1
+fi
+
+if [[ -z "${SMTP_TRANSPORT_JSON}" ]]; then
+  echo "missing env var SMTP_TRANSPORT_JSON"
+  exit 1
+fi
+
+cd $SCRIPT_DIR/../app/api/runtimes/express
+npm run start

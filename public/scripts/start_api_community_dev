@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+$SCRIPT_DIR/start_local_proxy
+$SCRIPT_DIR/start_dbs
+
+cd $SCRIPT_DIR/../app/api/runtimes/express
+npm run start

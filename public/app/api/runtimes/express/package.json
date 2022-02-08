@@ -1,0 +1,17 @@
+{
+  "name": "envkey-api",
+  "version": "2.0.0",
+  "description": "EnvKey self-hosted community API",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "nodemon --config ./nodemon.community.json",
+    "build": "../../../../../node_modules/.bin/webpack",
+    "db:migrate": "node -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/db_migrate.ts",
+    "db:migrate:down": "node -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/db_migrate_down.ts",
+    "db:migrate:rollback": "node -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/db_migrate_rollback.ts",
+    "db:migrate:unlock": "node -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/db_migrate_unlock.ts"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

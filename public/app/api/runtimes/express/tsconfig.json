@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "baseUrl": "./",
+    "paths": {
+      "@core/*": ["../../../core/src/*"],
+      "@infra/*": ["../../../api/infra/src/*"]
+    }
+  },
+  "extends": "../../../tsconfig.json",
+  "include": [
+    "src"
+, "../../shared/src/org_stats.ts", "../../../../../private/app/api/self_hosted/src/bootstrap_update.ts"  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

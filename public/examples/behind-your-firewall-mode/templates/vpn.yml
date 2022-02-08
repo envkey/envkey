@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "VPN setup"
+
+Parameters:
+  VPC:
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  EnvkeySecurityGroup:
+    Type: String
+  VpnCertificateArn:
+    Type: String
+
+Resources:
+  ClientVpnSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: For VPN connections
+      VpcId: !Ref VPC
+
+  ClientVpnEndpoint:
+    Type: AWS::EC2::ClientVpnEndpoint
+    Properties:
+      AuthenticationOptions:
+        - Type: "certificate-authentication"
+          MutualAuthentication:
+            ClientRootCertificateChainArn: !Ref VpnCertificateArn
+      ClientCidrBlock: 10.0.4.0/22
+      DnsServers:
+        - 10.0.0.2
+      ConnectionLogOptions:
+        Enabled: false
+      ServerCertificateArn: !Ref VpnCertificateArn
+      TransportProtocol: udp
+      VpcId: !Ref VPC
+      SecurityGroupIds:
+        - !Ref ClientVpnSecurityGroup
+      VpnPort: 443
+      SplitTunnel: true
+
+  # you might want another one of these to make the VPN multi-AZ
+  NetworkAssociation:
+    Type: AWS::EC2::ClientVpnTargetNetworkAssociation
+    Properties:
+      ClientVpnEndpointId: !Ref ClientVpnEndpoint
+      SubnetId: !Select [0, !Ref Subnets]
+
+  VpnAuthorizationRule:
+    Type: AWS::EC2::ClientVpnAuthorizationRule
+    Properties:
+      AuthorizeAllGroups: True
+      ClientVpnEndpointId: !Ref ClientVpnEndpoint
+      TargetNetworkCidr: 10.0.0.0/16 # VPC CIDR
+
+  VpnEgressToEnvkey:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: Egress from vpn connection to self-hosted envkey
+      GroupId: !Ref ClientVpnSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      DestinationSecurityGroupId: !Ref EnvkeySecurityGroup
+
+  EnvkeyIngressFromVpn:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress to self-hosted envkey from vpn connection
+      GroupId: !Ref EnvkeySecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      SourceSecurityGroupId: !Ref ClientVpnSecurityGroup

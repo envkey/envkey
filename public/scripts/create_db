@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+docker volume create envkey_development_community
+docker volume create envkey_development_community_vol
+
+docker run -d --name envkey_community_mysql8 \
+  -p 127.0.0.1:3309:3306 \
+  -e 'MYSQL_ALLOW_EMPTY_PASSWORD=true' \
+  -e 'MYSQL_DATABASE=envkey_development_community' \
+  --mount source=envkey_development_community_vol,target=/app \
+  mysql:8.0
+
+  

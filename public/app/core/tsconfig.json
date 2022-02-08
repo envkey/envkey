@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".", // just overriding this from base so no paths are available in core
+    "paths": {},
+    "declaration": true,
+    "outDir": "dist",
+    "noErrorTruncation": true,
+    "lib": ["es6", "es2016.array.include", "dom"]
+  },
+  "include": [
+    "src",
+    "../../../node_modules/electron/electron.d.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

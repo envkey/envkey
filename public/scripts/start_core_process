@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+$SCRIPT_DIR/build_worker
+
+cd $SCRIPT_DIR/../app/client/cli
+ 
+export NODE_TLS_REJECT_UNAUTHORIZED=0
+
+npm run start-core

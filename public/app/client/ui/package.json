@@ -1,0 +1,13 @@
+{
+  "name": "envkey-react",
+  "version": "2.0.0",
+  "description": "EnvKey react ui",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "build:watch": "NODE_ENV=development ../../../../node_modules/.bin/webpack-dev-server --config webpack.config.dev.ts -d --hot --inline --progress",
+    "build": "../../../../node_modules/.bin/webpack --config webpack.config.ts"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

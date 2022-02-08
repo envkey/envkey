@@ -1,0 +1,13 @@
+{
+  "name": "envkey-core-process",
+  "version": "2.0.0",
+  "description": "EnvKey client core server--listens on localhost for actions broadcasted by web ui, electron ui, or cli, manages local state cache, and serves ui files",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "watch": "rm -rf dist && tsc --watch -p tsconfig.json",
+    "check-watch": "tsc --watch --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

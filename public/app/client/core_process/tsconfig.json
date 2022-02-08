@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "outDir": "dist"
+  },
+  "include": [
+    ".",
+    "../../../../node_modules/electron/electron.d.ts"
+, "../shared/src/env.ts"  ],
+  "exclude": ["node_modules", "dist"]
+}

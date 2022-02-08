@@ -1,0 +1,10 @@
+{
+  "name": "envkey-infra",
+  "version": "2.0.0",
+  "description": "EnvKey infrastructure shared libraries",
+  "author": "Envkey Inc",
+  "license": "MIT",
+  "scripts": {},
+  "devDependencies": {},
+  "dependencies": {}
+}

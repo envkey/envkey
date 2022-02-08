@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "build"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@ui_types": ["./src/types"],
+      "@ui": ["./src/components"],
+      "@ui_lib/*": ["./src/lib/*"],
+      "@styles" : ["./src/styles"],
+      "@core/*": ["../../core/src/*"],
+      "@images": ["./src/images"],
+      "@constants": ["./src/constants"]
+    }
+  }
+}

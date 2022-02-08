@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+# creates all stacks for connecting to self-hosted envkey via privatelink
+# templates: ../vpc.yml, ../vpc-endpoint.yml, ../vpn.yml
+# dependencies: aws cli, jq
+# usage:
+# ./deploy_all \
+#   -p consumer_account_aws_profile_name \
+#   -e envkey_self_hosted_account_aws_profile_name \
+#   -r aws_region \
+#   -n envkey_vpc_endpoint_service_name
+
+START_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+trap "exit" INT
+set -e
+
+while getopts p:e:r:t:n: flag
+do
+    case "${flag}" in
+        p) CONSUMER_PROFILE=${OPTARG};;
+        e) ENVKEY_PROFILE=${OPTARG};;
+        r) REGION=${OPTARG};;
+        t) TAG=${OPTARG};;
+        n) SERVICE_NAME=${OPTARG};;
+    esac
+done
+
+[ -z "$CONSUMER_PROFILE" ] && >&2 echo "-p flag is required to specify consumer account AWS profile" && exit 1
+[ -z "$ENVKEY_PROFILE" ] && >&2 echo "-e flag is required to specify EnvKey self-hosted account AWS profile" && exit 1
+[ -z "$REGION" ] && >&2 echo "-r flag is required to specify AWS region" && exit 1
+[ -z "$SERVICE_NAME" ] && >&2 echo "-n flag is required to specify EnvKey VPC endpoint service name" && exit 1
+
+if [ -z "$TAG" ]
+then
+  RANDOM_TAG=$(echo "$RANDOM" | md5sum | head -c 10);
+else
+  RANDOM_TAG=$TAG
+fi
+
+eval $($START_DIR/deploy_vpc -p $CONSUMER_PROFILE -r $REGION -t $RANDOM_TAG)
+
+[ -z "$VPC" ] && >&2 echo "There was a problem deploying the VPC" && exit 1
+
+eval $($START_DIR/deploy_vpc_endpoint -p $CONSUMER_PROFILE -e $ENVKEY_PROFILE -r $REGION -t $RANDOM_TAG -v $VPC -s $SUBNETS -n $SERVICE_NAME)
+
+[ -z "$ENVKEY_SECURITY_GROUP" ] && >&2 echo "There was a problem deploying the EnvKey VPC Endpoint" && exit 1
+
+$START_DIR/deploy_vpn -p $CONSUMER_PROFILE -r $REGION -t $RANDOM_TAG -v $VPC -s $SUBNETS -g $ENVKEY_SECURITY_GROUP
+

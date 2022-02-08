@@ -1,0 +1,14 @@
+{
+  "name": "envkey-core",
+  "version": "2.0.0",
+  "description": "Core logic for EnvKey's serverless self-hostable authentication layer",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "watch": "rm -rf dist && tsc --watch -p tsconfig.json",
+    "check-watch": "tsc --watch --noEmit -p tsconfig.json",
+    "build:worker": "../../../node_modules/.bin/webpack --config webpack.config.worker.ts"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

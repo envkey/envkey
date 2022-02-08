@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@api_shared/*": ["../api/shared/src/*"],
+      "@core/*": ["../core/src/*"],
+      "@core_proc/*": ["../client/core_process/src/*"],
+      "@infra/*": ["../api/infra/src/*"]
+    },
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "__tests__", "__tests__/helpers"]
+}

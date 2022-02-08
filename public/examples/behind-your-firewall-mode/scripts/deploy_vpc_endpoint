@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+# creates vpc endpoint for connecting to self-hosted envkey via privatelink
+# template: ../templates/vpc-endpoint.yml
+# dependencies: aws cli, jq
+# usage: 
+# ./deploy_vpc_endpoint \
+#   -p consumer_account_aws_profile_name \
+#   -e envkey_self_hosted_account_aws_profile_name \
+#   -r aws_region \
+#   -v vpc_id \
+#   -s subnets_comma_delimited_list \
+#   -n envkey_vpc_endpoint_service_name
+
+START_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+trap "exit" INT
+set -e
+
+while getopts p:e:r:t:v:s:n: flag
+do
+    case "${flag}" in
+        p) CONSUMER_PROFILE=${OPTARG};;
+        e) ENVKEY_PROFILE=${OPTARG};;
+        r) REGION=${OPTARG};;
+        t) TAG=${OPTARG};;
+        v) VPC=${OPTARG};;
+        s) SUBNETS=${OPTARG};;
+        n) SERVICE_NAME=${OPTARG};;
+    esac
+done
+
+[ -z "$CONSUMER_PROFILE" ] && >&2 echo "-p flag is required to specify consumer account AWS profile" && exit 1
+[ -z "$ENVKEY_PROFILE" ] && >&2 echo "-e flag is required to specify EnvKey self-hosted account AWS profile" && exit 1
+[ -z "$REGION" ] && >&2 echo "-r flag is required to specify AWS region" && exit 1
+[ -z "$VPC" ] && >&2 echo "-v flag is required to specify vpc id" && exit 1
+[ -z "$SUBNETS" ] && >&2 echo "-s flag is required to specify subnet ids (in a comma delimited list)" && exit 1
+[ -z "$SERVICE_NAME" ] && >&2 echo "-n flag is required to specify EnvKey VPC endpoint service name" && exit 1
+
+if [ -z "$TAG" ]
+then
+  RANDOM_TAG=$(echo "$RANDOM" | md5sum | head -c 10);
+else
+  RANDOM_TAG=$TAG
+fi
+
+STACKNAME="envkey-consumer-vpc-endpoint-$RANDOM_TAG"
+
+aws cloudformation deploy \
+  --profile=$CONSUMER_PROFILE \
+  --region=$REGION \
+  --template-file $START_DIR/../templates/vpc-endpoint.yml \
+  --parameter-overrides VPC=$VPC \
+    Subnets=$SUBNETS \
+    EnvkeyVpcEndpointServiceName=$SERVICE_NAME \
+  --stack-name $STACKNAME >&2
+
+aws cloudformation wait stack-create-complete \
+  --profile=$CONSUMER_PROFILE \
+  --region=$REGION \
+  --stack-name $STACKNAME >&2
+
+OUTPUTS=$(
+  aws cloudformation describe-stacks \
+    --profile=$CONSUMER_PROFILE \
+    --region=$REGION \
+    --stack-name $STACKNAME \
+    --query 'Stacks[0].Outputs[?OutputKey==`EnvkeySecurityGroup` || OutputKey==`EnvkeyVpcEndpoint`]' 
+);
+  
+ENVKEY_SECURITY_GROUP=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="EnvkeySecurityGroup") | .OutputValue');
+ENVKEY_VPC_ENDPOINT=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="EnvkeyVpcEndpoint") | .OutputValue');
+
+SERVICE_ID=$(
+  aws ec2 describe-vpc-endpoint-services \
+    --profile=$CONSUMER_PROFILE \
+    --region=$REGION \
+    --service-name $SERVICE_NAME \
+    --query 'ServiceDetails[0].ServiceId' \
+    --output text
+)
+
+>&2 aws ec2 accept-vpc-endpoint-connections \
+  --profile=$ENVKEY_PROFILE \
+  --region=$REGION \
+  --service-id=$SERVICE_ID \
+  --vpc-endpoint-ids $ENVKEY_VPC_ENDPOINT
+
+sleep 10
+
+>&2 aws ec2 modify-vpc-endpoint \
+  --profile=$CONSUMER_PROFILE \
+  --region=$REGION \
+  --vpc-endpoint-id $ENVKEY_VPC_ENDPOINT \
+  --private-dns-enabled
+
+echo "ENVKEY_SECURITY_GROUP=$ENVKEY_SECURITY_GROUP ENVKEY_VPC_ENDPOINT=$ENVKEY_VPC_ENDPOINT"

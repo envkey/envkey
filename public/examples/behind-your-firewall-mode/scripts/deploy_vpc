@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+# creates a no frills vpc in target account with two private subnets 
+# template: ../templates/vpc.yml
+# dependencies: aws cli, jq
+# usage: ./deploy_vpc -p consumer_account_aws_profile_name -r aws_region
+
+START_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+trap "exit" INT
+set -e
+
+while getopts p:r:t: flag
+do
+    case "${flag}" in
+        p) CONSUMER_PROFILE=${OPTARG};;
+        r) REGION=${OPTARG};;
+        t) TAG=${OPTARG};;
+    esac
+done
+
+[ -z "$CONSUMER_PROFILE" ] && >&2 echo "-p flag is required to specify consumer account AWS profile" && exit 1
+[ -z "$REGION" ] && >&2 echo "-r flag is required to specify AWS region" && exit 1
+
+if [ -z "$TAG" ]
+then
+  RANDOM_TAG=$(echo "$RANDOM" | md5sum | head -c 10);
+else
+  RANDOM_TAG=$TAG
+fi
+
+STACKNAME="envkey-consumer-vpc-$RANDOM_TAG"
+
+aws cloudformation deploy \
+  --profile=$CONSUMER_PROFILE \
+  --region=$REGION \
+  --template-file $START_DIR/../templates/vpc.yml \
+  --stack-name $STACKNAME >&2
+
+aws cloudformation wait stack-create-complete \
+  --profile=$CONSUMER_PROFILE \
+  --region=$REGION \
+  --stack-name $STACKNAME >&2
+
+OUTPUTS=$(
+  aws cloudformation describe-stacks \
+    --profile=$CONSUMER_PROFILE \
+    --region=$REGION \
+    --stack-name $STACKNAME \
+    --query 'Stacks[0].Outputs[?OutputKey==`VPC` || OutputKey==`Subnets`]' 
+);
+  
+VPC=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="VPC") | .OutputValue');
+SUBNETS=$(echo "$OUTPUTS" | jq -r '.[] | select(.OutputKey=="Subnets") | .OutputValue');
+
+echo "VPC=$VPC SUBNETS=$SUBNETS"

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+rm ~/Library/Preferences/envkey-core-process-nodejs/config.json
+rm -r ~/Library/Preferences/envkey
+echo "core process config cleared--must be restarted to take effect"

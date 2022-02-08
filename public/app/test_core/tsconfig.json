@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["../core/src/*"],
+      "@infra/*": ["../api/infra/src/*"],
+      "@core_proc/*": ["../client/core_process/src/*"]
+    }
+  },
+  "extends": "../tsconfig.json",
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

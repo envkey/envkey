@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+
+# creates vpn configuration for remotely accessing vpc and connecting to envkey with openvpn-compatible client
+# template: ../templates/vpn.yml
+# dependencies: aws cli, jq, git
+# usage: 
+# ./scripts/deploy_vpn \
+#   -p consumer_account_aws_profile_name \
+#   -r aws_region \
+#   -v vpc_id \
+#   -s subnets_comma_delimited_list \
+#   -g envkey_security_group_id 
+
+START_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PWD=$(pwd)
+trap "exit" INT
+set -e
+
+while getopts p:r:t:v:s:g: flag
+do
+    case "${flag}" in
+        p) CONSUMER_PROFILE=${OPTARG};;
+        r) REGION=${OPTARG};;
+        t) TAG=${OPTARG};;
+        v) VPC=${OPTARG};;
+        s) SUBNETS=${OPTARG};;
+        g) ENVKEY_SECURITY_GROUP=${OPTARG};;
+    esac
+done
+
+[ -z "$CONSUMER_PROFILE" ] && >&2 echo "-p flag is required to specify consumer account AWS profile" && exit 1
+[ -z "$REGION" ] && >&2 echo "-r flag is required to specify AWS region" && exit 1
+[ -z "$VPC" ] && >&2 echo "-v flag is required to specify vpc id" && exit 1
+[ -z "$SUBNETS" ] && >&2 echo "-s flag is required to specify subnet ids (in a comma delimited list)" && exit 1
+[ -z "$ENVKEY_SECURITY_GROUP" ] && >&2 echo "-g flag is required to specify envkey security group id" && exit 1
+
+if [ -z "$TAG" ]
+then
+  RANDOM_TAG=$(echo "$RANDOM" | md5sum | head -c 10);
+else
+  RANDOM_TAG=$TAG
+fi
+
+# first we need to generate a cert and upload it to ACM
+rm -rf easy-rsa
+rm -rf pki
+git clone https://github.com/OpenVPN/easy-rsa.git
+./easy-rsa/easyrsa3/easyrsa init-pki
+./easy-rsa/easyrsa3/easyrsa build-ca nopass
+./easy-rsa/easyrsa3/easyrsa build-server-full server nopass
+./easy-rsa/easyrsa3/easyrsa build-client-full client1.domain.tld nopass
+
+rm -rf ~/envkey_vpn_certs
+mkdir ~/envkey_vpn_certs
+cp pki/ca.crt ~/envkey_vpn_certs/
+cp pki/issued/server.crt ~/envkey_vpn_certs/
+cp pki/private/server.key ~/envkey_vpn_certs/
+cp pki/issued/client1.domain.tld.crt ~/envkey_vpn_certs
+cp pki/private/client1.domain.tld.key ~/envkey_vpn_certs/
+
+VPN_CERTIFICATE_ARN=$(
+  aws acm import-certificate \
+    --profile=$CONSUMER_PROFILE \
+    --region=$REGION \
+    --certificate fileb://~/envkey_vpn_certs/server.crt \
+    --private-key fileb://~/envkey_vpn_certs/server.key \
+    --certificate-chain fileb://~/envkey_vpn_certs/ca.crt \
+    --output text
+);
+
+[ -z "$VPN_CERTIFICATE_ARN" ] && >&2 echo "There was a problem importing the VPN certificate to ACM" && exit 1
+
+rm -rf easy-rsa
+rm -rf pki
+
+STACKNAME="envkey-vpn-$RANDOM_TAG"
+
+aws cloudformation deploy \
+  --profile=$CONSUMER_PROFILE \
+  --region=$REGION \
+  --template-file $START_DIR/../templates/vpn.yml \
+  --parameter-overrides VPC=$VPC \
+    Subnets=$SUBNETS \
+    EnvkeySecurityGroup=$ENVKEY_SECURITY_GROUP \
+    VpnCertificateArn=$VPN_CERTIFICATE_ARN \
+  --stack-name $STACKNAME
+
+aws cloudformation wait stack-create-complete \
+  --profile=$CONSUMER_PROFILE \
+  --region=$REGION \
+  --stack-name $STACKNAME

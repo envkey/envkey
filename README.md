@@ -8,22 +8,20 @@ Welcome to the [EnvKey](https://www.envkey.com) v2 monorepo! All EnvKey's open s
 
 - Saves countless engineer-hours.
 
-
 ![EnvKey UI](https://user-images.githubusercontent.com/545350/150350438-44ff380c-c346-41d0-8e39-f41e9ad73110.png)
 
 ![EnvKey CLI](https://user-images.githubusercontent.com/545350/150350715-c7c1ca15-ac37-406c-bc29-c8d922542d2f.gif)
 
-
 ## Easy integration
 
 ```bash
-$ envkey-source -e 'your-program'
-# That's it! Your program's environment variables are in sync.
+$ envkey-source -e 'any-shell-command'
+# That's it! Your command runs with the latest environment variables.
 
-$ envkey-source -e 'your-program' -w
-# Your program automatically restarts when there's a change.
+$ envkey-source -e './start-server' -w
+# Your server automatically restarts when there's a change.
 
-$ envkey-source -e 'your-program' -r './reload-env.sh'
+$ envkey-source -e './start-server' -r './reload-env.sh'
 # Run custom reload logic when there's a change.
 
 $ eval "$(envkey-source)"

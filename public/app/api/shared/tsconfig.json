@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["src", "../../../../private/app/api/shared/src/billing.ts", "../../../../private/app/api/shared/src/api_handlers/billing.ts", "../../../../private/app/api/cloud/src/org_stats.ts", "../../../../private/app/api/shared/src/api_handlers/external_auth_users.ts", "../../../../private/app/api/shared/src/api_handlers/external_auth_orgs.ts", "../../../../private/app/api/shared/src/models/s3_logs.ts", "../../../../private/app/api/shared/src/models/provisioning.ts", "../../../../private/app/api/shared/src/models/external_auth.ts", "../../../../private/app/api/shared/src/api_handlers/groups.ts"],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["../../core/src/*"],
+      "@core_proc/*": ["../../../client/core_process/src/*"],
+      "@infra/*": ["../infra/src/*"]
+    },
+    "lib": ["es6", "es2016.array.include", "dom"],
+    "target": "es6",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "jsx": "react",
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "incremental": true,
+    "resolveJsonModule": true
+  }
+}
