@@ -17,7 +17,6 @@ import {
   getLocalKeysByDeviceId,
   getActiveRecoveryKeysByUserId,
   getGroupMembershipsByObjectId,
-  getActiveOrExpiredInvitesByInvitedByUserId,
   getActiveOrExpiredDeviceGrantsByGrantedByUserId,
   getActiveOrExpiredInvitesByInviteeId,
   getActiveOrExpiredDeviceGrantsByGranteeId,

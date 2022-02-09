@@ -1,9 +1,8 @@
-import { memoizeShallowAll as memoize } from "@core/lib/utils/memoize";
-import { sha256 } from "@core/lib/crypto/utils";
-import { env } from "../../../../../public/app/api/shared/src/env";
+let billingIdFn: ((orgId: string) => string) | undefined;
 
-export const getOrgBillingId = memoize((orgId: string) =>
-  sha256(
-    JSON.stringify([orgId, env.DEPLOYMENT_TAG, env.DOMAIN].filter(Boolean))
-  )
-);
+export const registerBillingIdFn = (fn: typeof billingIdFn) => {
+  billingIdFn = fn;
+};
+
+export const getOrgBillingId = (orgId: string) =>
+  billingIdFn ? billingIdFn(orgId) : "";
