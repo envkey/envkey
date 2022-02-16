@@ -995,7 +995,7 @@ clientAction<
       }
     }
 
-    const encryptionKey = secureRandomAlphanumeric(25);
+    const encryptionKey = secureRandomAlphanumeric(26);
     const now = Date.now();
 
     const archive: Client.OrgArchiveV1 = {

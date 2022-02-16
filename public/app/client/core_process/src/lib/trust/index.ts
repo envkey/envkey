@@ -3,6 +3,7 @@ import {
   verifyJson,
   encryptJson,
   decryptJson,
+  signJson,
   verifyPublicKeySignature,
 } from "@core/lib/crypto/proxy";
 import { dispatch } from "../../handler";
@@ -90,18 +91,24 @@ export const verifyCurrentUser = async (
   },
   verifyKeypair = async (pubkey: Crypto.Pubkey, privkey: Crypto.Privkey) => {
     const data = { message: "test" },
-      encrypted = await encryptJson({
-        data,
-        pubkey,
-        privkey,
-      }),
-      decrypted = await decryptJson({
-        encrypted,
-        privkey,
-        pubkey,
-      });
+      [encrypted, signed] = await Promise.all([
+        encryptJson({
+          data,
+          pubkey,
+          privkey,
+        }),
+        signJson({ data, privkey }),
+      ]),
+      [decrypted, verified] = await Promise.all([
+        decryptJson({
+          encrypted,
+          privkey,
+          pubkey,
+        }),
+        verifyJson({ signed, pubkey }).catch((err) => undefined),
+      ]);
 
-    if (!R.equals(data, decrypted)) {
+    if (!verified || !R.equals(data, decrypted) || !R.equals(data, verified)) {
       throw new Error("keypair verification failed");
     }
   },

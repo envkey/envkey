@@ -8,7 +8,7 @@ export const generateBearerSecret = (): {
   secret: string;
   hash: string;
 } => {
-  const secret = ["ekb", secureRandomAlphanumeric(25)].join("_");
+  const secret = ["ekb", secureRandomAlphanumeric(26)].join("_");
   const hash = sha256(secret);
   return { secret, hash };
 };

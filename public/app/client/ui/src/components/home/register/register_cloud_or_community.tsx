@@ -73,7 +73,7 @@ const getRegisterComponent = (hostType: "cloud" | "community") => {
 
     useEffect(() => {
       if (hostType == "community") {
-        setCommunityAuth(secureRandomAlphanumeric(25));
+        setCommunityAuth(secureRandomAlphanumeric(26));
       }
     }, []);
 

@@ -18,11 +18,11 @@ export type License = {
   maxCloudDataTransferPerHourMb?: number;
   maxCloudDataTransferPerMonthMb?: number;
 
-  ssoEnabled?: true;
-  teamsEnabled?: true;
-  customRbacEnabled?: true;
+  ssoEnabled?: boolean;
+  teamsEnabled?: boolean;
+  customRbacEnabled?: boolean;
 
-  provisional?: true;
+  provisional?: boolean;
 
   createdAt: number;
   deletedAt?: number;

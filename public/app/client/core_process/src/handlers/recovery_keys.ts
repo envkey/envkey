@@ -25,7 +25,6 @@ import {
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 import { secureRandomPhrase } from "@core/lib/crypto/phrase";
-import { graphTypes } from "@core/lib/graph";
 import { log } from "@core/lib/utils/logger";
 
 clientAction<
@@ -199,7 +198,7 @@ clientAction<
     } = action;
     let state = initialState;
 
-    const identityHash = sha256(JSON.stringify([hostUrl, encryptionKey])),
+    const identityHash = getIdentityHash({ hostUrl, encryptionKey }),
       apiRes = await dispatch(
         {
           type: Api.ActionType.LOAD_RECOVERY_KEY,
@@ -576,7 +575,10 @@ const createRecoveryKey = async (
     {
       ...envParams,
       recoveryKey: {
-        identityHash: sha256(JSON.stringify([auth.hostUrl, encryptionKey])),
+        identityHash: getIdentityHash({
+          hostUrl: auth.hostUrl,
+          encryptionKey,
+        }),
         pubkey: signedPubkey,
         encryptedPrivkey: encryptedPrivkey as Crypto.EncryptedData,
       },
@@ -584,4 +586,11 @@ const createRecoveryKey = async (
     },
     encryptionKey,
   ];
+};
+
+const getIdentityHash = (params: {
+  hostUrl: string;
+  encryptionKey: string;
+}): string => {
+  return sha256(JSON.stringify(params));
 };
