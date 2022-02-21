@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { OrgComponent } from "@ui_types";
 import { capitalize } from "@core/lib/utils/string";
-import { Api } from "@core/types";
+import { Api, Billing } from "@core/types";
 import moment from "moment";
 import * as g from "@core/lib/graph";
 import * as styles from "@styles";
 import { SvgImage } from "@images";
 
-export const Billing: OrgComponent = (props) => {
+export const BillingUI: OrgComponent = (props) => {
   const { graph, graphUpdatedAt, orgStats } = props.core;
   const currentUserId = props.ui.loadedAccountId!;
 
@@ -90,7 +90,10 @@ export const Billing: OrgComponent = (props) => {
           <label>Devices</label>
 
           <span>
-            using {org.deviceLikeCount}/{license.maxDevices}{" "}
+            using {org.deviceLikeCount}/
+            {license.maxDevices == Billing.UNLIMITED
+              ? " unlimited"
+              : license.maxDevices}{" "}
             {numPendingDevices > 0 ? (
               <small>
                 {" "}
@@ -107,7 +110,10 @@ export const Billing: OrgComponent = (props) => {
         <div className="field">
           <label>Server ENVKEYs</label>
           <span>
-            using {org.serverEnvkeyCount}/{license.maxServerEnvkeys}
+            using {org.serverEnvkeyCount}/
+            {license.maxServerEnvkeys == Billing.UNLIMITED
+              ? " unlimited"
+              : license.maxServerEnvkeys}
           </span>
         </div>
 

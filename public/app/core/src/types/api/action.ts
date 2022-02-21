@@ -421,6 +421,7 @@ export namespace Action {
       {
         graphUpdatedAt: number;
         loggableType: "orgAction";
+        loggableType2: "updateEnvsAction";
         auth: Auth.DefaultAuthParams;
       },
       Net.ApiParamTypes["UpdateEnvs"]

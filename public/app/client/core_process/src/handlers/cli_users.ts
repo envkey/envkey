@@ -307,8 +307,8 @@ const createCliUser = async (
     throw new Error("Action requires decrypted privkey");
   }
 
-  const cliKeyIdPart = secureRandomAlphanumeric(26),
-    encryptionKey = secureRandomAlphanumeric(26),
+  const cliKeyIdPart = secureRandomAlphanumeric(22),
+    encryptionKey = secureRandomAlphanumeric(22),
     trustedRoot = state.trustedRoot!,
     { pubkey, privkey, encryptedPrivkey } = await generateKeys({
       encryptionKey,

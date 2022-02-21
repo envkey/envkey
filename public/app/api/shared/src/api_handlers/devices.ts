@@ -69,7 +69,7 @@ apiAction<
 
     const emailToken = [
       "dg",
-      secureRandomAlphanumeric(26),
+      secureRandomAlphanumeric(22),
       encodeBase58(decodeUTF8(requestParams.host)),
     ].join("_");
 
@@ -377,7 +377,7 @@ apiAction<
         createdAt: now,
         updatedAt: now,
       },
-      token = secureRandomAlphanumeric(26),
+      token = secureRandomAlphanumeric(22),
       authToken: Api.Db.AuthToken = {
         type: "authToken",
         ...getAuthTokenKey(auth.org.id, auth.user.id, deviceId, token),

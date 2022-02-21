@@ -1736,10 +1736,7 @@ export namespace Net {
     RevokeInvite: GraphDiffsResult;
     AcceptInvite: AcceptInviteResult;
     CreateRecoveryKey: GraphDiffsResult;
-    LoadRecoveryKey:
-      | LoadedRecoveryKey
-      | RequiresEmailAuthResult
-      | RequiresExternalAuthResult;
+    LoadRecoveryKey: LoadedRecoveryKey | RequiresEmailAuthResult;
     RedeemRecoveryKey: RedeemRecoveryKeyResult;
     UpdateTrustedRootPubkey: OkResult;
     FetchGraph: GraphResult;

@@ -371,6 +371,7 @@ func execWithEnv(envkey string, env parser.EnvMap) {
 				// ignore error since process may already have finished
 				restarting = true
 				command.Process.Kill()
+				command.Process.Wait()
 				restarting = false
 
 				execFn(

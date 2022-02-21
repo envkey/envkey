@@ -139,7 +139,7 @@ export const ManageRecoveryKey: OrgComponent<
                   .filter(Boolean)
                   .map((value, i) => (
                     <span>
-                      {i > 0 && i % 5 == 0 ? <br /> : ""}
+                      {i > 0 && i % 4 == 0 ? <br /> : ""}
                       {value}{" "}
                     </span>
                   ))
@@ -149,22 +149,21 @@ export const ManageRecoveryKey: OrgComponent<
             </div>
           </div>
           <p>
-            Your Recovery Key allows you regain access to this organization if
-            you lose your device or forget your device's passphrase. We
-            recommend either printing it out or writing it down, then keeping it
-            somewhere safe.
+            Your Recovery Key allows you to get back in to the org if you lose
+            access to your device or forget your passphrase. Keep it safe and
+            make sure you can retrieve it even if you lose this device.
           </p>
 
           <p className="important">
             <h4>Important</h4>
-            If you lose your Recovery Key and there's no other user in your
-            organization with sufficient access to re-invite you, your data
-            could be gone forever.
+            If you lose your Recovery Key and there's no other user in your org
+            with sufficient access to re-invite you, some or all of your org's
+            data could be lost forever.
           </p>
 
           <p>
-            This key won't be shown again, but you can generate a new one at any
-            time in the <strong>My Org</strong> section.
+            This key won't be shown again, but you can always generate a new one
+            in the <strong>My Org</strong> section.
           </p>
           <div className="buttons">
             <button

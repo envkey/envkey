@@ -169,7 +169,7 @@ export const inviteUsers = async (accountId: string) => {
         R.indexBy(R.prop("name"), byType.apps)
       );
 
-    const tag = i ? i.toString() : secureRandomAlphanumeric(26).toLowerCase(),
+    const tag = i ? i.toString() : secureRandomAlphanumeric(22).toLowerCase(),
       inviteParams = [
         {
           user: {
@@ -222,7 +222,7 @@ export const inviteUsers = async (accountId: string) => {
         R.indexBy(R.prop("name"), byType.orgRoles)
       );
 
-    const tag = i ? i.toString() : secureRandomAlphanumeric(26).toLowerCase(),
+    const tag = i ? i.toString() : secureRandomAlphanumeric(22).toLowerCase(),
       inviteParams = [
         {
           user: {
@@ -268,7 +268,7 @@ export const inviteUsers = async (accountId: string) => {
         R.indexBy(R.prop("name"), byType.orgRoles)
       );
 
-    const tag = i ? i.toString() : secureRandomAlphanumeric(26).toLowerCase(),
+    const tag = i ? i.toString() : secureRandomAlphanumeric(22).toLowerCase(),
       inviteParams = [
         {
           user: {

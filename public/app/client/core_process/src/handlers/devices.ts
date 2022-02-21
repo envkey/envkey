@@ -656,7 +656,7 @@ const approveDevice = async (
       currentUserPubkey = (state.graph[auth.userId] as Model.CliUser).pubkey;
     }
 
-    const encryptionKey = secureRandomAlphanumeric(26),
+    const encryptionKey = secureRandomAlphanumeric(22),
       {
         pubkey: deviceGrantPubkey,
         privkey: deviceGrantPrivkey,

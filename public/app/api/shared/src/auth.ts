@@ -20,7 +20,7 @@ import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 import { pick } from "@core/lib/utils/object";
 import { validate as uuidValidate } from "uuid";
-import { mustGetScimProvider } from "../../../../../private/app/api/shared/src/models/provisioning";
+import { mustGetScimProvider } from "./models/provisioning";
 import { wait } from "@core/lib/utils/wait";
 import { PoolConnection } from "mysql2/promise";
 import { env } from "./env";

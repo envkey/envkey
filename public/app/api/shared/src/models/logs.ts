@@ -358,6 +358,7 @@ const getIps = async (orgId: string, startsAt: number, endsAt: number) => {
     const qargs: any[] = [];
 
     const loggableTypes = params.loggableTypes ?? Logs.ALL_LOGGABLE_TYPES;
+
     conditions.push(
       "t.loggableType IN (?) OR t.loggableType2 IN (?) OR t.loggableType3 IN (?) OR t.loggableType4 IN (?)"
     );
@@ -463,6 +464,7 @@ export const getLogTransactionStatement = ({
     errorStatus: "errorStatus" in response ? response.errorStatus : undefined,
     errorReason: "errorReason" in response ? response.errorReason : undefined,
     clientName: action.meta.client?.clientName,
+    loggableType: action.meta.loggableType,
     createdAt: now,
     updatedAt: now,
   };
@@ -485,6 +487,8 @@ export const getLogTransactionStatement = ({
     loggedAction = {
       ...loggedActionBase,
       loggableType: <const>"authAction",
+      loggableType2:
+        "loggableType2" in action.meta ? action.meta.loggableType2 : undefined,
       actionType: (action as Api.Action.AuthAction).type,
       ...authActionProps(
         action as Api.Action.AuthAction,
@@ -537,7 +541,6 @@ export const getLogTransactionStatement = ({
       orgId: handlerContext.orgId,
       deviceId: handlerContext.deviceId,
       actorId: handlerContext.actorId,
-
       generatedEnvkeyId: handlerContext.generatedEnvkey.id,
       fetchServiceVersion: parseInt(
         (action as Api.Action.RequestActions["FetchEnvkey"]).meta
@@ -574,23 +577,13 @@ export const getLogTransactionStatement = ({
           ...loggedActionBase,
           ...actionIdProps,
           loggableType: <const>"orgAction",
+          loggableType2:
+            "loggableType2" in action.meta
+              ? action.meta.loggableType2
+              : undefined,
           actionType: (action as Api.Action.GraphAction).type,
           blobsUpdated,
         };
-
-        if (
-          Object.keys(blobsUpdated?.users ?? {}).length > 0 &&
-          loggedAction.actionType == Api.ActionType.UPDATE_ENVS
-        ) {
-          addLoggableType(loggedAction, "updateUserEnvsAction");
-        }
-
-        if (
-          Object.keys(blobsUpdated?.keyableParents ?? {}).length > 0 ||
-          Object.keys(blobsUpdated?.blockKeyableParents ?? {}).length > 0
-        ) {
-          addLoggableType(loggedAction, "updateEnvkeyEnvsAction");
-        }
 
         break;
 
@@ -604,6 +597,10 @@ export const getLogTransactionStatement = ({
         }
         loggedAction = {
           ...loggedActionBase,
+          loggableType2:
+            "loggableType2" in action.meta
+              ? action.meta.loggableType2
+              : undefined,
           ...actionIdProps,
           ...fetchActionProps(
             action as Api.Action.FetchAction,

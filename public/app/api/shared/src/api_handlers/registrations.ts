@@ -7,7 +7,7 @@ import { mergeObjectTransactionItems } from "../db";
 import * as graphKey from "../graph_key";
 import * as R from "ramda";
 import { verifyEmailToken, verifyExternalAuthSession } from "../auth";
-import { getCreateExternalAuthProviderWithTransactionItems } from "../../../../../../private/app/api/shared/src/models/external_auth";
+import { getCreateExternalAuthProviderWithTransactionItems } from "../models/external_auth";
 import { getAuthTokenKey } from "../models/auth_tokens";
 import { pick } from "@core/lib/utils/pick";
 import { getApiUserGraph } from "../graph";
@@ -77,7 +77,7 @@ apiAction<
     }
 
     const [userId, orgId, deviceId] = R.times(() => uuid(), 4),
-      token = secureRandomAlphanumeric(26),
+      token = secureRandomAlphanumeric(22),
       environmentRoleIds = R.times(() => uuid(), 3),
       environmentRoles: Api.Db.EnvironmentRole[] = [
         {

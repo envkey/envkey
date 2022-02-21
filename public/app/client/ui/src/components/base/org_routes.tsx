@@ -158,7 +158,7 @@ const getRouterTree = (): RouterTree => [
       // remaining org routes
       {
         routerPath: `/billing`,
-        component: ui.Billing,
+        component: ui.BillingUI,
       },
       {
         routerPath: `/logs/:logManagerStateBs58?`,

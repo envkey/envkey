@@ -678,6 +678,7 @@ clientAction<
   type: "apiRequestAction",
   actionType: Api.ActionType.UPDATE_ENVS,
   loggableType: "orgAction",
+  loggableType2: "updateEnvsAction",
   authenticated: true,
   graphAction: true,
 });

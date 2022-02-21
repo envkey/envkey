@@ -3,12 +3,12 @@
 
 import * as crypto from "crypto";
 
-const DEFAULT_NUM_WORDS_IN_PHRASE = 15; // Provides ~163 bits of entropy (15 * log2(1937)) -- using 1937 instead of full 1952 wordlist for length since we won't allow duplicates (not that it makes much difference)
+export const PHRASE_LENGTH = 12; // Provides ~131 bits of entropy: (12 * log2(1940)) -- 1940 instead of full 1952 wordlist for length since we won't allow duplicates
 
-export const secureRandomPhrase = (n?: number) => {
+export const secureRandomPhrase = () => {
   const wordSet = new Set<string>();
 
-  while (wordSet.size < (n ?? DEFAULT_NUM_WORDS_IN_PHRASE)) {
+  while (wordSet.size < PHRASE_LENGTH) {
     const i = randInt(numWords);
     wordSet.add(words[i]);
   }

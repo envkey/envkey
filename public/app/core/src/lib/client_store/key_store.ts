@@ -98,8 +98,8 @@ export const initKeyStore = async () => {
     const existingDeviceKey = await getDeviceKey(),
       auth = existingDeviceKey
         ? existingDeviceKey.auth
-        : secureRandomAlphanumeric(26),
-      key = secureRandomAlphanumeric(26);
+        : secureRandomAlphanumeric(22),
+      key = secureRandomAlphanumeric(22);
 
     let deviceKey: DeviceKey;
     if (passphrase) {

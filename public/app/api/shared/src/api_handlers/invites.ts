@@ -21,7 +21,7 @@ import produce from "immer";
 import { decodeUTF8 } from "tweetnacl-util";
 import { encode as encodeBase58 } from "bs58";
 import { getFetchActionLogTargetIdsFn } from "../models/logs";
-import { scimCandidateDbKey } from "../../../../../../private/app/api/shared/src/models/provisioning";
+import { scimCandidateDbKey } from "../models/provisioning";
 import { getDeleteUsersWithTransactionItems } from "../blob";
 
 apiAction<
@@ -185,7 +185,7 @@ apiAction<
 
     const emailToken = [
       "i",
-      secureRandomAlphanumeric(26),
+      secureRandomAlphanumeric(22),
       encodeBase58(decodeUTF8(requestParams.host)),
     ].join("_");
 
@@ -521,7 +521,7 @@ apiAction<
         createdAt: now,
         updatedAt: now,
       },
-      token = secureRandomAlphanumeric(26),
+      token = secureRandomAlphanumeric(22),
       authToken: Api.Db.AuthToken = {
         type: "authToken",
         ...getAuthTokenKey(auth.org.id, auth.user.id, deviceId, token),

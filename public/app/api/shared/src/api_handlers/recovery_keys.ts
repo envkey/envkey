@@ -135,22 +135,21 @@ apiAction<
         recoveryKey: activeRecoveryKey,
       };
 
-    if (auth.user.provider == "email") {
-      if (!payload.emailToken) {
-        const emailToken = secureRandomAlphanumeric(26);
+    if (!payload.emailToken) {
+      const emailToken = secureRandomAlphanumeric(22);
 
-        if (process.env.NODE_ENV == "development") {
-          const clipboardy = require("clipboardy");
-          const notifier = require("node-notifier");
-          clipboardy.writeSync(emailToken);
-          notifier.notify("Email token copied to clipboard.");
-        }
+      if (process.env.NODE_ENV == "development") {
+        const clipboardy = require("clipboardy");
+        const notifier = require("node-notifier");
+        clipboardy.writeSync(emailToken);
+        notifier.notify("Email token copied to clipboard.");
+      }
 
-        const emailAction = () =>
-          sendEmail({
-            to: auth.user.email,
-            subject: `${auth.user.firstName}, here's your EnvKey Account Recovery Email Confirmation Token`,
-            bodyMarkdown: `Hi ${auth.user.firstName},
+      const emailAction = () =>
+        sendEmail({
+          to: auth.user.email,
+          subject: `${auth.user.firstName}, here's your EnvKey Account Recovery Email Confirmation Token`,
+          bodyMarkdown: `Hi ${auth.user.firstName},
 
 An attempt has been made to recover your ${auth.org.name} EnvKey account. If it **wasn't** you, it could mean someone else has obtained your Account Recovery Key, so you should generate a new one as soon as possible.
 
@@ -160,58 +159,35 @@ If it **was** you, here's your Email Confirmation Token:
 
 Please copy it and return to the EnvKey UI to complete the Account Recovery process.
 `,
-          });
+        });
 
-        return {
-          type: "response",
-          response: {
-            type: "requiresEmailAuthError",
-            email: auth.user.email,
-            error: true,
-            errorStatus: 422,
-            errorReason: "Email auth required",
-          },
-          postUpdateActions: [emailAction],
-          transactionItems: {
-            puts: [
-              {
-                ...activeRecoveryKey,
-                emailToken,
-                updatedAt: now,
-              } as Api.Db.RecoveryKey,
-            ],
-          },
-          handlerContext,
-          logTargetIds: [],
-        };
-      } else if (
-        !activeRecoveryKey.emailToken ||
-        sha256(payload.emailToken) !== sha256(activeRecoveryKey.emailToken)
-      ) {
-        throw new Api.ApiError("Not found", 404);
-      }
-    }
-
-    if (
-      auth.user.provider != "email" &&
-      !activeRecoveryKey.externalAuthSessionVerifiedAt
-    ) {
       return {
         type: "response",
         response: {
-          type: "requiresExternalAuthError",
-          ...pick(
-            ["id", "provider", "externalAuthProviderId", "uid"],
-            auth.user
-          ),
-          orgId: auth.org.id,
+          type: "requiresEmailAuthError",
+          email: auth.user.email,
           error: true,
           errorStatus: 422,
-          errorReason: "External auth required",
+          errorReason: "Email auth required",
+        },
+        postUpdateActions: [emailAction],
+        transactionItems: {
+          puts: [
+            {
+              ...activeRecoveryKey,
+              emailToken,
+              updatedAt: now,
+            } as Api.Db.RecoveryKey,
+          ],
         },
         handlerContext,
         logTargetIds: [],
       };
+    } else if (
+      !activeRecoveryKey.emailToken ||
+      sha256(payload.emailToken) !== sha256(activeRecoveryKey.emailToken)
+    ) {
+      throw new Api.ApiError("Not found", 404);
     }
 
     return {
@@ -300,7 +276,7 @@ apiAction<
         createdAt: now,
         updatedAt: now,
       },
-      token = secureRandomAlphanumeric(26),
+      token = secureRandomAlphanumeric(22),
       authToken: Api.Db.AuthToken = {
         type: "authToken",
         ...getAuthTokenKey(

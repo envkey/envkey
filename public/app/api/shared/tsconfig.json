@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src", "../../../../private/app/api/shared/src/billing.ts", "../../../../private/app/api/shared/src/api_handlers/billing.ts", "../../../../private/app/api/cloud/src/org_stats.ts", "../../../../private/app/api/shared/src/api_handlers/external_auth_users.ts", "../../../../private/app/api/shared/src/api_handlers/external_auth_orgs.ts", "../../../../private/app/api/shared/src/models/s3_logs.ts", "../../../../private/app/api/shared/src/models/provisioning.ts", "../../../../private/app/api/shared/src/models/external_auth.ts", "../../../../private/app/api/shared/src/api_handlers/groups.ts"],
+  "include": ["src"],
   "exclude": ["node_modules"],
   "compilerOptions": {
     "baseUrl": ".",

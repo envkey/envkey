@@ -9,6 +9,7 @@ import { getDefaultApiHostUrl } from "../../../../shared/src/env";
 import { HomeContainer } from "../home/home_container";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
+import { PHRASE_LENGTH } from "@core/lib/crypto/phrase";
 import * as styles from "@styles";
 
 export const RedeemRecoveryKey: Component = (props) => {
@@ -93,7 +94,9 @@ export const RedeemRecoveryKey: Component = (props) => {
     (loadedRecoveryKey && deviceName && deviceNameUnique) ||
     (!loadedRecoveryKey &&
       recoveryKey &&
-      [8, 9].includes(recoveryKey.split(/\s/).length)) ||
+      [PHRASE_LENGTH, PHRASE_LENGTH + 1].includes(
+        recoveryKey.split(/\s/).length
+      )) ||
     (!loadedRecoveryKey &&
       loadRecoveryKeyError?.type == "requiresEmailAuthError" &&
       emailToken);
@@ -148,8 +151,8 @@ export const RedeemRecoveryKey: Component = (props) => {
     const split = recoveryKey.split(/\s/);
 
     const [encryptionKey, hostUrl] =
-      split.length == 9
-        ? [split.slice(0, 8).join(" "), split[8]]
+      split.length == PHRASE_LENGTH + 1
+        ? [split.slice(0, PHRASE_LENGTH).join(" "), split[PHRASE_LENGTH]]
         : [split.join(" "), getDefaultApiHostUrl()];
 
     setIsLoading(true);
@@ -184,8 +187,8 @@ export const RedeemRecoveryKey: Component = (props) => {
     const split = recoveryKey.split(/\s/);
 
     const [encryptionKey, hostUrl] =
-      split.length == 9
-        ? [split.slice(0, 8).join(" "), split[8]]
+      split.length == PHRASE_LENGTH + 1
+        ? [split.slice(0, PHRASE_LENGTH).join(" "), split[PHRASE_LENGTH]]
         : [split.join(" "), getDefaultApiHostUrl()];
 
     setIsRedeeming(true);
@@ -323,9 +326,7 @@ export const RedeemRecoveryKey: Component = (props) => {
         ]
       : [
           loadRecoveryKeyError &&
-          !["requiresEmailAuthError", "requiresExternalAuthError"].includes(
-            loadRecoveryKeyError.type
-          ) ? (
+          loadRecoveryKeyError.type != "requiresEmailAuthError" ? (
             <p className="error">
               There was a problem loading your recovery key. Please ensure you
               typed it in correctly and try again.

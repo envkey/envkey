@@ -37,11 +37,7 @@ const LOG_TYPE_OPTIONS_BY_VALUE = R.indexBy(
 );
 
 const LOG_TYPE_CONFLICTING_FILTERS: [FilterLogType, FilterLogType[]][] = [
-  [
-    "org_updates",
-    ["all_env_updates", "user_env_updates", "envkey_env_updates"],
-  ],
-  ["all_env_updates", ["user_env_updates", "envkey_env_updates"]],
+  ["org_updates", ["user_env_updates"]],
   [
     "all_access",
     [
@@ -370,9 +366,7 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
       [
         "all_access",
         "org_updates",
-        "all_env_updates",
         "user_env_updates",
-        "envkey_env_updates",
         "all_env_access",
         "user_env_access",
         "envkey_env_access",
@@ -583,12 +577,7 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
               label: "Updates",
               options: Object.values(
                 pick(
-                  [
-                    "org_updates",
-                    // "all_env_updates",
-                    "user_env_updates",
-                    // "envkey_env_updates",
-                  ],
+                  ["org_updates", "user_env_updates"],
                   LOG_TYPE_OPTIONS_BY_VALUE
                 )
               ),
@@ -1387,16 +1376,8 @@ const getBaseLoggableTypes = (
       loggableTypes.push("orgAction");
     }
 
-    if (filterLogTypes.has("all_env_updates")) {
-      loggableTypes.push("updateUserEnvsAction", "updateEnvkeyEnvsAction");
-    }
-
     if (filterLogTypes.has("user_env_updates")) {
-      loggableTypes.push("updateUserEnvsAction");
-    }
-
-    if (filterLogTypes.has("envkey_env_updates")) {
-      loggableTypes.push("updateEnvkeyEnvsAction");
+      loggableTypes.push("updateEnvsAction");
     }
 
     if (filterLogTypes.has("all_access")) {

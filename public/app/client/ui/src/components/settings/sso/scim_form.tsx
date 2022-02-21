@@ -126,7 +126,7 @@ export const ScimForm: OrgComponent<{ providerId?: string }> = (props) => {
                 const authSecret =
                   willInputSecret && secret
                     ? secret
-                    : ["ekb", secureRandomAlphanumeric(26)].join("_");
+                    : ["ekb", secureRandomAlphanumeric(22)].join("_");
                 setSecret(authSecret);
 
                 const res = await props.dispatch({
@@ -311,7 +311,7 @@ export const ScimForm: OrgComponent<{ providerId?: string }> = (props) => {
                         const authSecret =
                           willInputSecret && secret
                             ? secret
-                            : ["ekb", secureRandomAlphanumeric(26)].join("_");
+                            : ["ekb", secureRandomAlphanumeric(22)].join("_");
 
                         const res = await props.dispatch({
                           type: Api.ActionType

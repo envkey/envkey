@@ -6,7 +6,7 @@ import { verifyExternalAuthSession, verifyEmailToken } from "../auth";
 import { secureRandomAlphanumeric } from "@core/lib/crypto/utils";
 import { getDb, mergeObjectTransactionItems } from "../db";
 import { env } from "../env";
-import { getNonSamlExternalAuthSessionSkey } from "../../../../../../private/app/api/shared/src/models/external_auth";
+import { getNonSamlExternalAuthSessionSkey } from "../models/external_auth";
 import { pick } from "@core/lib/utils/pick";
 import { getOrgGraph, getApiUserGraph } from "../graph";
 import { getAuthTokenKey } from "../models/auth_tokens";
@@ -97,7 +97,7 @@ apiAction<
       }
     }
 
-    const token = secureRandomAlphanumeric(26),
+    const token = secureRandomAlphanumeric(22),
       deviceId = payload.deviceId,
       authToken: Api.Db.AuthToken = {
         type: "authToken",

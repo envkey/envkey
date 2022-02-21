@@ -9,9 +9,7 @@
     }
   },
   "extends": "../../../tsconfig.json",
-  "include": [
-    "src"
-, "../../shared/src/org_stats.ts", "../../../../../private/app/api/self_hosted/src/bootstrap_update.ts"  ],
+  "include": ["src" ],
   "exclude": [
     "node_modules"
   ]

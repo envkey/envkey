@@ -92,7 +92,7 @@ apiAction<
       }
     }
 
-    const token = secureRandomAlphanumeric(26);
+    const token = secureRandomAlphanumeric(22);
 
     if (process.env.NODE_ENV == "development") {
       const clipboardy = require("clipboardy");

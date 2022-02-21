@@ -87,7 +87,7 @@ export const getEnvsUiPermissions = (
         continue;
       }
 
-      if (envsNeedFetch(props.core, id)) {
+      if (envsNeedFetch(props.core, id) && !props.core.fetchEnvsErrors[id]) {
         shouldFetch = true;
         toFetchEnvs[id] = { envs: true };
       }

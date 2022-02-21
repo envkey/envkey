@@ -1,3 +1,5 @@
+export const UNLIMITED = 999999999999;
+
 export type License = {
   type: "license";
   id: string;

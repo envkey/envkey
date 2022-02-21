@@ -265,7 +265,7 @@ export const KeyableParent: OrgComponent<
         ENVKEY=
         {justGenerated
           ? justGenerated.envkeyIdPart.slice(0, 10)
-          : generatedEnvkey!.envkeyShort}
+          : generatedEnvkey?.envkeyShort}
         …{justGenerated && copied ? <small>Copied.</small> : ""}
       </span>
     );

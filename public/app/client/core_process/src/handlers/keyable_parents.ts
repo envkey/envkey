@@ -357,8 +357,8 @@ const generateKeyParams = async (
 
   const currentUserPrivkey = currentAuth.privkey;
 
-  const envkeyIdPart = "ek" + secureRandomAlphanumeric(26),
-    encryptionKey = secureRandomAlphanumeric(26),
+  const envkeyIdPart = "ek" + secureRandomAlphanumeric(22),
+    encryptionKey = secureRandomAlphanumeric(22),
     {
       pubkey: generatedPubkey,
       privkey: generatedPrivkey,

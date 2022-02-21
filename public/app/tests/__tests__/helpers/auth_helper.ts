@@ -13,8 +13,6 @@ import { getActiveVerificationsWithEmail } from "@api_shared/models/email_verifi
 import { log } from "@core/lib/utils/logger";
 import { graphTypes } from "@core/lib/graph";
 import { getPubkeyHash } from "@core/lib/client";
-import { getOrgBillingId } from "@api_shared/billing";
-import { genLicense } from "../../../../../private/billing/generate";
 
 export const getEmailToken = async (
     authType: Extract<Auth.AuthType, "sign_up" | "sign_in">,
@@ -58,7 +56,12 @@ export const getEmailToken = async (
     orgName?: string,
     firstName?: string,
     lastName?: string,
-    deviceName?: string
+    deviceName?: string,
+    setLicenseFn?: (
+      orgId: string,
+      accountId: string,
+      deviceStoreId: string
+    ) => Promise<void>
   ) => {
     let state: Client.State;
     const emailVerificationToken = await getEmailToken("sign_up", email),
@@ -118,41 +121,8 @@ export const getEmailToken = async (
 
     const deviceStoreId = getTestId();
 
-    if (!process.env.COMMUNITY_AUTH_DEV_ONLY) {
-      // set license with high limits so it doesn't interfere
-      const privkey =
-        "PvBfDXY9S5gG7BZh175JJUlcGYY5877XCXXOAMfLKiZWA5tZUoFHjQ1L17d0ElalxrY58vR3xsRV7RK0L3+unA==";
-      const orgBillingId = getOrgBillingId(orgId);
-
-      const license = genLicense({
-        privkey,
-        orgBillingId,
-        numDaysValid: -1,
-        env: "development",
-        hostType: "cloud",
-        maxDevices: 9999,
-        maxServerEnvkeys: 9999,
-        maxCloudStorageMb: 10000,
-        maxCloudApiCallsPerHour: 100000,
-        maxCloudApiCallsPerMonth: 100000,
-        maxCloudDataTransferPerHourMb: 100000,
-        maxCloudDataTransferPerMonthMb: 100000,
-        ssoEnabled: true,
-        teamsEnabled: true,
-      });
-
-      const licenseRes = await dispatch(
-        {
-          type: Api.ActionType.UPDATE_LICENSE,
-          payload: {
-            signedLicense: license,
-          },
-        },
-        accountId,
-        deviceStoreId
-      );
-
-      expect(licenseRes.success).toBeTrue();
+    if (setLicenseFn) {
+      await setLicenseFn(orgId, accountId, deviceStoreId);
     }
 
     // establish device context

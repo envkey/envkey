@@ -19,7 +19,7 @@ import {
   getDeleteUsersWithTransactionItems,
 } from "../blob";
 import { getDb } from "../db";
-import { scimCandidateDbKey } from "../../../../../../private/app/api/shared/src/models/provisioning";
+import { scimCandidateDbKey } from "../models/provisioning";
 import { getOrg } from "../models/orgs";
 import { log } from "@core/lib/utils/logger";
 

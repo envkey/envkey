@@ -15,6 +15,7 @@ import {
   getActiveGeneratedEnvkeysByKeyableParentId,
   getLocalKeysByLocalsComposite,
   getConnectedAppsForBlock,
+  getEnvironmentsByEnvParentId,
 } from "@core/lib/graph";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import { encrypt } from "@core/lib/crypto/proxy";
@@ -41,6 +42,15 @@ export const encryptedKeyParamsForEnvironments = async (params: {
   environmentKeysByComposite: Record<string, string>;
   changesetKeysByEnvironmentId: Record<string, string>;
   keys: Api.Net.EnvParams["keys"];
+  inheritingEnvironmentIdsByEnvironmentId: Record<string, Set<string>>;
+  inheritanceOverridesByEnvironmentId: {
+    [inheritingEnvironmentId: string]: {
+      [inheritsEnvironmentId: string]: Client.Env.KeyableEnv;
+    };
+  };
+  environmentIdsSet: Set<string>;
+  envParentIds: string[];
+  baseEnvironmentsByEnvParentId: Record<string, Model.Environment[]>;
 }> => {
   const {
     state,
@@ -60,15 +70,6 @@ export const encryptedKeyParamsForEnvironments = async (params: {
 
   const environmentKeysByComposite: Record<string, string> = {};
   const changesetKeysByEnvironmentId: Record<string, string> = {};
-  const inheritanceOverridesByEnvironmentId: {
-    [inheritingEnvironmentId: string]: {
-      [inheritsEnvironmentId: string]: Client.Env.KeyableEnv;
-    };
-  } = {};
-  const inheritingEnvironmentIdsByEnvironmentId: Record<
-    string,
-    Set<string>
-  > = {};
 
   let keys: Api.Net.EnvParams["keys"] = {};
 
@@ -78,55 +79,6 @@ export const encryptedKeyParamsForEnvironments = async (params: {
       ...graphTypes(state.graph).orgUsers.map(R.prop("id")),
       ...graphTypes(state.graph).cliUsers.map(R.prop("id")),
     ];
-
-  for (let environmentId of environmentIds) {
-    const environment = state.graph[environmentId] as
-      | Model.Environment
-      | undefined;
-    if (environment && !environment.isSub) {
-      const inheritingEnvironmentIds = getInheritingEnvironmentIds(
-        state,
-        {
-          envParentId: environment.envParentId,
-          environmentId,
-        },
-        pending
-      );
-      inheritingEnvironmentIdsByEnvironmentId[environment.id] =
-        inheritingEnvironmentIds;
-
-      for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
-        const composite = getUserEncryptedKeyOrBlobComposite({
-          environmentId: inheritingEnvironmentId,
-          inheritsEnvironmentId: environment.id,
-        });
-        const existing = state.envs[composite];
-
-        const overridesByEnvironmentId = getInheritanceOverrides(
-          state,
-          {
-            envParentId: environment.envParentId,
-            environmentId: inheritingEnvironmentId,
-            forInheritsEnvironmentId: environmentId,
-          },
-          pending
-        );
-
-        if (overridesByEnvironmentId[environmentId]) {
-          inheritanceOverridesByEnvironmentId[inheritingEnvironmentId] = {
-            ...(inheritanceOverridesByEnvironmentId[inheritingEnvironmentId] ??
-              {}),
-            ...overridesByEnvironmentId,
-          };
-
-          if (!(newKeysOnly && existing)) {
-            const inheritanceOverridesKey = getNewSymmetricEncryptionKey();
-            environmentKeysByComposite[composite] = inheritanceOverridesKey;
-          }
-        }
-      }
-    }
-  }
 
   // for each environment, generate key and queue encryption ops for each
   // permitted device, invite, device grant, local key, server, and recovery key
@@ -429,47 +381,6 @@ export const encryptedKeyParamsForEnvironments = async (params: {
               ]);
             }
           }
-
-          if (environment && !environment.isSub) {
-            const inheritingEnvironmentIds =
-              inheritingEnvironmentIdsByEnvironmentId[environment.id];
-            for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
-              const targetUserInheritingPermissions = getEnvironmentPermissions(
-                state.graph,
-                inheritingEnvironmentId,
-                userId
-              );
-              if (!targetUserInheritingPermissions.has("read")) {
-                continue;
-              }
-
-              const composite = getUserEncryptedKeyOrBlobComposite({
-                environmentId: inheritingEnvironmentId,
-                inheritsEnvironmentId: environmentId,
-              });
-              const key = environmentKeysByComposite[composite];
-
-              if (key) {
-                toEncrypt.push([
-                  [
-                    "users",
-                    userId,
-                    deviceId,
-                    envParentId,
-                    "environments",
-                    inheritingEnvironmentId,
-                    "inheritanceOverrides",
-                    environmentId,
-                  ],
-                  {
-                    data: key,
-                    pubkey,
-                    privkey,
-                  },
-                ]);
-              }
-            }
-          }
         }
       }
     }
@@ -523,10 +434,6 @@ export const encryptedKeyParamsForEnvironments = async (params: {
           getServersByEnvironmentId(state.graph)[id] ?? []
         );
       }
-
-      // const environmentRole = state.graph[
-      //   environment.environmentRoleId
-      // ] as Rbac.EnvironmentRole;
     }
 
     for (let keyableParent of keyableParents) {
@@ -595,13 +502,157 @@ export const encryptedKeyParamsForEnvironments = async (params: {
         }
       }
     }
+  }
 
-    if (environment && !environment.isSub) {
-      let inheritingKeyableParents: Model.KeyableParent[] = [];
-      const inheritingEnvironmentIds =
-        inheritingEnvironmentIdsByEnvironmentId[environment.id];
+  // now generate keys for inheritance overrides if environments on either side of the relationship are being updated
+  const inheritanceOverridesByEnvironmentId: {
+    [inheritingEnvironmentId: string]: {
+      [inheritsEnvironmentId: string]: Client.Env.KeyableEnv;
+    };
+  } = {};
+
+  const inheritingEnvironmentIdsByEnvironmentId: Record<
+    string,
+    Set<string>
+  > = {};
+
+  const environmentIdsSet = new Set(environmentIds);
+
+  const envParentIds = R.uniq(
+    environmentIds
+      .map((environmentId) => {
+        const environment = state.graph[environmentId] as
+          | Model.Environment
+          | undefined;
+        return environment ? environment.envParentId : undefined;
+      })
+      .filter(Boolean)
+  ) as string[];
+
+  const baseEnvironmentsByEnvParentId = envParentIds.reduce(
+    (agg, envParentId) => ({
+      ...agg,
+      [envParentId]: (
+        getEnvironmentsByEnvParentId(state.graph)[envParentId] ?? []
+      ).filter((environment) => !environment.isSub),
+    }),
+    {} as Record<string, Model.Environment[]>
+  );
+
+  for (let envParentId of envParentIds) {
+    const envParent = state.graph[envParentId] as Model.EnvParent;
+    const baseEnvironments = baseEnvironmentsByEnvParentId[envParentId];
+
+    for (let baseEnvironment of baseEnvironments) {
+      const inheritingEnvironmentIds = getInheritingEnvironmentIds(
+        state,
+        {
+          envParentId,
+          environmentId: baseEnvironment.id,
+        },
+        pending
+      );
+
+      inheritingEnvironmentIdsByEnvironmentId[baseEnvironment.id] =
+        inheritingEnvironmentIds;
 
       for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
+        if (
+          !(
+            environmentIdsSet.has(inheritingEnvironmentId) ||
+            environmentIdsSet.has(baseEnvironment.id)
+          )
+        ) {
+          continue;
+        }
+
+        const composite = getUserEncryptedKeyOrBlobComposite({
+          environmentId: inheritingEnvironmentId,
+          inheritsEnvironmentId: baseEnvironment.id,
+        });
+        const existing = state.envs[composite];
+
+        const overridesByEnvironmentId = getInheritanceOverrides(
+          state,
+          {
+            envParentId,
+            environmentId: inheritingEnvironmentId,
+            forInheritsEnvironmentId: baseEnvironment.id,
+          },
+          pending
+        );
+
+        if (overridesByEnvironmentId[baseEnvironment.id]) {
+          inheritanceOverridesByEnvironmentId[inheritingEnvironmentId] = {
+            ...(inheritanceOverridesByEnvironmentId[inheritingEnvironmentId] ??
+              {}),
+            ...overridesByEnvironmentId,
+          };
+
+          if (!(newKeysOnly && existing)) {
+            const inheritanceOverridesKey = getNewSymmetricEncryptionKey();
+            environmentKeysByComposite[composite] = inheritanceOverridesKey;
+          }
+
+          for (let userId of allUserIds) {
+            const targetUserInheritingPermissions = getEnvironmentPermissions(
+              state.graph,
+              inheritingEnvironmentId,
+              userId
+            );
+            if (!targetUserInheritingPermissions.has("read")) {
+              continue;
+            }
+
+            const key = environmentKeysByComposite[composite];
+
+            if (key) {
+              const deviceIds = getDeviceIdsForUser(state.graph, userId, now);
+              const pubkeysByDeviceId = getPubkeysByDeviceIdForUser(
+                state.graph,
+                userId,
+                now
+              );
+
+              for (let deviceId of deviceIds) {
+                const pubkey = pubkeysByDeviceId[deviceId];
+                if (!pubkey) {
+                  continue;
+                }
+                toEncrypt.push([
+                  [
+                    "users",
+                    userId,
+                    deviceId,
+                    envParentId,
+                    "environments",
+                    inheritingEnvironmentId,
+                    "inheritanceOverrides",
+                    baseEnvironment.id,
+                  ],
+                  {
+                    data: key,
+                    pubkey,
+                    privkey,
+                  },
+                ]);
+              }
+            }
+          }
+        }
+      }
+
+      let inheritingKeyableParents: Model.KeyableParent[] = [];
+      for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
+        if (
+          !(
+            environmentIdsSet.has(inheritingEnvironmentId) ||
+            environmentIdsSet.has(baseEnvironment.id)
+          )
+        ) {
+          continue;
+        }
+
         let allInheritingEnvironmentIds = [
           inheritingEnvironmentId,
           ...getConnectedEnvironments(state.graph, inheritingEnvironmentId).map(
@@ -722,7 +773,12 @@ export const encryptedKeyParamsForEnvironments = async (params: {
     environmentKeysByComposite,
     changesetKeysByEnvironmentId,
     keys,
+    environmentIdsSet,
+    envParentIds,
+    baseEnvironmentsByEnvParentId,
+    inheritingEnvironmentIdsByEnvironmentId,
+    inheritanceOverridesByEnvironmentId,
   };
 };
 
-const getNewSymmetricEncryptionKey = () => secureRandomAlphanumeric(26);
+const getNewSymmetricEncryptionKey = () => secureRandomAlphanumeric(22);
