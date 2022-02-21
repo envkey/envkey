@@ -85,9 +85,18 @@ cleanup () {
 
 download_envkey () {
   echo "Downloading EnvKey CLI binary for ${PLATFORM}-${ARCH}"
-  url="https://$BUCKET.s3.amazonaws.com/cli/release_artifacts/$VERSION/envkey-cli_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
+  url="https://$BUCKET.s3.amazonaws.com/cli/release_artifacts/$VERSION/envkey-cli_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"  
+
   echo "Downloading tarball from ${url}"
   curl -s -L -o envkey-cli.tar.gz "${url}"
+
+  if [ -x "$(command -v minisign)" ]; then
+    echo "minisign is installed--verifying artifact signature"
+    curl -s -L -o envkey-cli.tar.gz "${url}.minisig"
+    { minisign -Vm $(basename $url) -P "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK" || { echo "Error: $(basename $url) signature invalid. Exiting with error." >&2; exit 1; }; } && echo $(basename $url) verified
+  else 
+    echo "minisign is not installed--won't verify artifact signature"
+  fi
 
   tar xzf envkey-cli.tar.gz 1> /dev/null
 
