@@ -92,8 +92,8 @@ download_envkey () {
 
   if [ -x "$(command -v minisign)" ]; then
     echo "minisign is installed--verifying artifact signature"
-    curl -s -L -o envkey-cli.tar.gz "${url}.minisig"
-    { minisign -Vm $(basename $url) -P "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK" || { echo "Error: $(basename $url) signature invalid. Exiting with error." >&2; exit 1; }; } && echo $(basename $url) verified
+    curl -s -L -o envkey-cli.tar.gz.minisig "${url}.minisig"
+    { minisign -Vm envkey-cli.tar.gz -P "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK" || { echo "Error: envkey-cli.tar.gz signature invalid. Exiting with error." >&2; cleanup; exit 1; }; } && echo envkey-cli.tar.gz verified
   else 
     echo "minisign is not installed--won't verify artifact signature"
   fi
