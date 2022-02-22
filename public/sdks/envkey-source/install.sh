@@ -4,6 +4,8 @@
 
 set -e
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 PLATFORM=
 ARCH=
 BUCKET=
@@ -63,10 +65,8 @@ else
 fi
 
 # Set Version
-if [[ -z "${ENVKEY_SOURCE_VERSION}" ]]; then
-  curl -s -o .ek_tmp_version "https://$BUCKET.s3.amazonaws.com/latest/envkeysource-version.txt"
-  VERSION=$(cat .ek_tmp_version)
-  rm .ek_tmp_version
+if [[ -z "${ENVKEY_SOURCE_VERSION}" ]]; then  
+  VERSION=$(curl -s "https://$BUCKET.s3.amazonaws.com/latest/envkeysource-version.txt")
 else
   VERSION=$ENVKEY_SOURCE_VERSION
   echo "Using custom version $VERSION"
@@ -80,15 +80,27 @@ welcome_envkey () {
 }
 
 cleanup () {
-  rm envkey-source.tar.gz
-  rm -f envkey-source
-  rm -f envkey-source.exe
+  echo "Cleaning up..."
+  cd $SCRIPT_DIR
+  rm -rf envkey_source_install_tmp
 }
 
 download_envkey () {
   url="https://$BUCKET.s3.amazonaws.com/envkeysource/release_artifacts/${VERSION}/envkey-source_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
-  echo "Downloading envkey-source binary from $url"
+
+  mkdir envkey_source_install_tmp
+  cd envkey_source_install_tmp
+
+  echo "Downloading envkey-source tarball from $url"
   curl -s -L -o envkey-source.tar.gz "${url}"
+
+  if [ -x "$(command -v minisign)" ]; then
+    echo "minisign is installed--verifying artifact signature"
+    curl -s -L -o envkey-source.tar.gz.minisig "${url}.minisig"
+    { minisign -Vm envkey-source.tar.gz -P "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK" || { echo "Error: envkey-source.tar.gz signature invalid. Exiting with error." >&2; cleanup; exit 1; }; } && echo envkey-source.tar.gz verified
+  else 
+    echo "minisign is not installed--won't verify artifact signature"
+  fi
 
   tar zxf envkey-source.tar.gz 1> /dev/null
 

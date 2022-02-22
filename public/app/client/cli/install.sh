@@ -4,6 +4,8 @@
 
 set -e
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 PLATFORM=
 ARCH=
 BUCKET=
@@ -63,10 +65,8 @@ else
 fi
 
 # Set Version
-if [[ -z "${ENVKEY_CLI_VERSION}" ]]; then
-  curl -s -o .ek_tmp_version "https://$BUCKET.s3.amazonaws.com/latest/cli-version.txt"
-  VERSION=$(cat .ek_tmp_version)
-  rm .ek_tmp_version
+if [[ -z "${ENVKEY_CLI_VERSION}" ]]; then  
+  VERSION=$(curl -s "https://$BUCKET.s3.amazonaws.com/latest/cli-version.txt")
 else
   VERSION=$ENVKEY_CLI_VERSION
   echo "Using custom version $VERSION"
@@ -78,16 +78,20 @@ welcome_envkey () {
   echo ""
 }
 
-cleanup () {
-  rm envkey-cli.tar.gz
-  rm -f envkey
+cleanup () {  
+  echo "Cleaning up..."
+  cd $SCRIPT_DIR
+  rm -rf envkey_cli_install_tmp
 }
 
 download_envkey () {
   echo "Downloading EnvKey CLI binary for ${PLATFORM}-${ARCH}"
-  url="https://$BUCKET.s3.amazonaws.com/cli/release_artifacts/$VERSION/envkey-cli_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"  
+  url="https://$BUCKET.s3.amazonaws.com/cli/release_artifacts/$VERSION/envkey-cli_${VERSION}_${PLATFORM}_${ARCH}.tar.gz" 
 
-  echo "Downloading tarball from ${url}"
+  mkdir envkey_cli_install_tmp
+  cd envkey_cli_install_tmp
+
+  echo "Downloading CLI tarball from ${url}"
   curl -s -L -o envkey-cli.tar.gz "${url}"
 
   if [ -x "$(command -v minisign)" ]; then

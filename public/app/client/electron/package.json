@@ -1,7 +1,7 @@
 {
   "_name": "---- Note!! The name below is public to end users as the OS identifier. ----",
   "name": "envkey",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "_description": "---- NOTE!! The description below is public to end users. ----",
   "description": "EnvKey UI",
   "author": "Envkey Inc <support@envkey.com>",
@@ -14,7 +14,7 @@
   "_main": "---- Note!! production build entrypoint, relative to the root of the app. ----",
   "main": "bundle.js",
   "scripts": {
-    "build": "rm -rf dist && ../../../../node_modules/.bin/webpack && ../../../../node_modules/.bin/webpack --config ./webpack.preload.ts && cp ../../core/build/worker.js dist/",
+    "build": "rm -rf dist && ../../../../node_modules/.bin/webpack && ../../../../node_modules/.bin/webpack --config ./webpack.preload.ts && cp ../../core/build/worker.js dist/ && cp -R minisign dist/",
     "build:start": "npm run build && (export NODE_ENV=development && cd dist && ../../../../../node_modules/.bin/electron bundle.js)",
     "start": "(export NODE_ENV=development && cd dist && ../../../../../node_modules/.bin/electron bundle.js)"
   },

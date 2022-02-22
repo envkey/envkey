@@ -18,8 +18,11 @@ import * as sudoPrompt from "@vscode/sudo-prompt";
 import { UpgradeProgress } from "@core/types/electron";
 import * as R from "ramda";
 
+const MINISIGN_PUBKEY =
+  "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK";
+
 const arch = os.arch() == "arm64" ? "arm64" : "amd64";
-const platform = os.platform();
+const platform = os.platform() as "win32" | "darwin" | "linux";
 const ext = platform == "win32" ? ".exe" : "";
 
 let platformIdentifier: string = platform;
@@ -224,33 +227,62 @@ const download = async (
   const assetName = `${assetPrefix}_${nextVersion}_${platformIdentifier}_${arch}.tar.gz`;
   const releaseTag = `${projectType}-v${nextVersion}`;
 
-  const fileAsBuf = await getReleaseAsset({
-    bucket: ENVKEY_RELEASES_BUCKET,
-    releaseTag,
-    assetName,
-    progress: (totalBytes: number, downloadedBytes: number) => {
-      const throttling = throttlingProgress[projectType];
+  const [fileBuf, sigBuf] = await Promise.all([
+    getReleaseAsset({
+      bucket: ENVKEY_RELEASES_BUCKET,
+      releaseTag,
+      assetName,
+      progress: (totalBytes: number, downloadedBytes: number) => {
+        const throttling = throttlingProgress[projectType];
 
-      if (onProgress && (!throttling || totalBytes == downloadedBytes)) {
-        onProgress({
-          clientProject: projectType,
-          downloadedBytes,
-          totalBytes,
-        });
+        if (onProgress && (!throttling || totalBytes == downloadedBytes)) {
+          onProgress({
+            clientProject: projectType,
+            downloadedBytes,
+            totalBytes,
+          });
 
-        throttlingProgress[projectType] = true;
-        setTimeout(() => {
-          throttlingProgress[projectType] = false;
-        }, PROGRESS_INTERVAL);
-      }
-    },
-  });
+          throttlingProgress[projectType] = true;
+          setTimeout(() => {
+            throttlingProgress[projectType] = false;
+          }, PROGRESS_INTERVAL);
+        }
+      },
+    }),
+    getReleaseAsset({
+      bucket: ENVKEY_RELEASES_BUCKET,
+      releaseTag,
+      assetName: assetName + ".minisig",
+    }),
+  ]);
   log(`${friendlyName} update: fetched latest archive`, {
-    sizeBytes: Buffer.byteLength(fileAsBuf),
+    sizeBytes: Buffer.byteLength(fileBuf),
     assetName,
   });
 
-  const folder = await unpackToFolder(fileAsBuf, execName);
+  // const sigStr = sigBuf.toString();
+  // const sigSplit = sigStr.split("\n");
+  // const sig = sigSplit[sigSplit.length - 1];
+
+  // log(`Verifying ${assetName}.minisig`, {
+  //   sig,
+  //   anotherPubkey: naclUtil.encodeBase64(signingPubkey),
+  // });
+  // if (
+  //   !nacl.sign.detached.verify(
+  //     new Uint8Array(
+  //       fileBuf.buffer,
+  //       fileBuf.byteOffset,
+  //       fileBuf.byteLength / Uint8Array.BYTES_PER_ELEMENT
+  //     ),
+  //     naclUtil.decodeBase64(sig),
+  //     naclUtil.decodeBase64(MINISIGN_PUBKEY)
+  //   )
+  // ) {
+  //   throw new Error("Couldn't verify signature for " + execName);
+  // }
+
+  const folder = await unpackToFolder(fileBuf, sigBuf, execName);
   log(`${friendlyName} update: unpacked to folder`, { folder });
 
   return folder;
@@ -312,14 +344,61 @@ const getWindowsBin = () => path.resolve(os.homedir(), "bin");
 // resolves to the folder where it unrolled the archive
 const unpackToFolder = async (
   archiveBuf: Buffer,
+  sigBuf: Buffer,
   execName: string
 ): Promise<string> => {
   return new Promise(async (resolve, reject) => {
     const tempFileBase = `${execName}_${+new Date() / 1000}`;
     const tempFilePath = path.resolve(tempDir, `${tempFileBase}.tar.gz`);
+    const tempSigPath = path.resolve(tempDir, `${tempFileBase}.tar.gz.minisig`);
     const tempFileTarPath = path.resolve(tempDir, `${tempFileBase}.tar`);
     const tempOutputDir = path.resolve(tempDir, tempFileBase);
-    await fsp.writeFile(tempFilePath, archiveBuf);
+
+    await Promise.all([
+      fsp.writeFile(tempFilePath, archiveBuf),
+      fsp.writeFile(tempSigPath, sigBuf),
+    ]);
+
+    // verify binary with vendored minisign
+    const minisignPath = path.join.apply(this, [
+      ...(process.env.MINISIGN_PATH_FROM_ELECTRON_RESOURCES
+        ? [
+            process.resourcesPath,
+            process.env.MINISIGN_PATH_FROM_ELECTRON_RESOURCES,
+          ]
+        : [process.env.MINISIGN_PATH!]),
+      ...({
+        win32: ["windows", "minisign.exe"],
+        darwin: ["mac", arch, "minisign"],
+        linux: ["linux", "minisign"],
+      }[platform] ?? []),
+    ]);
+
+    await new Promise((resolve, reject) => {
+      exec(
+        `${minisignPath} -Vm ${tempFilePath} -P ${MINISIGN_PUBKEY}`,
+        (error, stdout, stderr) => {
+          if (stderr) {
+            log(`Error verifying signature with minisig`, { stderr });
+
+            dialog.showMessageBox({
+              title: "EnvKey CLI Tools",
+              message: `There was a problem verifying the signature of the \`${execName}\` CLI tool executable. This might indicate a security issue. Please contact support@envkey.com as soon as possible so we can investigate.`,
+              buttons: ["OK"],
+            });
+
+            return reject(new Error(stderr));
+          }
+          if (error) {
+            log(`Error executing minisign`, { error });
+            return reject(error);
+          }
+          log(`Verified signature with minisig`, { stdout });
+          resolve(true);
+        }
+      );
+    });
+
     const tarredGzipped = fs.createReadStream(tempFilePath);
     const tarredOnlyWrite = fs.createWriteStream(tempFileTarPath);
 
