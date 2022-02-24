@@ -6,6 +6,7 @@ import { initDeviceKey } from "@core/lib/client_store/key_store";
 import * as R from "ramda";
 import { getPendingUpdateDetails } from "@core/lib/client";
 import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
+import * as semver from "semver";
 import { log } from "@core/lib/utils/logger";
 
 const clipboardy = require("clipboardy");
@@ -191,8 +192,8 @@ clientAction<Client.Action.ClientActions["WriteClipboard"]>({
       release: os.release(),
     });
 
-    if (os.platform() == "win32" && os.release().includes("WSL2")) {
-      log("Windows WSL2 copy-to-clipboard");
+    if (os.platform() == "win32" && semver.gte(os.release(), "8.0.0")) {
+      log("Windows copy-to-clipboard");
       await new Promise<void>((resolve, reject) => {
         const proc = spawn("clip.exe");
         proc.stdin.write(action.payload.value);
