@@ -1,0 +1,15 @@
+{
+  "name": "envkey-example",
+  "version": "1.0.0",
+  "description": "Integrating a node app with EnvKey",
+  "type" : "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "envkey-source-v2 -e 'node server.js' -w -r 'say $TITLE!'"
+  },
+  "author": "Envkey Inc.",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.17.3"
+  }
+}

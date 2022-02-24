@@ -1,11 +1,11 @@
 import { Client, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
+import { spawn } from "child_process";
 import os from "os";
 import { initDeviceKey } from "@core/lib/client_store/key_store";
 import * as R from "ramda";
 import { getPendingUpdateDetails } from "@core/lib/client";
 import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
-import open from "open";
 
 const clipboardy = require("clipboardy");
 
@@ -183,7 +183,20 @@ clientAction<Client.Action.ClientActions["WriteClipboard"]>({
   type: "clientAction",
   actionType: Client.ActionType.WRITE_CLIPBOARD,
   handler: async (state, action, context) => {
-    await clipboardy.write(action.payload.value);
+    // Fix for windows 10 clipboardy issue: https://github.com/sindresorhus/clipboardy/issues/85
+    if (os.platform() == "win32" && os.release().includes("WSL2")) {
+      await new Promise<void>((resolve, reject) => {
+        const proc = spawn("clip.exe");
+        proc.stdin.write(action.payload.value);
+        proc.stdin.end();
+        proc.on("error", (err) => {
+          reject(err);
+        });
+        proc.on("exit", () => resolve());
+      }).catch((err) => clipboardy.write(action.payload.value));
+    } else {
+      await clipboardy.write(action.payload.value);
+    }
   },
 });
 

@@ -14,3 +14,11 @@ export async function exec(
     });
   });
 }
+
+export function escapeShellUnixLike(arg: string) {
+  return `'${arg.replace(/'/g, `'\\''`)}'`;
+}
+
+export function escapeShellWindows(arg: string) {
+  return `'${arg.replace(/'/g, `''`)}'`;
+}

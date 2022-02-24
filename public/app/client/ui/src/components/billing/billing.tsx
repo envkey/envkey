@@ -90,10 +90,7 @@ export const BillingUI: OrgComponent = (props) => {
           <label>Devices</label>
 
           <span>
-            using {org.deviceLikeCount}/
-            {license.maxDevices == Billing.UNLIMITED
-              ? " unlimited"
-              : license.maxDevices}{" "}
+            using {org.deviceLikeCount}/{license.maxDevices}{" "}
             {numPendingDevices > 0 ? (
               <small>
                 {" "}
@@ -110,10 +107,7 @@ export const BillingUI: OrgComponent = (props) => {
         <div className="field">
           <label>Server ENVKEYs</label>
           <span>
-            using {org.serverEnvkeyCount}/
-            {license.maxServerEnvkeys == Billing.UNLIMITED
-              ? " unlimited"
-              : license.maxServerEnvkeys}
+            using {org.serverEnvkeyCount}/{license.maxServerEnvkeys}
           </span>
         </div>
 

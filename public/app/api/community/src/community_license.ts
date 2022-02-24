@@ -1,5 +1,5 @@
 import { Api } from "@core/types";
-import { env } from "../../../../../public/app/api/shared/src/env";
+import { env } from "../../shared/src/env";
 
 export const getCommunityLicense: Api.VerifyLicenseFn = () => ({
   type: "license",

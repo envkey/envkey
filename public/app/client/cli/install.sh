@@ -10,6 +10,7 @@ PLATFORM=
 ARCH=
 BUCKET=
 VERSION=
+MINISIGN_PUBKEY=RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK
 
 # Set platform
 case "$(uname -s)" in
@@ -97,7 +98,7 @@ download_envkey () {
   if [ -x "$(command -v minisign)" ]; then
     echo "minisign is installed--verifying artifact signature"
     curl -s -L -o envkey-cli.tar.gz.minisig "${url}.minisig"
-    { minisign -Vm envkey-cli.tar.gz -P "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK" || { echo "Error: envkey-cli.tar.gz signature invalid. Exiting with error." >&2; cleanup; exit 1; }; } && echo envkey-cli.tar.gz verified
+    { minisign -Vm envkey-cli.tar.gz -P $MINISIGN_PUBKEY || { echo "Error: envkey-cli.tar.gz signature invalid. Exiting with error." >&2; cleanup; exit 1; }; } && echo envkey-cli.tar.gz verified
   else 
     echo "minisign is not installed--won't verify artifact signature"
   fi

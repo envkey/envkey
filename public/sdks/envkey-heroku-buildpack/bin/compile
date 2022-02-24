@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+indent() {
+  sed -u 's/^/       /'
+}
+
+echo "-----> Attempting to load, decrypt, and export EnvKey variables"
+
+BP_DIR=$(cd $(dirname ${0:-}); cd ..; pwd)
+BUILD_DIR=${1:-}
+ENV_DIR=${3:-}
+ENVKEY_DIR="$BUILD_DIR/vendor/envkey/bin"
+MINISIGN_PUBKEY=RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK
+
+if [ -f $ENV_DIR/ENVKEY ]; then
+  # grab minisign so we can use it to verify envkey-source binary
+  MINISIGN_VERSION=0.10
+  MINISIGN_URL="https://github.com/jedisct1/minisign/releases/download/$MINISIGN_VERSION/minisign-$MINISIGN_VERSION-linux.tar.gz"
+  echo "Will download minisign for verifying the envkey-source binary." | indent
+  echo "Downloading minisign ${MINISIGN_VERSION} from ${MINISIGN_URL}..." | indent
+  curl -s -L -o minisign.tar.gz $MINISIGN_URL
+  tar -zxf minisign.tar.gz
+
+  # now get envkey-source
+  ENVKEY_SOURCE_VERSION=2.0.2
+  ENVKEY_URL="https://envkey-releases.s3.amazonaws.com/envkeysource/release_artifacts/${ENVKEY_SOURCE_VERSION}/envkey-source_${ENVKEY_SOURCE_VERSION}_linux_amd64.tar.gz"
+  echo "Downloading envkey-source ${ENVKEY_SOURCE_VERSION} from ${ENVKEY_URL}..." | indent
+  curl -s -o envkey-source.tar.gz $ENVKEY_URL
+  curl -s -o envkey-source.tar.gz.minisig "${ENVKEY_URL}.minisig"
+
+  # verify envkey-source
+  { ./minisign-$MINISIGN_VERSION-linux/x86_64/minisign -Vm envkey-source.tar.gz -P $MINISIGN_PUBKEY > /dev/null || { echo "Error: envkey-source signature invalid. Exiting with error." | indent >&2; exit 1; } ;} && echo "envkey-source verified by minisign" | indent
+
+  tar -zxf envkey-source.tar.gz
+  mkdir -p $ENVKEY_DIR
+  mv envkey-source $ENVKEY_DIR
+
+  echo "ENVKEY is set" | indent
+  export "ENVKEY=$(cat $ENV_DIR/ENVKEY)"
+  echo $($ENVKEY_DIR/envkey-source) > $BP_DIR/export
+  echo "EnvKey variables exported to subsequent buildpacks" | indent
+  mkdir $BUILD_DIR/.profile.d
+  cat > $BUILD_DIR/.profile.d/envkey.sh << EOF
+export -p > ./envkey-runtime-env.sh
+$(cat $BP_DIR/export)
+. ./envkey-runtime-env.sh
+rm envkey-runtime-env.sh
+export PATH=$PATH:$HOME/vendor/envkey/bin
+EOF
+  echo "EnvKey variables exported to running application via .profile.d/envkey.sh" | indent
+  echo "envkey-source executable is available for use" | indent
+else
+  echo "ENVKEY not set" | indent
+  exit 1
+fi
