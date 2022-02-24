@@ -6,6 +6,7 @@ import { initDeviceKey } from "@core/lib/client_store/key_store";
 import * as R from "ramda";
 import { getPendingUpdateDetails } from "@core/lib/client";
 import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
+import { log } from "@core/lib/utils/logger";
 
 const clipboardy = require("clipboardy");
 
@@ -184,12 +185,20 @@ clientAction<Client.Action.ClientActions["WriteClipboard"]>({
   actionType: Client.ActionType.WRITE_CLIPBOARD,
   handler: async (state, action, context) => {
     // Fix for windows 10 clipboardy issue: https://github.com/sindresorhus/clipboardy/issues/85
+
+    log("Copy-to-clipboard", {
+      platform: os.platform(),
+      release: os.release(),
+    });
+
     if (os.platform() == "win32" && os.release().includes("WSL2")) {
+      log("Windows WSL2 copy-to-clipboard");
       await new Promise<void>((resolve, reject) => {
         const proc = spawn("clip.exe");
         proc.stdin.write(action.payload.value);
         proc.stdin.end();
         proc.on("error", (err) => {
+          log("Windows copy-to-clipboard error", { err });
           reject(err);
         });
         proc.on("exit", () => resolve());
