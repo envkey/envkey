@@ -1,23 +1,3 @@
-// Copyright © 2022 Envkey Inc. <support@envkey.com>
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
 package cmd
 
 import (
@@ -32,16 +12,16 @@ import (
 	"github.com/envkey/envkey/public/sdks/envkey-source/daemon"
 	"github.com/envkey/envkey/public/sdks/envkey-source/env"
 	"github.com/envkey/envkey/public/sdks/envkey-source/fetch"
-	"github.com/envkey/envkey/public/sdks/envkey-source/parser"	
+	"github.com/envkey/envkey/public/sdks/envkey-source/parser"
 	"github.com/envkey/envkey/public/sdks/envkey-source/shell"
 	"github.com/envkey/envkey/public/sdks/envkey-source/version"
 
-	"github.com/joho/godotenv"
 	"github.com/goware/prefixer"
+	"github.com/joho/godotenv"
 	colors "github.com/logrusorgru/aurora/v3"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
-	"github.com/mitchellh/go-homedir"
 )
 
 type AppConfig struct {
@@ -124,7 +104,7 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	if shellHook != "" {		
+	if shellHook != "" {
 		shell.Hook(shellHook)
 		return
 	}
@@ -146,11 +126,11 @@ func run(cmd *cobra.Command, args []string) {
 	*		4 - .envkey config file in current directory {appId: string, orgId: string}
 	*				+ file at ~/.envkey/apps/[appId].env (for local keys mainly)
 	*	  5 - .env file at ~/.env
-	*/
+	 */
 
 	if len(args) > 0 {
 		envkey = args[0]
-	} else if (os.Getenv("ENVKEY") != ""){
+	} else if os.Getenv("ENVKEY") != "" {
 		envkey = os.Getenv("ENVKEY")
 	} else {
 		envFile := ".env"
@@ -190,7 +170,7 @@ func run(cmd *cobra.Command, args []string) {
 		if err != nil {
 			godotenv.Load(filepath.Join(home, ".env"))
 			envkey = os.Getenv("ENVKEY")
-		}		
+		}
 	}
 
 	if envkey == "" {
@@ -212,7 +192,6 @@ func run(cmd *cobra.Command, args []string) {
 
 	fetchOpts := fetch.FetchOptions{shouldCache, cacheDir, "envkey-source", version.Version, verboseOutput, timeoutSeconds, retries, retryBackoff}
 
-
 	if memCache || onChangeCmd != "" || (execCmd != "" && watch) {
 		daemon.LaunchDetachedIfNeeded(daemon.DaemonOptions{
 			verboseOutput,
@@ -222,7 +201,7 @@ func run(cmd *cobra.Command, args []string) {
 		if err != nil {
 			res, err = fetch.FetchMap(envkey, fetchOpts)
 		}
-	} else {		
+	} else {
 		res, err = fetch.FetchMap(envkey, fetchOpts)
 	}
 
@@ -293,10 +272,10 @@ func execWithEnv(envkey string, env parser.EnvMap) {
 		} else {
 			res, err = shell.Source(env, force, pamCompatible, dotEnvCompatible)
 		}
-		
+
 		checkError(err)
 		fmt.Println(res)
-		
+
 		os.Exit(0)
 	}
 
@@ -320,7 +299,7 @@ func execWithEnv(envkey string, env parser.EnvMap) {
 					var msg string
 					if execCmd != "" {
 						msg = " | command finished--waiting for changes..."
-					} else if (onChangeCmd != ""){
+					} else if onChangeCmd != "" {
 						msg = " | waiting for changes..."
 					}
 					fmt.Fprintln(os.Stderr, daemon.FormatTerminal(msg, nil))
@@ -335,11 +314,11 @@ func execWithEnv(envkey string, env parser.EnvMap) {
 	var onChange func(parser.EnvMap, parser.EnvMap)
 
 	onChange = func(updatedEnv parser.EnvMap, previousEnv parser.EnvMap) {
-		if (watchVars != nil && len(watchVars) > 0){
+		if watchVars != nil && len(watchVars) > 0 {
 			watchVarChanged := false
 			for _, k := range watchVars {
 				trimmed := strings.TrimSpace(k)
-        if (updatedEnv[trimmed] != previousEnv[trimmed]){
+				if updatedEnv[trimmed] != previousEnv[trimmed] {
 					watchVarChanged = true
 					break
 				}
@@ -387,15 +366,15 @@ func execWithEnv(envkey string, env parser.EnvMap) {
 		}
 	}
 
-	daemon.ListenChange(envkey, "envkey-source", version.Version, onChange)
+	daemon.ListenChangeWithEnv(envkey, "envkey-source", version.Version, onChange)
 }
 
 func init() {
-	RootCmd.Flags().StringVarP(&execCmd, "exec", "e", "","command to execute with EnvKey environment (default is none)")
+	RootCmd.Flags().StringVarP(&execCmd, "exec", "e", "", "command to execute with EnvKey environment (default is none)")
 	RootCmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-run --exec command whenever environment is updated (default is false)")
 	RootCmd.Flags().StringVarP(&onChangeCmd, "on-reload", "r", "", "command to execute when environment is updated (default is none)")
 	RootCmd.Flags().StringSliceVar(&watchVars, "only", nil, "when using -w or -r, reload only when specific vars change (comma-delimited list)")
-	RootCmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite existing environment variables and/or other entries in .env file")		
+	RootCmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite existing environment variables and/or other entries in .env file")
 	RootCmd.Flags().StringVar(&envFileOverride, "env-file", "", "Explicitly set path to ENVKEY-containing .env file (optional)")
 
 	RootCmd.Flags().StringVar(&shellHook, "hook", "", "hook for shell config to automatically sync when entering directory")
@@ -405,8 +384,8 @@ func init() {
 
 	RootCmd.Flags().BoolVar(&shouldCache, "cache", false, "cache encrypted config on disk as a local backup for offline work (default is false)")
 	RootCmd.Flags().StringVar(&cacheDir, "cache-dir", "", "cache directory (default is $HOME/.envkey/cache)")
-	RootCmd.Flags().BoolVar(&memCache, "mem-cache", false, "keep in-memory cache up-to-date in realtime for zero latency (default is false)")	
-	
+	RootCmd.Flags().BoolVar(&memCache, "mem-cache", false, "keep in-memory cache up-to-date in realtime for zero latency (default is false)")
+
 	RootCmd.Flags().BoolVar(&verboseOutput, "verbose", false, "print verbose output (default is false)")
 	RootCmd.Flags().Float64Var(&timeoutSeconds, "timeout", 20.0, "timeout in seconds for http requests")
 	RootCmd.Flags().Uint8Var(&retries, "retries", 3, "number of times to retry requests on failure")
@@ -426,12 +405,11 @@ func init() {
 	RootCmd.Flags().BoolVar(&pamCompatible, "pam-compatible", false, "change output format to be compatible with /etc/environment on Linux")
 	RootCmd.Flags().BoolVar(&dotEnvCompatible, "dot-env-compatible", false, "change output to .env format")
 
-
 	RootCmd.Flags().BoolVar(&daemonMode, "daemon", false, "")
 	RootCmd.Flags().MarkHidden(("daemon"))
 
 	RootCmd.Flags().BoolVar(&localDevHost, "dev", false, "")
-	RootCmd.Flags().MarkHidden(("dev"))	
+	RootCmd.Flags().MarkHidden(("dev"))
 
 	RootCmd.Flags().BoolVar(&jsonFormat, "json", false, "change output to json format")
 	RootCmd.Flags().BoolVar(&yamlFormat, "yaml", false, "change output to yaml format")

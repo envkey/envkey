@@ -3,8 +3,8 @@ package daemon
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -27,7 +27,6 @@ import (
 	"github.com/envkey/envkey/public/sdks/envkey-source/parser"
 	"github.com/envkey/envkey/public/sdks/envkey-source/version"
 	"github.com/envkey/envkey/public/sdks/envkey-source/ws"
-
 	// "github.com/davecgh/go-spew/spew"
 )
 
@@ -42,7 +41,7 @@ type SocketAuth struct {
 }
 
 type DaemonResponse struct {
-	CurrentEnv parser.EnvMap
+	CurrentEnv  parser.EnvMap
 	PreviousEnv parser.EnvMap
 }
 
@@ -51,6 +50,7 @@ var tcpServerConnsByEnvkey = map[string]net.Conn{}
 var tcpClientsByEnvkey = map[string]*net.TCPConn{}
 var currentEnvsByEnvkey = map[string]parser.EnvMap{}
 var previousEnvsByEnvkey = map[string]parser.EnvMap{}
+var onChangeChannelsByEnvkey = make(map[string](chan struct{}))
 
 var mutex sync.Mutex
 
@@ -86,7 +86,7 @@ func LaunchDetachedIfNeeded(opts DaemonOptions) error {
 		cmdArgs := []string{"--daemon"}
 
 		if opts.VerboseOutput {
-			fmt.Fprintln(os.Stderr, FormatTerminal(" | executing " + name, nil))
+			fmt.Fprintln(os.Stderr, FormatTerminal(" | executing "+name, nil))
 		}
 
 		cmd := exec.Command(name, cmdArgs...)
@@ -117,7 +117,7 @@ func LaunchDetachedIfNeeded(opts DaemonOptions) error {
 		} else {
 			msg := "envkey-source daemon couldn't be started"
 			if opts.VerboseOutput {
-				fmt.Fprintln(os.Stderr, FormatTerminal(" | " + msg, colors.Red))
+				fmt.Fprintln(os.Stderr, FormatTerminal(" | "+msg, colors.Red))
 			}
 			cmd.Process.Kill()
 			return errors.New(msg)
@@ -181,7 +181,7 @@ func FetchMap(envkey, clientNameArg, clientVersionArg string) (parser.EnvMap, pa
 	var daemonResp DaemonResponse
 
 	buf := bytes.NewBuffer(body)
-	dec := gob.NewDecoder(buf)	
+	dec := gob.NewDecoder(buf)
 
 	if err := dec.Decode(&daemonResp); err != nil {
 		return nil, nil, err
@@ -193,50 +193,40 @@ func FetchMap(envkey, clientNameArg, clientVersionArg string) (parser.EnvMap, pa
 func InlineStart() {
 	go startTcpServer()
 	go startHttpServer()
-	select {
-	}
+	select {}
 }
 
-func ListenChange(envkey, clientName, clientVersion string, onChange func(parser.EnvMap, parser.EnvMap)) {
-	mutex.Lock()
-	tcpClient := tcpClientsByEnvkey[envkey]
-	mutex.Unlock()
-
-	if tcpClient != nil {
-		tcpClient.Close()
-	}
+func ListenChange(envkey string, onChange func(), onInvalid func(), onLostConnection func(error), onConnectFailed func(error)) {
+	RemoveListener(envkey)
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:19410")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't connect to envkey daemon: "+err.Error(), colors.Red))
-		os.Exit(1)
+		onConnectFailed(err)
 	}
 	client, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't connect to envkey daemon: "+err.Error(), colors.Red))
-		os.Exit(1)
+		onConnectFailed(err)
 	}
 
 	writer := bufio.NewWriter(client)
 	_, err = writer.WriteString(envkey + "\n")
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't connect to envkey daemon: "+err.Error(), colors.Red))
-		os.Exit(1)
+		onConnectFailed(err)
 	}
 
 	err = writer.Flush()
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't connect to envkey daemon: "+err.Error(), colors.Red))
-		os.Exit(1)
+		onConnectFailed(err)
 	}
+
+	done := make(chan struct{})
 
 	mutex.Lock()
 	tcpClientsByEnvkey[envkey] = client
+	onChangeChannelsByEnvkey[envkey] = done
 	mutex.Unlock()
-
-	done := make(chan struct{})
 
 	go func() {
 		defer close(done)
@@ -245,24 +235,15 @@ func ListenChange(envkey, clientName, clientVersion string, onChange func(parser
 			res, err := reader.ReadString('\n')
 
 			if err != nil {
-				fmt.Fprintln(os.Stderr, FormatTerminal(" | lost connection to envkey daemon: "+err.Error(), colors.Red))
-				os.Exit(1)
+				onLostConnection(err)
 			}
 			msg := strings.TrimSpace(res)
 
 			if msg == "envkey_invalid" {
-				fmt.Fprintln(os.Stderr, FormatTerminal(" | ENVKEY invalid--watcher will exit", colors.Red))
-				os.Exit(1)
+				onInvalid()
 			}
 
-			currentEnv, previousEnv, err := FetchMap(envkey, clientName, clientVersion)
-
-			if err != nil {
-				fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't fetch latest env: "+err.Error(), colors.Red))
-				os.Exit(1)
-			}
-
-			onChange(currentEnv, previousEnv)
+			onChange()
 		}
 	}()
 
@@ -272,6 +253,43 @@ func ListenChange(envkey, clientName, clientVersion string, onChange func(parser
 			return
 		}
 	}
+}
+
+func RemoveListener(envkey string) {
+	mutex.Lock()
+	tcpClient := tcpClientsByEnvkey[envkey]
+	onChangeChannel := onChangeChannelsByEnvkey[envkey]
+	mutex.Unlock()
+
+	if tcpClient != nil {
+		tcpClient.Close()
+	}
+
+	if onChangeChannel != nil {
+		close(onChangeChannel)
+	}
+}
+
+func ListenChangeWithEnv(envkey, clientName, clientVersion string, onChange func(parser.EnvMap, parser.EnvMap)) {
+	ListenChange(envkey, func() {
+		currentEnv, previousEnv, err := FetchMap(envkey, clientName, clientVersion)
+
+		if err != nil {
+			fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't fetch latest env: "+err.Error(), colors.Red))
+			os.Exit(1)
+		}
+
+		onChange(currentEnv, previousEnv)
+	}, func() {
+		fmt.Fprintln(os.Stderr, FormatTerminal(" | ENVKEY invalid--watcher will exit", colors.Red))
+		os.Exit(1)
+	}, func(err error) {
+		fmt.Fprintln(os.Stderr, FormatTerminal(" | lost connection to envkey daemon: "+err.Error(), colors.Red))
+		os.Exit(1)
+	}, func(err error) {
+		fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't connect to envkey daemon: "+err.Error(), colors.Red))
+		os.Exit(1)
+	})
 }
 
 func startTcpServer() {
@@ -341,11 +359,11 @@ func aliveHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Still kickin'")
 }
 
-func stopHandler(w http.ResponseWriter, r *http.Request) {	
+func stopHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "envkey-source daemon stopped'")		
-	if f, ok := w.(http.Flusher); ok { 
-	  f.Flush() 
+	fmt.Fprint(w, "envkey-source daemon stopped'")
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
 	}
 	os.Exit(0)
 }
@@ -359,7 +377,7 @@ func fetchHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Not found")
 	}
 
-	defer func (){
+	defer func() {
 		mutex.Lock()
 		previousEnvsByEnvkey[envkey] = nil
 		mutex.Unlock()
@@ -394,12 +412,12 @@ func fetchHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintln(w, "Connect envkey socket error", err)
 			return
-		}		
+		}
 	} else {
-		if !socket.IsConnected() {			 
+		if !socket.IsConnected() {
 			err := fetchCurrent(envkey, vars["clientName"], vars["clientVersion"])
 
-			mutex.Lock()			
+			mutex.Lock()
 			previousEnv = previousEnvsByEnvkey[envkey]
 			currentEnv = currentEnvsByEnvkey[envkey]
 			mutex.Unlock()
