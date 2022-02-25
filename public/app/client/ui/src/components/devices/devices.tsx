@@ -9,6 +9,7 @@ import * as styles from "@styles";
 import { SvgImage } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
+import copy from "copy-text-to-clipboard";
 
 const getDevicesComponent = (isTopLevel?: true) => {
   const Devices: OrgComponent<{ userId?: string }> = (props) => {
@@ -391,10 +392,7 @@ const getDevicesComponent = (isTopLevel?: true) => {
                       <button
                         onClick={() => {
                           setCopiedIndex(i);
-                          props.dispatch({
-                            type: Client.ActionType.WRITE_CLIPBOARD,
-                            payload: { value: encryptionToken },
-                          });
+                          copy(encryptionToken);
                         }}
                       >
                         Copy

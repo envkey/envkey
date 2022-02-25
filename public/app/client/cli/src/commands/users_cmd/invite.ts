@@ -1,6 +1,5 @@
 import * as z from "zod";
 import chalk from "chalk";
-import fs from "fs";
 import { Api, Client, Model } from "@core/types";
 import { Graph } from "@core/types/client/graph";
 import { exit } from "../../lib/process";
@@ -12,13 +11,10 @@ import {
   sortByPredefinedOrder,
 } from "../../lib/args";
 import { OrgRole } from "@core/types/rbac";
-import Table from "cli-table3";
 import { graphTypes, authz } from "@core/lib/graph";
 import { fetchScimCandidates } from "../../lib/scim_client_helpers";
 import { autoModeOut, getPrompt } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
-
-const clipboardy = require("clipboardy");
 
 const isEmailValidator = (value: string): boolean => {
   try {
@@ -348,15 +344,14 @@ export const handler = async (
     );
   }
   const outOfBandEncToken = [identityHash, encryptionKey].join("_");
-  clipboardy.writeSync(outOfBandEncToken);
+
   console.log(
     `\nAn EnvKey invitation has been sent to ${firstName} by email.\nYou also need to send ${firstName} an ${chalk.bold(
       "Encryption Token"
-    )} by any reasonably private channel (like Slack, Twitter, Skype, or Facebook). It was ${chalk.bold(
-      "just copied"
-    )} to your system's clipboard.`
+    )} by any reasonably private channel (like Slack, Twitter, Skype, or Facebook.`
   );
-  console.log("  ", outOfBandEncToken);
+  console.log("\n", chalk.bold("Encryption Token:\n"));
+  console.log(outOfBandEncToken);
 
   const hasNoDefaultApps = !(state.graph[orgRoleId] as OrgRole).autoAppRoleId;
   if (hasNoDefaultApps) {

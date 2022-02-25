@@ -14,9 +14,6 @@ import {
 import { autoModeOut, getPrompt } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
-const clipboardy = require("clipboardy");
-const notifier = require("node-notifier");
-
 export const command = ["create [name] [role]"];
 export const desc = "Create a CLI key for automating the EnvKey CLI.";
 export const builder = (yargs: Argv<BaseArgs>) =>
@@ -173,8 +170,6 @@ export const handler = async (
     `\n  Environment variable: CLI_ENVKEY=${chalk.bold(cliKey)}`,
     "\n"
   );
-  clipboardy.writeSync(cliKey);
-  notifier.notify("The new CLI key has been copied to clipboard.");
 
   autoModeOut({ cliKey: cliKey, id: newUser.id, roleId: role.id });
 

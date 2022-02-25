@@ -1,4 +1,3 @@
-import clipboardy from "clipboardy";
 import * as R from "ramda";
 import {
   authz,
@@ -288,9 +287,6 @@ export const handler = async (
   console.log(table.toString());
   console.log("Local Key:", `\nENVKEY=${chalk.bold(fullKey)}`);
   autoModeOut({ localKey: fullKey, id: newLocalKey.id, appId: app.id });
-
-  clipboardy.writeSync(fullKey);
-  notifier.notify("The new local envkey has been copied to clipboard.");
 
   console.log("");
   console.log(

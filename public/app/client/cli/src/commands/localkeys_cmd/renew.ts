@@ -12,7 +12,6 @@ import { Client, Model } from "@core/types";
 import chalk from "chalk";
 import * as R from "ramda";
 import Table from "cli-table3";
-import clipboardy from "clipboardy";
 import {
   findApp,
   findKeyableParent,
@@ -208,9 +207,6 @@ export const handler = async (
     id: localKey.id,
     appId: app.id,
   });
-
-  clipboardy.writeSync(fullKey);
-  notifier.notify("The new local envkey has been copied to clipboard.");
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

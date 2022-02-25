@@ -7,6 +7,7 @@ import { twitterShortTs } from "@core/lib/utils/date";
 import { capitalizeAll } from "humanize-plus";
 import humanize from "humanize-string";
 import { ExternalLink } from "../shared";
+import copy from "copy-text-to-clipboard";
 
 export const KeyableParent: OrgComponent<
   {},
@@ -178,14 +179,8 @@ export const KeyableParent: OrgComponent<
                 envkeyParts.push(currentAccount.hostUrl);
               }
 
+              copy(`ENVKEY=${envkeyParts.join("-")}`);
               onCopied();
-
-              props.dispatch({
-                type: Client.ActionType.WRITE_CLIPBOARD,
-                payload: {
-                  value: `ENVKEY=${envkeyParts.join("-")}`,
-                },
-              });
             }}
           >
             Copy ENVKEY

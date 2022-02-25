@@ -602,11 +602,6 @@ export namespace Action {
       };
     };
 
-    WriteClipboard: {
-      type: ActionType.WRITE_CLIPBOARD;
-      payload: { value: string };
-    };
-
     OpenUrl: {
       type: ActionType.OPEN_URL;
       payload: { url: string };

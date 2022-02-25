@@ -4,6 +4,7 @@ import { Client } from "@core/types";
 import { cliUserRoute } from "./helpers";
 import * as g from "@core/lib/graph";
 import * as styles from "@styles";
+import copy from "copy-text-to-clipboard";
 
 export const GeneratedCliUsers: OrgComponent<
   { appId?: string },
@@ -64,10 +65,7 @@ export const GeneratedCliUsers: OrgComponent<
             <button
               onClick={() => {
                 setCopiedIndex(i);
-                props.dispatch({
-                  type: Client.ActionType.WRITE_CLIPBOARD,
-                  payload: { value: cliKey },
-                });
+                copy(cliKey);
               }}
             >
               Copy

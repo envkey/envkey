@@ -1,11 +1,9 @@
-import clipboardy from "clipboardy";
 import * as R from "ramda";
 import {
   authz,
   graphTypes,
   getEnvironmentName,
   getEnvironmentsByEnvParentId,
-  getActiveGeneratedEnvkeysByKeyableParentId,
 } from "@core/lib/graph";
 import { exit } from "../../lib/process";
 import { Argv } from "yargs";
@@ -27,7 +25,6 @@ import {
   tryApplyDetectedAppOverride,
 } from "../../app_detection";
 // old module
-const notifier = require("node-notifier");
 
 export const command = ["create [app] [environment] [server-name]"];
 export const desc = "Create a new server ENVKEY.";
@@ -306,9 +303,6 @@ export const handler = async (
   console.log(table.toString());
   console.log("Server Key:", `\nENVKEY=${chalk.bold(fullKey)}`);
   autoModeOut({ serverKey: fullKey, id: newServer.id, appId: app.id });
-
-  clipboardy.writeSync(fullKey);
-  notifier.notify("The new server envkey has been copied to clipboard.");
 
   console.log("");
   console.log("Set it as an environment variable on your server.");

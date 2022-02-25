@@ -9,8 +9,6 @@ import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import * as semver from "semver";
 import { log } from "@core/lib/utils/logger";
 
-const clipboardy = require("clipboardy");
-
 clientAction<Client.Action.ClientActions["InitDevice"]>({
   type: "clientAction",
   actionType: Client.ActionType.INIT_DEVICE,
@@ -179,35 +177,6 @@ clientAction<Client.Action.ClientActions["MergePersisted"]>({
 clientAction<Client.Action.ClientActions["FetchedClientState"]>({
   type: "clientAction",
   actionType: Client.ActionType.FETCHED_CLIENT_STATE,
-});
-
-clientAction<Client.Action.ClientActions["WriteClipboard"]>({
-  type: "clientAction",
-  actionType: Client.ActionType.WRITE_CLIPBOARD,
-  handler: async (state, action, context) => {
-    // Fix for windows 10 clipboardy issue: https://github.com/sindresorhus/clipboardy/issues/85
-
-    log("Copy-to-clipboard", {
-      platform: os.platform(),
-      release: os.release(),
-    });
-
-    if (os.platform() == "win32" && semver.gte(os.release(), "8.0.0")) {
-      log("Windows copy-to-clipboard");
-      await new Promise<void>((resolve, reject) => {
-        const proc = spawn("clip.exe");
-        proc.stdin.write(action.payload.value);
-        proc.stdin.end();
-        proc.on("error", (err) => {
-          log("Windows copy-to-clipboard error", { err });
-          reject(err);
-        });
-        proc.on("exit", () => resolve());
-      }).catch((err) => clipboardy.write(action.payload.value));
-    } else {
-      await clipboardy.write(action.payload.value);
-    }
-  },
 });
 
 clientAction<Client.Action.ClientActions["SetUiLastSelectedAccountId"]>({

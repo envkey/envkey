@@ -9,7 +9,6 @@ import { authz, graphTypes } from "@core/lib/graph";
 import * as R from "ramda";
 import { autoModeOut } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
-const clipboardy = require("clipboardy");
 
 export const command = "authorize [person]";
 export const desc = "Authorize a new device.";
@@ -119,10 +118,6 @@ export const handler = async (
   console.log(`\n    ${chalk.bold(outOfBandEncToken)}\n`);
   autoModeOut({ encryptionToken: outOfBandEncToken });
 
-  clipboardy.writeSync(outOfBandEncToken);
-  console.log(
-    chalk.italic("    The encryption token was copied to your clipboard.")
-  );
   console.log(
     `\n${
       auth.userId === granteeUser.id

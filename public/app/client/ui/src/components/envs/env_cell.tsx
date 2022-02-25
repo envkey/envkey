@@ -21,6 +21,7 @@ import { getValDisplay } from "@ui_lib/envs";
 import { SvgImage } from "@images";
 import * as EntryForm from "./entry_form";
 import { isMultiline } from "@core/lib/utils/string";
+import copy from "copy-text-to-clipboard";
 
 type Props = {
   entryKey: string;
@@ -514,10 +515,7 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
             onClick={(e) => {
               e.stopPropagation();
               setCopied(true);
-              props.dispatch({
-                type: Client.ActionType.WRITE_CLIPBOARD,
-                payload: { value: val! },
-              });
+              copy(val!);
               setTimeout(() => setCopied(false), 1500);
             }}
             className="copy"

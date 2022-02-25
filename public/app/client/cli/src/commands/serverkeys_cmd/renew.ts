@@ -11,7 +11,6 @@ import {
 import { Client, Model } from "@core/types";
 import chalk from "chalk";
 import Table from "cli-table3";
-import clipboardy from "clipboardy";
 import {
   findApp,
   findServer,
@@ -21,8 +20,6 @@ import {
 } from "../../lib/args";
 import { autoModeOut, getPrompt, isAutoMode } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
-// old module
-const notifier = require("node-notifier");
 
 export const command = ["regen [app] [server]"];
 export const desc = "Regenerate a server ENVKEY.";
@@ -228,9 +225,6 @@ export const handler = async (
   console.log(table.toString());
   console.log("New Server Key:", `\nENVKEY=${chalk.bold(fullKey)}`);
   autoModeOut({ serverKey: fullKey, id: server.id, appId: app.id });
-
-  clipboardy.writeSync(fullKey);
-  notifier.notify("The new server envkey has been copied to clipboard.");
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

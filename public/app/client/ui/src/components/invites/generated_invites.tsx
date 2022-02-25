@@ -6,6 +6,7 @@ import { simpleDurationString } from "@core/lib/utils/date";
 import * as g from "@core/lib/graph";
 import * as styles from "@styles";
 import * as R from "ramda";
+import copy from "copy-text-to-clipboard";
 
 export const GeneratedInvites: OrgComponent<
   { appId?: string },
@@ -79,10 +80,7 @@ export const GeneratedInvites: OrgComponent<
             <button
               onClick={() => {
                 setCopiedIndex(i);
-                props.dispatch({
-                  type: Client.ActionType.WRITE_CLIPBOARD,
-                  payload: { value: encryptionToken },
-                });
+                copy(encryptionToken);
               }}
             >
               Copy

@@ -103,7 +103,6 @@ enum ActionType {
 
   RECEIVED_ORG_SOCKET_MESSAGE = "envkey/client/RECEIVED_ORG_SOCKET_MESSAGE",
 
-  WRITE_CLIPBOARD = "envkey/client/WRITE_CLIPBOARD",
   OPEN_URL = "envkey/client/OPEN_URL",
 
   DEPLOY_SELF_HOSTED = "envkey/client/DEPLOY_SELF_HOSTED",
