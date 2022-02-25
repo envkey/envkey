@@ -9,8 +9,8 @@ import * as styles from "@styles";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 
-const INVITE_TOKEN_REGEX = /^(i|dg)_[a-zA-Z0-9]{26}_.+$/;
-const ENCRYPTION_TOKEN_REGEX = /^[a-fA-F0-9]{64}_[a-zA-Z0-9]{26}$/;
+const INVITE_TOKEN_REGEX = /^(i|dg)_[a-zA-Z0-9]{22}_.+$/;
+const ENCRYPTION_TOKEN_REGEX = /^[a-fA-F0-9]{64}_[a-zA-Z0-9]{22}$/;
 
 let runningLoop = false;
 

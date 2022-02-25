@@ -61,7 +61,7 @@ export const ClientUpgrades: React.FC<
   useLayoutEffect(() => {
     if (showLoader && progressPct > 0) {
       setShowLoader(false);
-    } else if (!showLoader && progressPct >= 1 && !showLoaderTimeout) {
+    } else if (!showLoader && progressPct >= 0.9 && !showLoaderTimeout) {
       showLoaderTimeout = setTimeout(() => {
         setShowLoader(true);
         showLoaderTimeout = undefined;

@@ -82,7 +82,7 @@ export const sendEmail = async (email: CustomEmail) => {
   const { to, subject, bodyMarkdown } = email;
   const emailData = {
     to,
-    from: process.env.SENDER_EMAIL,
+    from: `EnvKey <${process.env.SENDER_EMAIL}>`,
     subject,
     text: marked(bodyMarkdown, { renderer: plainTextRenderer }),
     html: marked(bodyMarkdown),
@@ -116,7 +116,7 @@ export const sendBulkEmail = async (email: CustomEmail) => {
   const { to, subject, bodyMarkdown } = email;
   const emailData = {
     to,
-    from: process.env.SENDER_EMAIL,
+    from: `EnvKey <${process.env.SENDER_EMAIL}>`,
     subject,
     text: marked(bodyMarkdown, { renderer: plainTextRenderer }),
     html: marked(bodyMarkdown),
