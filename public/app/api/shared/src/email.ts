@@ -1,9 +1,12 @@
 import type Mail from "nodemailer/lib/mailer";
 import nodemailer from "nodemailer";
 import { env } from "./env";
-import { marked } from "marked";
 import { log, logStderr } from "@core/lib/utils/logger";
 import { newMemoryQueue } from "./memory_queue";
+
+// workaround for mismatched marked module typings
+import { marked as markedImport } from "marked";
+const marked = require("marked") as typeof markedImport;
 
 type CustomEmail = {
   to: string;

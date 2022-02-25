@@ -4,9 +4,12 @@ import chalk from "chalk";
 import * as semver from "semver";
 import * as R from "ramda";
 import { dispatch } from "./core";
-import { marked } from "marked";
 import { spinner, stopSpinner } from "./spinner";
 import { getPrompt } from "./console_io";
+
+// workaround for mismatched marked module typings
+import { marked as markedImport } from "marked";
+const marked = require("marked") as typeof markedImport;
 
 const SKIP_UPGRADE_DURATION = 1000 * 60 * 60 * 24; // 1 day
 

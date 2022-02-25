@@ -25,8 +25,12 @@ if (requestingBuildInfo) {
 }
 
 // configure marked for rendering markdown in terminal
-import { marked } from "marked";
-import TerminalRenderer from "marked-terminal";
+
+// workaround for mismatched marked module typings
+import { marked as markedImport } from "marked";
+const marked = require("marked") as typeof markedImport;
+
+const TerminalRenderer = require("marked-terminal");
 marked.setOptions({
   renderer: new TerminalRenderer(),
 });
