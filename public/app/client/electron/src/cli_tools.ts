@@ -360,14 +360,14 @@ const unpackToFolder = async (
 
     await new Promise((resolve, reject) => {
       exec(
-        `${minisignPath} -Vm ${tempFilePath} -P ${MINISIGN_PUBKEY}`,
+        `"${minisignPath}" -Vm ${tempFilePath} -P ${MINISIGN_PUBKEY}`,
         (error, stdout, stderr) => {
           if (stderr) {
             log(`Error verifying signature with minisig`, { stderr });
 
             dialog.showMessageBox({
               title: "EnvKey CLI Tools",
-              message: `There was a problem verifying the signature of the \`${execName}\` CLI tool executable. This might indicate a security issue. Please contact support@envkey.com as soon as possible so we can investigate.`,
+              message: `There was a problem verifying the signature of the \`${execName}\` CLI tool executable. This might indicate a security issue. Please contact support@envkey.com so we can investigate.`,
               buttons: ["OK"],
             });
 

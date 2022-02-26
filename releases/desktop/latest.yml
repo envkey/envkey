@@ -1,8 +1,8 @@
-version: 2.0.14
+version: 2.0.15
 files:
-  - url: EnvKey_Windows_Installer-2.0.14.exe
-    sha512: KXblVpmF5vFk/wy1PODB26yt0YKzMY9UvukThYEjuDhThrnYzrv5uf7caet5005QDP8Jsu3fR7+oi4TwiV+3lQ==
-    size: 68650424
-path: EnvKey_Windows_Installer-2.0.14.exe
-sha512: KXblVpmF5vFk/wy1PODB26yt0YKzMY9UvukThYEjuDhThrnYzrv5uf7caet5005QDP8Jsu3fR7+oi4TwiV+3lQ==
-releaseDate: '2022-02-26T18:15:47.858Z'
+  - url: EnvKey_Windows_Installer-2.0.15.exe
+    sha512: jQjZbM73Grdge+9yRuJR1l6sUK7B5CEiHl15RQcWtmCvfAlydHsBpUsYny0a5xupeHzOEAgZ1EGmzUqXVMbaOQ==
+    size: 68650808
+path: EnvKey_Windows_Installer-2.0.15.exe
+sha512: jQjZbM73Grdge+9yRuJR1l6sUK7B5CEiHl15RQcWtmCvfAlydHsBpUsYny0a5xupeHzOEAgZ1EGmzUqXVMbaOQ==
+releaseDate: '2022-02-26T19:19:58.936Z'
