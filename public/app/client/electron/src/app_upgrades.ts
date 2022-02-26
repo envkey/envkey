@@ -16,7 +16,7 @@ import {
   downloadAndInstallCliTools,
   isLatestCliInstalled,
   isLatestEnvkeysourceInstalled,
-} from "./cli_upgrades";
+} from "./cli_tools";
 
 const CHECK_INTERVAL = 10 * 60 * 1000;
 // allow looping only once

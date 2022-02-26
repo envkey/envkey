@@ -260,28 +260,6 @@ const download = async (
     assetName,
   });
 
-  // const sigStr = sigBuf.toString();
-  // const sigSplit = sigStr.split("\n");
-  // const sig = sigSplit[sigSplit.length - 1];
-
-  // log(`Verifying ${assetName}.minisig`, {
-  //   sig,
-  //   anotherPubkey: naclUtil.encodeBase64(signingPubkey),
-  // });
-  // if (
-  //   !nacl.sign.detached.verify(
-  //     new Uint8Array(
-  //       fileBuf.buffer,
-  //       fileBuf.byteOffset,
-  //       fileBuf.byteLength / Uint8Array.BYTES_PER_ELEMENT
-  //     ),
-  //     naclUtil.decodeBase64(sig),
-  //     naclUtil.decodeBase64(MINISIGN_PUBKEY)
-  //   )
-  // ) {
-  //   throw new Error("Couldn't verify signature for " + execName);
-  // }
-
   const folder = await unpackToFolder(fileBuf, sigBuf, execName);
   log(`${friendlyName} update: unpacked to folder`, { folder });
 
@@ -373,6 +351,12 @@ const unpackToFolder = async (
         linux: ["linux", "minisign"],
       }[platform] ?? []),
     ]);
+
+    log(`Verifying ${execName} with minisign`, {
+      platform,
+      arch,
+      minisignPath,
+    });
 
     await new Promise((resolve, reject) => {
       exec(
@@ -484,11 +468,7 @@ const copyExecFiles = async (
   }
 
   try {
-    log(`attempting mkdirp(${destinationFolder})`);
-    await mkdirp(destinationFolder).then((res) => {
-      log(`mkdirp(${destinationFolder}) success`);
-      return res;
-    });
+    await mkdirp(destinationFolder);
 
     await Promise.all(
       files.map(([folder, file]) => {

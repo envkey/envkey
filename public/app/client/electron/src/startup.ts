@@ -8,7 +8,7 @@ import {
   isLatestCliInstalled,
   isLatestEnvkeysourceInstalled,
   installCliAutocomplete,
-} from "./cli_upgrades";
+} from "./cli_tools";
 
 export const startup = async (onInit: (authTokenRes: string) => void) => {
   startCoreFromElectron()

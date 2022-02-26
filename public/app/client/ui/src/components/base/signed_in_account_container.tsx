@@ -412,7 +412,6 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
   useEffect(() => {
     if (auth && props.core.fetchSessionError) {
       console.log("fetchSessionErr", {
-        auth,
         err: props.core.fetchSessionError,
       });
     }
