@@ -132,7 +132,8 @@ const usersNode: MaybeNodeFn = (state, currentUserId, now) => {
 
 const teamsNode: MaybeNodeFn = (state, currentUserId, now) => {
   const teams = g.getGroupsByObjectType(state.graph)["orgUser"] ?? [];
-  return teams.length > 0
+  return teams.length > 0 &&
+    g.authz.hasOrgPermission(state.graph, currentUserId, "blocks_read_all")
     ? {
         label: "Teams",
         showInTree: true,

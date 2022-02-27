@@ -33,7 +33,8 @@ export const useUserTabs = (
         : g.authz.canManageCliUser(graph, currentUserId, user.id),
       g.authz.canListAppsForUser(graph, currentUserId, user.id),
       g.authz.canListBlocksForUser(graph, currentUserId, user.id),
-      (user.type == "orgUser" && org.teamsEnabled) ??
+      user.type == "orgUser" &&
+        (org.teamsEnabled ?? false) &&
         g.authz.canManageUserGroups(graph, currentUserId),
       g.authz.hasOrgPermission(graph, currentUserId, "org_read_logs"),
     ];

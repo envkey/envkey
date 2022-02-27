@@ -103,7 +103,7 @@ export const ManageEnvkeys =
         marginBottom: 40,
       },
 
-      ".local-envkeys": {
+      ".local-envkeys:not(:first-of-type)": {
         marginTop: 40,
       },
     },

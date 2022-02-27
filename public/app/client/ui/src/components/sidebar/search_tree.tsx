@@ -151,7 +151,7 @@ export const SearchTree: OrgComponent<{}, Props> = (props) => {
 
       canCreateApp: g.authz.canCreateApp(graph, currentUserId),
       canCreateTeam:
-        (org.teamsEnabled ||
+        (org.teamsEnabled &&
           g.authz.canManageUserGroups(graph, currentUserId)) ??
         false,
       canCreateBlock: g.authz.canCreateBlock(graph, currentUserId),

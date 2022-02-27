@@ -1166,6 +1166,7 @@ export const SubEnvs = style({
 
             "&.sub-label": {
               position: "fixed",
+              paddingRight: 10,
               userSelect: "none",
               top: layout.MAIN_HEADER_HEIGHT,
               fontSize: "16px",
