@@ -53,7 +53,9 @@ You can download the latest versions of the EnvKey UI and CLI for your platform 
 
 The first time you open the app, [EnvKey's CLI](https://docs-v2.envkey.com/cli-overview) and the [envkey-source](https://docs-v2.envkey.com/envkey-source) integration tool will also be installed for you. Both can also be installed individually on a server.
 
-You can also go to [releases](https://github.com/envkey/envkey/releases) in this repo and find the latest release of `envkey-desktop` for your platform. Here's a [quick overview on verifying releases with minisign](https://docs-v2.envkey.com/verifying-releases).
+You can also go to [releases](https://github.com/envkey/envkey/releases) in this repo and find the latest release of `envkey-desktop` for your platform.
+
+Here's a [quick overview on verifying releases with minisign](https://docs-v2.envkey.com/docs/verifying-releases).
 
 ## Docs
 
