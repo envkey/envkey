@@ -9,13 +9,77 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/mitchellh/go-homedir"
 )
 
+type AppConfig struct {
+	AppId string `json:"appId"`
+}
+
 type LocalKeyRes struct {
 	LocalKey string `json:"localKey"`
+}
+
+func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localDevHost bool) (string, AppConfig) {
+	/*
+	* ENVKEY lookup order:
+	*		1 - ENVKEY environment variable is set
+	*		2 - .env file in current directory
+	*		3 - .envkey config file in current directory {appId: string, orgId: string}
+	*				+ file at ~/.envkey/apps/[appId].env (for local keys mainly)
+	*	  4 - .env file at ~/.env
+	 */
+
+	var envkey string
+	var appConfig AppConfig
+
+	if os.Getenv("ENVKEY") != "" {
+		envkey = os.Getenv("ENVKEY")
+	} else {
+		envFile := ".env"
+		if envFileOverride != "" {
+			envFile = envFileOverride
+		}
+		godotenv.Load(envFile)
+		envkey = os.Getenv("ENVKEY")
+	}
+
+	if envkey == "" {
+		if verboseOutput {
+			fmt.Fprintln(os.Stderr, "loading .envkey")
+		}
+
+		jsonBytes, err := os.ReadFile(".envkey")
+
+		if err == nil {
+			if verboseOutput {
+				fmt.Fprintln(os.Stderr, string(jsonBytes))
+			}
+
+			err = json.Unmarshal(jsonBytes, &appConfig)
+			utils.CheckError(err, toStderr)
+
+			if verboseOutput {
+				fmt.Fprintln(os.Stderr, "loaded app config")
+			}
+
+			envkey, err = EnvkeyFromAppId(appConfig.AppId, verboseOutput, localDevHost)
+			utils.CheckError(err, toStderr)
+		}
+	}
+
+	if envkey == "" && envFileOverride == "" {
+		home, err := homedir.Dir()
+		if err != nil {
+			godotenv.Load(filepath.Join(home, ".env"))
+			envkey = os.Getenv("ENVKEY")
+		}
+	}
+
+	return envkey, appConfig
 }
 
 func EnvkeyFromAppId(appId string, verboseOutput bool, localDevHost bool) (string, error) {

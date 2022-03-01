@@ -1,0 +1,33 @@
+{
+  "name": "envkey-webpack-plugin",
+  "version": "2.0.0",
+  "description": "Use envkey as a webpack plugin.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/envkey/envkey.git"
+  },
+  "keywords": [
+    "webpack",
+    "secrets",
+    "configuration",
+    "environment variables",
+    "security",
+    "encryption"
+  ],
+  "author": "EnvKey <support@envkey.com> (https://www.envkey.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/envkey/envkey/issues"
+  },
+  "homepage": "https://github.com/envkey/envkey/public/sdks/languages/envkey-webpack-plugin#readme",
+  "dependencies": {
+    "envkey": "^2.0.0"
+  },
+  "peerDependencies": {
+    "webpack": "*"
+  }
+}

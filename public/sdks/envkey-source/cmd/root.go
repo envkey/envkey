@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/daemon"
@@ -14,19 +12,14 @@ import (
 	"github.com/envkey/envkey/public/sdks/envkey-source/fetch"
 	"github.com/envkey/envkey/public/sdks/envkey-source/parser"
 	"github.com/envkey/envkey/public/sdks/envkey-source/shell"
+	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
 	"github.com/envkey/envkey/public/sdks/envkey-source/version"
 
 	"github.com/goware/prefixer"
-	"github.com/joho/godotenv"
 	colors "github.com/logrusorgru/aurora/v3"
-	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
-
-type AppConfig struct {
-	AppId string `json:"appId"`
-}
 
 var cacheDir string
 var envFileOverride string
@@ -57,11 +50,16 @@ var unset bool
 var jsonFormat bool
 var yamlFormat bool
 
+var clientNameArg string
+var clientVersionArg string
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   use,
 	Short: "Cross-platform integration tool to load an EnvKey environment in development or on a server.",
-	Run:   run,
+	Run: func(cmd *cobra.Command, args []string) {
+		run(cmd, args, true)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -73,22 +71,7 @@ func Execute() {
 	}
 }
 
-func fatal(msg string) {
-	if execCmd == "" {
-		fmt.Fprintf(os.Stderr, msg)
-	} else {
-		fmt.Println("echo 'error: " + msg + "'; false")
-	}
-	os.Exit(1)
-}
-
-func checkError(err error) {
-	if err != nil {
-		fatal(err.Error())
-	}
-}
-
-func run(cmd *cobra.Command, args []string) {
+func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	if printVersion {
 		fmt.Println(version.Version)
 		return
@@ -114,9 +97,14 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	if (clientNameArg != "" && clientVersionArg == "") ||
+		(clientVersionArg != "" && clientNameArg == "") {
+		utils.Fatal("if one of --client-name or --client-version is set, the other must also be set", execCmd == "")
+	}
+
 	var envkey string
+	var appConfig env.AppConfig
 	var err error
-	var appConfig AppConfig
 
 	/*
 	* ENVKEY lookup order:
@@ -128,49 +116,10 @@ func run(cmd *cobra.Command, args []string) {
 	*	  5 - .env file at ~/.env
 	 */
 
-	if len(args) > 0 {
-		envkey = args[0]
-	} else if os.Getenv("ENVKEY") != "" {
-		envkey = os.Getenv("ENVKEY")
+	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+		envkey = strings.TrimSpace(args[0])
 	} else {
-		envFile := ".env"
-		if envFileOverride != "" {
-			envFile = envFileOverride
-		}
-		godotenv.Load(envFile)
-		envkey = os.Getenv("ENVKEY")
-	}
-
-	if envkey == "" {
-		if verboseOutput {
-			fmt.Fprintln(os.Stderr, "loading .envkey")
-		}
-
-		jsonBytes, err := os.ReadFile(".envkey")
-
-		if err == nil {
-			if verboseOutput {
-				fmt.Fprintln(os.Stderr, string(jsonBytes))
-			}
-
-			err = json.Unmarshal(jsonBytes, &appConfig)
-			checkError(err)
-
-			if verboseOutput {
-				fmt.Fprintln(os.Stderr, "loaded app config")
-			}
-
-			envkey, err = env.EnvkeyFromAppId(appConfig.AppId, verboseOutput, localDevHost)
-			checkError(err)
-		}
-	}
-
-	if envkey == "" && envFileOverride == "" {
-		home, err := homedir.Dir()
-		if err != nil {
-			godotenv.Load(filepath.Join(home, ".env"))
-			envkey = os.Getenv("ENVKEY")
-		}
+		envkey, appConfig = env.GetEnvkey(verboseOutput, envFileOverride, execCmd == "", localDevHost)
 	}
 
 	if envkey == "" {
@@ -180,7 +129,7 @@ func run(cmd *cobra.Command, args []string) {
 		} else if ignoreMissing {
 			os.Exit(0)
 		} else {
-			fatal("ENVKEY missing")
+			utils.Fatal("ENVKEY missing", execCmd == "")
 		}
 	}
 
@@ -188,15 +137,26 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Fprintln(os.Stderr, "loaded ENVKEY")
 	}
 
+	var clientName string
+	var clientVersion string
+
+	if clientNameArg != "" && clientVersion != "" {
+		clientName = clientNameArg
+		clientVersion = clientVersionArg
+	} else {
+		clientName = "envkey-source"
+		clientVersion = version.Version
+	}
+
 	var res parser.EnvMap
 
-	fetchOpts := fetch.FetchOptions{shouldCache, cacheDir, "envkey-source", version.Version, verboseOutput, timeoutSeconds, retries, retryBackoff}
+	fetchOpts := fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion, verboseOutput, timeoutSeconds, retries, retryBackoff}
 
 	if memCache || onChangeCmd != "" || (execCmd != "" && watch) {
 		daemon.LaunchDetachedIfNeeded(daemon.DaemonOptions{
 			verboseOutput,
 		})
-		res, _, err = daemon.FetchMap(envkey, "envkey-source", version.Version)
+		res, _, err = daemon.FetchMap(envkey, clientName, clientVersion)
 
 		if err != nil {
 			res, err = fetch.FetchMap(envkey, fetchOpts)
@@ -205,35 +165,35 @@ func run(cmd *cobra.Command, args []string) {
 		res, err = fetch.FetchMap(envkey, fetchOpts)
 	}
 
-	if err != nil && err.Error() == "ENVKEY invalid" && appConfig.AppId != "" {
+	if err != nil && err.Error() == "ENVKEY invalid" && appConfig.AppId != "" && firstAttempt {
 		// clear out incorrect ENVKEY and try again
 		env.ClearAppEnvkey(appConfig.AppId)
-		run(cmd, args)
+		run(cmd, args, false)
 		return
 	}
 
-	checkError(err)
+	utils.CheckError(err, execCmd == "")
 
-	execWithEnv(envkey, res)
+	execWithEnv(envkey, res, clientName, clientVersion)
 }
 
 func execute(c string, env []string, copyOrAttach string, includeStdin bool, copyOutputPrefix string) *exec.Cmd {
-	command := exec.Command("bash", "-c", c)
+	command := exec.Command("sh", "-c", c)
 	command.Env = env
 
 	if copyOrAttach == "copy" {
 		outPipe, err := command.StdoutPipe()
-		checkError(err)
+		utils.CheckError(err, execCmd == "")
 		errPipe, err := command.StderrPipe()
-		checkError(err)
+		utils.CheckError(err, execCmd == "")
 
 		var inPipe io.WriteCloser
 		if includeStdin {
 			inPipe, err = command.StdinPipe()
-			checkError(err)
+			utils.CheckError(err, execCmd == "")
 		}
 
-		checkError(err)
+		utils.CheckError(err, execCmd == "")
 
 		go io.Copy(os.Stdout, prefixer.New(outPipe, copyOutputPrefix))
 		go io.Copy(os.Stderr, prefixer.New(errPipe, copyOutputPrefix))
@@ -251,14 +211,14 @@ func execute(c string, env []string, copyOrAttach string, includeStdin bool, cop
 	}
 
 	err := command.Start()
-	checkError(err)
+	utils.CheckError(err, execCmd == "")
 
 	return command
 }
 
 var restarting = false
 
-func execWithEnv(envkey string, env parser.EnvMap) {
+func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVersion string) {
 	if execCmd == "" && onChangeCmd == "" {
 		var res string
 		var err error
@@ -273,7 +233,7 @@ func execWithEnv(envkey string, env parser.EnvMap) {
 			res, err = shell.Source(env, force, pamCompatible, dotEnvCompatible)
 		}
 
-		checkError(err)
+		utils.CheckError(err, execCmd == "")
 		fmt.Println(res)
 
 		os.Exit(0)
@@ -366,7 +326,7 @@ func execWithEnv(envkey string, env parser.EnvMap) {
 		}
 	}
 
-	daemon.ListenChangeWithEnv(envkey, "envkey-source", version.Version, onChange)
+	daemon.ListenChangeWithEnv(envkey, clientName, clientVersion, onChange)
 }
 
 func init() {
@@ -413,6 +373,9 @@ func init() {
 
 	RootCmd.Flags().BoolVar(&jsonFormat, "json", false, "change output to json format")
 	RootCmd.Flags().BoolVar(&yamlFormat, "yaml", false, "change output to yaml format")
+
+	RootCmd.Flags().StringVar(&clientNameArg, "client-name", "", "Client name for logging when wrapped by another SDK")
+	RootCmd.Flags().StringVar(&clientVersionArg, "client-version", "", "Client version for logging when wrapped by another SDK")
 
 	RootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "prints the version")
 }

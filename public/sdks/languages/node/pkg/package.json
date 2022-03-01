@@ -1,0 +1,22 @@
+{
+  "name": "envkey",
+  "version": "2.0.0",
+  "description": "EnvKey secures and simplifies configuration and secrets management.",
+  "repository": "https://github.com/envkey/envkey",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "configuration",
+    "environment variables",
+    "encryption",
+    "security"
+  ],
+  "author": "EnvKey <support@envkey.com> (https://www.envkey.com)",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^20.0.4"
+  }
+}
