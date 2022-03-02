@@ -107,8 +107,7 @@ export const handler = async (
   }
   const { localKeys } = graphTypes(state.graph);
   if (!localKeys.length) {
-    console.error(chalk.bold(`No local keys exist for the app ${app.name}.`));
-    return exit();
+    return exit(1, chalk.bold(`No local keys exist for the app ${app.name}.`));
   }
   if (!keyName) {
     keyName = (

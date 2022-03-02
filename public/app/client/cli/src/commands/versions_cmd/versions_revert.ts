@@ -91,11 +91,10 @@ export const handler = async (
 
   const [pendingSummary, initialPending] = getPending(state);
   if (initialPending && !argv["ignore-pending"]) {
-    console.error(pendingSummary);
     return exit(
       1,
       chalk.red(
-        "There are already pending changes, so `envkey revert` is disabled.\nEither reset pending changes, or use flag --ignore-pending to continue."
+        "There are already pending changes, so `envkey revert` is disabled.\nEither reset pending changes, or use flag --ignore-pending to continue. Use `envkey pending` to see the pending changes."
       )
     );
   }

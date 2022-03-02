@@ -129,7 +129,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 		} else if ignoreMissing {
 			os.Exit(0)
 		} else {
-			utils.Fatal("ENVKEY missing", execCmd == "")
+			utils.Fatal("ENVKEY missing\n", execCmd == "")
 		}
 	}
 
@@ -362,8 +362,8 @@ func init() {
 	// - embedded newlines in values will disappear
 	//   (a single backslash "escapes" the newline for parsing purposes, but in the actual
 	//   environment the newline will not appear)
-	RootCmd.Flags().BoolVar(&pamCompatible, "pam-compatible", false, "change output format to be compatible with /etc/environment on Linux")
-	RootCmd.Flags().BoolVar(&dotEnvCompatible, "dot-env-compatible", false, "change output to .env format")
+	RootCmd.Flags().BoolVar(&pamCompatible, "pam", false, "change output format to be compatible with /etc/environment on Linux")
+	RootCmd.Flags().BoolVar(&dotEnvCompatible, "dot-env", false, "change output to .env format")
 
 	RootCmd.Flags().BoolVar(&daemonMode, "daemon", false, "")
 	RootCmd.Flags().MarkHidden(("daemon"))
@@ -386,6 +386,8 @@ If you haven't yet, first check out the Integration Quickstart: https://docs-v2.
 To execute a command directly with your EnvKey environment set:
 
 envkey-source -e 'command' [flags]
+
+To type less, use the ` + "`es`" + ` alias.
 
 To automatically re-run the command when the environment changes, use:
 
@@ -423,8 +425,8 @@ eval "$(envkey-source [flags])"
 
 Or output your environment variables to a file:
 
-envkey-source --dot-env-compatible > .env
-envkey-source --pam-compatible > /etc/environment
+envkey-source --dot-env > .env
+envkey-source --pam > /etc/environment
 
 You can pass an ENVKEY directly (not recommended for real workflows):
 

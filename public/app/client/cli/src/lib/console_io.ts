@@ -49,11 +49,11 @@ export const autoModeOut = (
   );
 };
 
-export const alwaysWriteError = (errorMessage: string) => {
+export const alwaysWriteError = (...errorMessages: string[]) => {
   if (isAutoMode()) {
-    autoModeOut({ error: stripAnsiColors(errorMessage) });
+    autoModeOut({ error: errorMessages.map(stripAnsiColors).join(" ") });
   } else {
-    console.log(errorMessage);
+    console.error(...errorMessages);
   }
 };
 

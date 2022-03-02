@@ -54,16 +54,26 @@ type LogActionParams = {
   now: number;
 };
 
-export const fetchLogs = async (
+let limitLogsFn: Api.LimitLogsFn | undefined;
+
+export const registerLimitLogsFn = (fn: Api.LimitLogsFn) => {
+    limitLogsFn = fn;
+  },
+  fetchLogs = async (
     auth: Auth.DefaultAuthContext,
     orgGraph: Api.Graph.OrgGraph,
     params: Logs.FetchLogParams,
-    transactionConn: PoolConnection | undefined
+    transactionConn: PoolConnection | undefined,
+    now: number
   ): Promise<Api.Net.ApiResultTypes["FetchLogs"]> => {
     const pageSize = Math.min(parseInt(params.pageSize as any) ?? 100, 500);
-    const startsAt = params.startsAt ?? 0;
     const endsAt = params.endsAt ?? Date.now();
     const sortDir = params.sortDesc ? "DESC" : "ASC";
+    let startsAt = params.startsAt ?? 0;
+
+    if (limitLogsFn) {
+      startsAt = limitLogsFn(auth.license, now, startsAt);
+    }
 
     if (params.userIds && params.deviceIds) {
       throw new Api.ApiError(

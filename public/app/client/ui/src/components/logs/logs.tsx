@@ -62,6 +62,13 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
   const { graph, deletedGraph, graphUpdatedAt } = props.core;
   const currentUserId = props.ui.loadedAccountId!;
 
+  const license = useMemo(
+    () => g.graphTypes(graph).license,
+    [graphUpdatedAt, currentUserId]
+  );
+  const licenseExpired =
+    license.expiresAt != -1 && props.ui.now > license.expiresAt;
+
   const logParentId =
     props.routeParams.appId ??
     props.routeParams.blockId ??
@@ -511,15 +518,23 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
               }
             }}
           >
-            <option value={"15.m"}>Last 15 minutes</option>
-            <option value={"1.h"}>Last hour</option>
-            <option value={"4.h"}>Last 4 hours</option>
-            <option value={"24.h"}>Last 24 hours</option>
-            <option value={"7.d"}>Last 7 days</option>
-            <option value={"30.d"}>Last 30 days</option>
-            <option value={"365.d"}>Last 365 days</option>
-            <option value={"36500000.d"}>All time</option>
-            <option value={"custom"}>Custom</option>
+            {[
+              <option value={"15.m"}>Last 15 minutes</option>,
+              <option value={"1.h"}>Last hour</option>,
+              <option value={"4.h"}>Last 4 hours</option>,
+              <option value={"24.h"}>Last 24 hours</option>,
+              <option value={"7.d"}>Last 7 days</option>,
+              <option value={"30.d"}>Last 30 days</option>,
+              ...(license.hostType != "cloud" ||
+              (!licenseExpired &&
+                license.cloudLogRetentionDays &&
+                license.cloudLogRetentionDays > 30)
+                ? [
+                    <option value={"365.d"}>Last 365 days</option>,
+                    <option value={"36500000.d"}>All time</option>,
+                  ]
+                : [<option value={"custom"}>Custom</option>]),
+            ]}
           </select>
 
           <SvgImage type="down-caret" />
@@ -531,7 +546,25 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
           <label>Between </label>
           <Datetime
             value={moment.utc(logManagerState.startsAt)}
-            isValidDate={(dt) => dt.valueOf() < logManagerState.endsAt}
+            isValidDate={(dt) => {
+              const ts = dt.valueOf();
+              let earliestAllowed = 0;
+              let daysBack: number | undefined;
+
+              if (license.hostType == "cloud") {
+                if (licenseExpired || !license.cloudLogRetentionDays) {
+                  daysBack = 30;
+                } else {
+                  daysBack = license.cloudLogRetentionDays;
+                }
+              }
+
+              if (daysBack) {
+                earliestAllowed = props.ui.now - daysBack * 24 * 60 * 60 * 1000;
+              }
+
+              return ts < logManagerState.endsAt && ts > earliestAllowed;
+            }}
             onChange={(dt) =>
               updateLogManagerState({
                 startsAt: dt.valueOf() as number,

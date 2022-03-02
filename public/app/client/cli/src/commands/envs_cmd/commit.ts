@@ -16,7 +16,12 @@ import { Client, Model } from "@core/types";
 import { logAndExitIfActionFailed, displayFullEnvName } from "../../lib/args";
 import { authz, getEnvironmentName } from "@core/lib/graph";
 import { hasPendingConflicts } from "@core/lib/client";
-import { autoModeOut, getPrompt, isAutoMode } from "../../lib/console_io";
+import {
+  autoModeOut,
+  getPrompt,
+  isAutoMode,
+  alwaysWriteError,
+} from "../../lib/console_io";
 
 export const command = "commit [app-or-block] [environment]";
 export const desc = "Commit pending environment changes.";
@@ -151,7 +156,7 @@ export const handler = async (
   if (pendingEnvironmentIds?.length) {
     for (let envId of pendingEnvironmentIds) {
       if (!authz.canUpdateEnv(state.graph, auth.userId, envId)) {
-        console.error(
+        alwaysWriteError(
           chalk.red(
             `Cannot modify environment ${chalk.bold(
               displayFullEnvName(state.graph, envId)

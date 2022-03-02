@@ -14,6 +14,7 @@ import mysql from "mysql2/promise";
 import { Billing } from "..";
 import { Model } from "..";
 import * as Socket from "./socket";
+import WebSocket from "ws";
 
 namespace Api {
   export import Db = _Db;
@@ -197,6 +198,38 @@ namespace Api {
       }
   );
 
+  export type UserSocketConnections = {
+    [orgId: string]: {
+      [userId: string]: {
+        [deviceId: string]: WebSocket;
+      };
+    };
+  };
+
+  export type ConnectedByDeviceId = Record<
+    string,
+    { orgId: string; userId: string }
+  >;
+
+  export type EnvkeySocketConnections = {
+    [orgId: string]: {
+      [generatedEnvkeyId: string]: {
+        [connectionId: string]: WebSocket;
+      };
+    };
+  };
+
+  export type ConnectedByConnectionId = Record<
+    string,
+    { orgId: string; generatedEnvkeyId: string }
+  >;
+
+  export type ClearEnvkeyConnectionSocketFn = (
+    orgId: string,
+    generatedEnvkeyId: string,
+    connectionId: string
+  ) => void;
+
   export type ReplicationFn = (
     updatedOrg: Api.Db.Org,
     updatedOrgGraph: Api.Graph.OrgGraph,
@@ -225,12 +258,35 @@ namespace Api {
     responseBytes: number
   ) => Promise<void>;
 
+  export type ThrottleSocketConnectionFn = (
+    connectionType: "device" | "generatedEnvkey",
+    license: Billing.License,
+    numHosts: number,
+    numConnected: number
+  ) => Promise<void>;
+
   export type VerifyLicenseFn = (
     orgId: string,
     signedLicense: string | undefined,
     now: number,
     enforceExpiration?: boolean
   ) => Billing.License;
+
+  export type LimitLogsFn = (
+    license: Billing.License,
+    now: number,
+    startsAt: number
+  ) => number;
+
+  export type BalanceSocketsFn = (
+    connectionType: "device" | "generatedEnvkey",
+    connectedByDeviceId: Api.ConnectedByDeviceId,
+    connectedByConnectionId: Api.ConnectedByConnectionId,
+    numDeviceConnections: number,
+    numEnvkeyConnections: number,
+    clearDeviceSocketFn: SocketServer["clearDeviceSocket"],
+    clearEnvkeyConnectionSocketFn: ClearEnvkeyConnectionSocketFn
+  ) => void;
 }
 
 export default Api;

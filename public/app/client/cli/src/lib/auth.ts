@@ -84,16 +84,13 @@ export const authenticate = async <
     }
 
     if (!auth) {
-      console.error(chalk.bold("This action requires authentication."));
-
-      console.error(
-        "Try",
-        chalk.bold("envkey accept-invite"),
-        ", or",
-        chalk.bold("envkey register")
+      return exit(
+        1,
+        chalk.bold("Authentication required."),
+        "Use",
+        chalk.bold("`envkey sign-in`") + ", or",
+        chalk.bold("`envkey accept-invite`")
       );
-
-      return exit();
     }
 
     if (auth.type == "clientUserAuth" && (!auth.token || !auth.privkey)) {
@@ -569,13 +566,7 @@ export const printAccount = (
   },
   printNoAccountsHelp = () => {
     console.log(chalk.bold("No EnvKey accounts are stored on this device.\n"));
-
-    console.log(
-      "Try",
-      chalk.bold("envkey register") + " or ",
-      chalk.bold("envkey accept-invite"),
-      "\n"
-    );
+    console.log("Try", chalk.bold("`envkey accept-invite`"), "\n");
   },
   printDeviceSettings = (state: Client.State) => {
     const defaultAccount = state.defaultAccountId

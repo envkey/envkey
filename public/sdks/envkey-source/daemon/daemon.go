@@ -196,7 +196,7 @@ func InlineStart() {
 	select {}
 }
 
-func ListenChange(envkey string, onChange func(), onInvalid func(), onLostConnection func(error), onConnectFailed func(error)) {
+func ListenChange(envkey string, onChange func(), onInvalid func(), onThrottled func(), onLostConnection func(error), onConnectFailed func(error)) {
 	RemoveListener(envkey)
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:19410")
@@ -241,9 +241,11 @@ func ListenChange(envkey string, onChange func(), onInvalid func(), onLostConnec
 
 			if msg == "envkey_invalid" {
 				onInvalid()
+			} else if msg == "connection_throttled" {
+				onThrottled()
+			} else {
+				onChange()
 			}
-
-			onChange()
 		}
 	}()
 
@@ -282,6 +284,9 @@ func ListenChangeWithEnv(envkey, clientName, clientVersion string, onChange func
 		onChange(currentEnv, previousEnv)
 	}, func() {
 		fmt.Fprintln(os.Stderr, FormatTerminal(" | ENVKEY invalid--watcher will exit", colors.Red))
+		os.Exit(1)
+	}, func() {
+		fmt.Fprintln(os.Stderr, FormatTerminal(" | connection throttled because your org reach its limit--watcher will exit", colors.Red))
 		os.Exit(1)
 	}, func(err error) {
 		fmt.Fprintln(os.Stderr, FormatTerminal(" | lost connection to envkey daemon: "+err.Error(), colors.Red))
@@ -492,6 +497,9 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 		},
 		OnInvalid: func() {
 			writeTCP(envkey, []byte("envkey_invalid"))
+		},
+		OnThrottled: func() {
+			writeTCP(envkey, []byte("connection_throttled"))
 		},
 	}
 	socket.Dial(endpoint, http.Header{"authorization": {string(authorizationJsonBytes)}})

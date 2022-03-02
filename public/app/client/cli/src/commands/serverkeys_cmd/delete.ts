@@ -83,8 +83,7 @@ export const handler = async (
   }
   const { servers } = graphTypes(state.graph);
   if (!servers.length) {
-    console.error(chalk.bold(`No servers exist for the app ${app.name}.`));
-    return exit();
+    return exit(1, chalk.bold(`No servers exist for the app ${app.name}.`));
   }
   if (!serverName) {
     serverName = (

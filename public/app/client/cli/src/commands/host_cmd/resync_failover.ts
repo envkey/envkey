@@ -3,7 +3,7 @@ import { Argv } from "yargs";
 import { initCore, dispatch } from "../../lib/core";
 import { logAndExitIfActionFailed } from "../../lib/args";
 import { BaseArgs } from "../../types";
-import { autoModeOut } from "../../lib/console_io";
+import { autoModeOut, alwaysWriteError } from "../../lib/console_io";
 import { Api } from "@core/types";
 
 export const command = "resync-failover";
@@ -16,7 +16,7 @@ export const handler = async (
   let { state, auth } = await initCore(argv, true, true);
 
   if (!(auth.hostType == "self-hosted" && auth.deploymentTag)) {
-    console.error(
+    alwaysWriteError(
       "This action is only available on EnvKey Enterprise Self-Hosted hosts."
     );
     return exit(1);

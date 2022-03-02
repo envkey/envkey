@@ -6,6 +6,7 @@ import * as fs from "fs";
 import gunzip from "gunzip-maybe";
 import * as tar from "tar-fs";
 import mkdirp from "mkdirp";
+import which from "which";
 import {
   getReleaseAsset,
   getLatestReleaseVersion,
@@ -295,21 +296,26 @@ const install = async (
     }
   }
 
+  let binDir: string;
   switch (platform) {
     case "darwin":
-      await copyExecFiles(cliFolder, envkeysourceFolder, "/usr/local/bin");
-      break;
     case "linux":
-      await copyExecFiles(cliFolder, envkeysourceFolder, "/usr/local/bin");
+      binDir = "/usr/local/bin";
       break;
     case "win32":
-      await copyExecFiles(cliFolder, envkeysourceFolder, getWindowsBin());
+      binDir = getWindowsBin();
       break;
     default:
       throw new Error(
         `Cannot install CLI tools to unsupported platform ${platform}`
       );
   }
+
+  await copyExecFiles(cliFolder, envkeysourceFolder, binDir);
+
+  await fsp
+    .symlink(path.join(binDir, "envkey-source"), path.join(binDir, "es"))
+    .catch((err) => {});
 
   log(`CLI tools update: completed successfully`, {
     cli: params.cli?.nextVersion,

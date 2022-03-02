@@ -8,6 +8,7 @@ import {
   listAccounts,
   printNoAccountsHelp,
 } from "../../lib/auth";
+import { alwaysWriteError } from "../../lib/console_io";
 import { Client } from "@core/types";
 
 export const command = "set-default [account]";
@@ -37,7 +38,7 @@ export const handler = async (argv: BaseArgs): Promise<void> => {
       try {
         auth = await chooseAccount(state, true, false);
         if (!auth) {
-          console.error("No accounts are available");
+          alwaysWriteError("No accounts are available");
           await exit(0);
         }
       } catch (err) {

@@ -19,6 +19,10 @@ type AppConfig struct {
 	AppId string `json:"appId"`
 }
 
+type ErrorRes struct {
+	Error string `json:"error"`
+}
+
 type LocalKeyRes struct {
 	LocalKey string `json:"localKey"`
 }
@@ -164,7 +168,18 @@ func genLocalKey(appId string, verboseOutput bool, localDevHost bool) (string, e
 	}
 
 	if err != nil {
-		return "", err
+		if len(jsonBytes) == 0 {
+			return "", err
+		} else {
+			var errorRes ErrorRes
+			err = json.Unmarshal(jsonBytes, &errorRes)
+
+			if err != nil {
+				return "", err
+			}
+
+			return "", errors.New(errorRes.Error)
+		}
 	}
 
 	var localKeyRes LocalKeyRes

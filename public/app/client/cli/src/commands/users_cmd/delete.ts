@@ -59,7 +59,6 @@ export const handler = async (
 
   const user = findUser(state.graph, userName);
   if (!user) {
-    console.error();
     return exit(1, chalk.red.bold("User not found"));
   }
   if (user.type === "cliUser") {

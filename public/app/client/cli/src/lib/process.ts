@@ -1,13 +1,17 @@
 import { disconnect } from "./core";
-import { alwaysWriteError, autoModeOut, autoModeHasWritten } from "./console_io";
+import {
+  alwaysWriteError,
+  autoModeOut,
+  autoModeHasWritten,
+} from "./console_io";
 
 export function exit(): any;
 export function exit(code: 0): any;
-export function exit(code: 1, exitMessage?: string): any;
+export function exit(code: 1, ...exitMessages: string[]): any;
 
-export function exit(code = 0, exitMessage?: string): any {
-  if (typeof exitMessage !== "undefined") {
-    alwaysWriteError(exitMessage);
+export function exit(code = 0, ...exitMessages: string[]): any {
+  if (exitMessages.length > 0) {
+    alwaysWriteError(...exitMessages);
   } else if (code == 0 && !autoModeHasWritten()) {
     autoModeOut({});
   }

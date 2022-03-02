@@ -20,11 +20,11 @@ func TestSource(t *testing.T) {
 	validRes, _ := shell.Source(envMap, true, false, false)
 	assert.Equal(t, correctValid, validRes)
 
-	// Test --pam-compatible
+	// Test --pam
 	validRes2, _ := shell.Source(envMap, true, true, false)
 	assert.Equal(t, correctPam, validRes2)
 
-	// Test --dot-env-compatible
+	// Test --dot-env
 	validRes3, _ := shell.Source(envMap, true, false, true)
 	assert.Equal(t, correctDotEnv, validRes3)
 }

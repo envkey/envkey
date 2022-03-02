@@ -7,7 +7,7 @@ import { Client } from "@core/types";
 import chalk from "chalk";
 
 export const command = ["sign-out", "logout"];
-export const desc = "Sign out of a session on this device.";
+export const desc = "Sign out of an account on this device.";
 export const builder = (yargs: Argv<BaseArgs>) => yargs;
 export const handler = async (argv: BaseArgs): Promise<void> => {
   const { state } = await initCore(argv, false),

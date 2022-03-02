@@ -59,7 +59,7 @@ export const NewTeam: OrgComponent = (props) => {
     }
   };
 
-  if (licenseExpired || !license.teamsEnabled) {
+  if (licenseExpired || license.plan != "paid") {
     const blockStatement = licenseExpired ? (
       <p>
         {`Your organization's ${

@@ -122,7 +122,16 @@ download_envkey () {
   else
     sudo mv envkey-source /usr/local/bin/
     echo "envkey-source is installed in /usr/local/bin"
-  fi
+  fi  
+
+  # don't ovewrite existing es command
+  if [ ! -x "$(command -v es)" ]; then
+    echo "creating es alias"
+    LOC=$(which envkey-source)
+    BIN_DIR=$(dirname $LOC)
+    ln -s $LOC $BIN_DIR/es
+  fi  
+  
 }
 
 welcome_envkey

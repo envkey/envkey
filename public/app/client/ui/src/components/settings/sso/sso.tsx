@@ -37,7 +37,7 @@ export const SSOSettings: OrgComponent = (props) => {
     }
   };
 
-  if (licenseExpired || !license.ssoEnabled) {
+  if (licenseExpired || license.plan != "paid") {
     const blockStatement = licenseExpired ? (
       <p>
         {`Your organization's ${

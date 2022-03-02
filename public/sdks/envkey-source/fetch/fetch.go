@@ -295,7 +295,7 @@ func httpGetAsync(
 		return
 	}
 
-	if (inRegionFailoverHeader){
+	if inRegionFailoverHeader {
 		req.Header.Set("Failover", "in-region")
 	}
 
@@ -506,11 +506,13 @@ func getJson(envkeyHost string, envkeyIdPart string, options FetchOptions, respo
 				fmt.Fprintln(os.Stderr, "404 not found")
 			}
 
-			// Since envkey wasn't found and permission may have been removed, clear cache
+			// Since ENVKEY wasn't found and permission may have been removed, clear cache
 			if fetchCache != nil {
 				fetchCache.Delete(envkeyIdPart)
 			}
 			return errors.New("ENVKEY invalid")
+		} else if r != nil && r.StatusCode == 429 {
+			return errors.New("request limit exceeded")
 		}
 
 		numEndpoint = numEndpoint + 1

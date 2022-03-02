@@ -62,10 +62,10 @@ export const handler = async (
     );
 
     if (!account) {
-      console.error(
+      return exit(
+        1,
         "No self-hosted installation found. Try specifying --profile, --deployment-tag, --primary-region, and --failover-region manually."
       );
-      return exit(1);
     }
 
     primaryRegion = account.primaryRegion!;

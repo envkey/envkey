@@ -50,21 +50,35 @@ export const ClientUpgrades: React.FC<
         Object.values(props.clientUpgradeProgress).map(R.prop("totalBytes"))
       )
     : 0;
-  const progressPct =
-    totalBytes > 0 && downloadedBytes > 0 ? downloadedBytes / totalBytes : 0;
+
+  const [progressPct, setProgressPct] = useState(0);
 
   const [startedUpgrade, setStartedUpgrade] = useState(false);
 
-  const [showLoader, setShowLoader] = useState(true);
+  const [showInitialLoader, setShowInitialLoader] = useState(true);
+  const [showFinalLoader, setShowFinalLoader] = useState(true);
 
-  let showLoaderTimeout: ReturnType<typeof setTimeout> | undefined;
   useLayoutEffect(() => {
-    if (showLoader && progressPct > 0) {
-      setShowLoader(false);
-    } else if (!showLoader && progressPct >= 0.9 && !showLoaderTimeout) {
-      showLoaderTimeout = setTimeout(() => {
-        setShowLoader(true);
-        showLoaderTimeout = undefined;
+    const pct =
+      totalBytes > 0 && downloadedBytes > 0 ? downloadedBytes / totalBytes : 0;
+
+    if (pct > progressPct) {
+      setProgressPct(pct);
+    }
+  }, [totalBytes, downloadedBytes]);
+
+  let showFinalLoaderTimeout: ReturnType<typeof setTimeout> | undefined;
+  useLayoutEffect(() => {
+    if (showInitialLoader && progressPct > 0) {
+      setShowInitialLoader(false);
+    } else if (
+      !showFinalLoader &&
+      !showFinalLoaderTimeout &&
+      progressPct >= 0.9
+    ) {
+      showFinalLoaderTimeout = setTimeout(() => {
+        setShowFinalLoader(true);
+        showFinalLoaderTimeout = undefined;
       }, 1000);
     }
   }, [progressPct]);
@@ -124,7 +138,7 @@ export const ClientUpgrades: React.FC<
         {startedUpgrade ? (
           [
             <div className="progress">
-              {showLoader ? (
+              {showInitialLoader ? (
                 <SmallLoader />
               ) : (
                 <div

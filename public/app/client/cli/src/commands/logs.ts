@@ -20,7 +20,12 @@ import {
   logAndExitIfActionFailed,
 } from "../lib/args";
 import { dateFromRelativeTime } from "@core/lib/utils/date";
-import { autoModeOut, isAutoMode, getPrompt } from "../lib/console_io";
+import {
+  autoModeOut,
+  isAutoMode,
+  getPrompt,
+  alwaysWriteError,
+} from "../lib/console_io";
 
 addCommand((yargs: Argv<BaseArgs>) =>
   yargs.command(
@@ -249,7 +254,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
           findUser(state.graph, argv["person"]) ||
           findCliUser(state.graph, argv["person"]);
         if (!user) {
-          console.error("person not found");
+          alwaysWriteError("person not found");
           await exitWrapper(1);
         }
         payload.userIds = [user!.id];
@@ -258,7 +263,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
       if (argv["app"]) {
         const appId = findApp(state.graph, argv["app"])?.id as string;
         if (!appId) {
-          console.error("app not found");
+          alwaysWriteError("app not found");
           await exitWrapper(1);
         }
         const envs = getEnvironmentsByEnvParentId(state.graph)[appId];
@@ -269,7 +274,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
       if (argv["block"]) {
         const blockId = findBlock(state.graph, argv["block"])?.id as string;
         if (!blockId) {
-          console.error("block not found");
+          alwaysWriteError("block not found");
           await exitWrapper(1);
         }
         const envs = getEnvironmentsByEnvParentId(state.graph)[blockId];
@@ -280,7 +285,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
       if (argv["local-overrides"]) {
         if (!targetIds.length) {
           // for some reason, yargs `check` did not work, but that would have been preferred
-          console.error(
+          alwaysWriteError(
             "local-overrides requires a valid app, block, or environment flag"
           );
           await exitWrapper(1);
@@ -289,7 +294,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
           findUser(state.graph, argv["local-overrides"]) ||
           findCliUser(state.graph, argv["local-overrides"]);
         if (!user) {
-          console.error("local-overrides user not found");
+          alwaysWriteError("local-overrides user not found");
           await exitWrapper(1);
         }
         targetIds = targetIds.map((targetId) => `${targetId}|${user!.id}`);
@@ -302,7 +307,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
           (g) => g.envkeyShort === argv["envkey-short"]
         );
         if (!generatedKey) {
-          console.error("envkey-short not matched to generated envkey");
+          alwaysWriteError("envkey-short not matched to generated envkey");
           await exitWrapper(1);
         }
         targetIds.push(generatedKey!.id);
@@ -316,7 +321,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
       payload.targetIds = targetIds.length ? targetIds : undefined;
 
       if (!authz.canFetchLogs(state.graph, auth.userId, auth.orgId, payload)) {
-        console.error(
+        alwaysWriteError(
           chalk.red.bold("You don't have permission to fetch the logs.")
         );
         await exitWrapper(1);
@@ -445,7 +450,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
           if (!isNaN(possiblePageNumber) && possiblePageNumber >= 0) {
             payload.pageNum = possiblePageNumber - 1; // zero based pagination
           }
-          console.error(chalk.blueBright(instructions));
+          alwaysWriteError(chalk.blueBright(instructions));
         }
       }
       await exitWrapper(0);

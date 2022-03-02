@@ -6,7 +6,7 @@ import { dispatch, initCore } from "../../lib/core";
 import { chooseAccount } from "../../lib/auth";
 import { Client } from "@core/types";
 import { logAndExitIfActionFailed } from "../../lib/args";
-import { getPrompt } from "../../lib/console_io";
+import { getPrompt, alwaysWriteError } from "../../lib/console_io";
 
 export const command = "forget";
 export const desc =
@@ -20,11 +20,10 @@ export const handler = async (argv: BaseArgs): Promise<void> => {
   try {
     account = await chooseAccount(state, false, false);
     if (!account) {
-      console.error("No accounts are available");
+      alwaysWriteError("No accounts are available");
       return await exit(0);
     }
   } catch (err) {
-    console.error();
     return await exit(1, err);
   }
 

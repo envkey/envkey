@@ -51,4 +51,6 @@ export type Env = {
 
   // See nodemailer SMTP JSON object https://nodemailer.com/smtp/
   SMTP_TRANSPORT_JSON?: string;
+
+  API_TARGET_RAM_UTILIZATION?: string;
 };

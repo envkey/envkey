@@ -117,10 +117,10 @@ export const handler = async (
     return exit();
   }
   if (!authz.canUpdateUserRole(state.graph, auth.userId, user.id, newRoleId)) {
-    console.error(
+    return exit(
+      1,
       chalk.red("You are not allowed to assign that role to the user.")
     );
-    return exit();
   }
 
   const res = await dispatch({

@@ -6,6 +6,7 @@ import os from "os";
 import dotenv from "dotenv";
 import { sha256 } from "@core/lib/crypto/utils";
 import { getCoreProcAuthToken } from "@core/lib/client_store/key_store";
+import { alwaysWriteError } from "./lib/console_io";
 import { fetchState } from "@core/lib/core_proc";
 import {
   getEnvironmentName,
@@ -361,7 +362,7 @@ const envkeyToDetectedApp = async (
   ) as Client.ClientUserAuth | undefined;
 
   if (!account?.userId) {
-    console.error(
+    console.log(
       `Detected ENVKEY ${foundEnvkey.substring(0, 4)}***** from ${
         dotenvFile || "environment"
       }, but there is no corresponding local account.`

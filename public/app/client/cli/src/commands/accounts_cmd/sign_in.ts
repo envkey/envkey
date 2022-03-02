@@ -9,11 +9,12 @@ import {
   printNoAccountsHelp,
   printAccount,
 } from "../../lib/auth";
+import { alwaysWriteError } from "../../lib/console_io";
 import * as R from "ramda";
 import { Client } from "@core/types";
 import chalk from "chalk";
 
-export const command = ["sign-in", "login"];
+export const command = ["sign-in", "login", "authenticate", "auth"];
 export const desc =
   "Sign in to an EnvKey account stored on this device. To sign in on a new device, use `envkey accept-invite`.";
 export const builder = (yargs: Argv<BaseArgs>) => yargs;
@@ -63,7 +64,7 @@ export const handler = async (argv: BaseArgs): Promise<void> => {
   }
 
   if (!auth) {
-    console.error("No accounts are available");
+    alwaysWriteError("No accounts are available");
     return exit(0);
   }
 

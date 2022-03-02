@@ -2,6 +2,34 @@ import { addCommand } from "../cmd";
 
 // Commands added below will be displayed in the same order in the --help command
 
+import * as signIn from "./accounts_cmd/sign_in";
+addCommand((yargs) =>
+  yargs.command(signIn.command, signIn.desc, signIn.builder, signIn.handler)
+);
+import * as signOut from "./accounts_cmd/sign_out";
+addCommand((yargs) =>
+  yargs.command(signOut.command, signOut.desc, signOut.builder, signOut.handler)
+);
+
+import * as acceptInvite from "./accounts_cmd/accept_invite";
+addCommand((yargs) =>
+  yargs.command(
+    acceptInvite.command,
+    acceptInvite.desc,
+    acceptInvite.builder,
+    acceptInvite.handler
+  )
+);
+
+import * as lock from "./accounts_cmd/lock";
+addCommand((yargs) =>
+  yargs.command(lock.command, lock.desc, lock.builder, lock.handler)
+);
+import * as unlock from "./accounts_cmd/unlock";
+addCommand((yargs) =>
+  yargs.command(unlock.command, unlock.desc, unlock.builder, unlock.handler)
+);
+
 import * as setCmd from "./envs_cmd/set";
 addCommand((yargs) =>
   yargs.command(setCmd.command, setCmd.desc, setCmd.builder, setCmd.handler)
@@ -74,15 +102,5 @@ addCommand((yargs) =>
     grantDevice.desc,
     grantDevice.builder,
     grantDevice.handler
-  )
-);
-
-import * as acceptInvite from "./accounts_cmd/accept_invite";
-addCommand((yargs) =>
-  yargs.command(
-    acceptInvite.command,
-    acceptInvite.desc,
-    acceptInvite.builder,
-    acceptInvite.handler
   )
 );

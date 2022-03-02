@@ -30,6 +30,7 @@ type ReconnectingWebsocket struct {
 
 	OnReconnect func()
 	OnInvalid   func()
+	OnThrottled func()
 
 	Verbose bool
 
@@ -162,6 +163,10 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 				ws.OnInvalid()
 			}
 			return
+		} else if code == 429 {
+			if ws.OnThrottled != nil {
+				ws.OnThrottled()
+			}
 		} else {
 			if ws.Verbose {
 				fmt.Fprintf(os.Stderr, "Websocket[%s].Dial: can't connect to websocket, will try again in %v\n", ws.url, nextInterval)

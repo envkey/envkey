@@ -17,10 +17,8 @@ export type License = {
   maxCloudApiCallsPerMonth?: number;
   maxCloudDataTransferPerHourMb?: number;
   maxCloudDataTransferPerMonthMb?: number;
-
-  ssoEnabled?: boolean;
-  teamsEnabled?: boolean;
-  customRbacEnabled?: boolean;
+  maxCloudActiveSocketConnections?: number;
+  cloudLogRetentionDays?: number;
 
   provisional?: boolean;
 
