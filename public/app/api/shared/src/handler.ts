@@ -455,8 +455,6 @@ export const apiAction = <
         }
       }
 
-      logWithElapsed(transactionId + " - got action result", requestStart);
-
       const res = await getActionRes(
         apiActionConfig,
         action,

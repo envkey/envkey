@@ -14,8 +14,11 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,8 +30,23 @@ import (
 	"github.com/envkey/envkey/public/sdks/envkey-source/parser"
 	"github.com/envkey/envkey/public/sdks/envkey-source/version"
 	"github.com/envkey/envkey/public/sdks/envkey-source/ws"
+
 	// "github.com/davecgh/go-spew/spew"
+
+	"github.com/mitchellh/go-homedir"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+type ListenChangeProps struct {
+	Envkey                 string
+	OnChange               func()
+	OnInvalid              func()
+	OnThrottled            func()
+	OnLostDaemonConnection func(error)
+	OnDaemonConnectFailed  func(error)
+	OnWillReconnect        func()
+	OnReconnected          func()
+}
 
 type DaemonOptions struct {
 	VerboseOutput bool
@@ -45,12 +63,15 @@ type DaemonResponse struct {
 	PreviousEnv parser.EnvMap
 }
 
-var websocketsByEnvkey = map[string]*ws.ReconnectingWebsocket{}
-var tcpServerConnsByEnvkey = map[string]net.Conn{}
+// client state (foreground process)
 var tcpClientsByEnvkey = map[string]*net.TCPConn{}
+var onChangeChannelsByEnvkey = make(map[string](chan struct{}))
+
+// daemon state (background process)
+var websocketsByEnvkey = map[string]*ws.ReconnectingWebsocket{}
+var tcpServerConnsByEnvkeyByConnId = map[string](map[string]net.Conn){}
 var currentEnvsByEnvkey = map[string]parser.EnvMap{}
 var previousEnvsByEnvkey = map[string]parser.EnvMap{}
-var onChangeChannelsByEnvkey = make(map[string](chan struct{}))
 
 var mutex sync.Mutex
 
@@ -191,34 +212,69 @@ func FetchMap(envkey, clientNameArg, clientVersionArg string) (parser.EnvMap, pa
 }
 
 func InlineStart() {
+	home, err := homedir.Dir()
+	if err != nil {
+		panic(err)
+	}
+
+	logDir := filepath.Join(home, ".envkey", "logs")
+	err = os.MkdirAll(logDir, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   filepath.Join(logDir, "envkey-source-daemon.log"),
+		MaxSize:    25, // megabytes
+		MaxBackups: 3,
+		MaxAge:     30, //days
+		Compress:   false,
+	})
+
 	go startTcpServer()
 	go startHttpServer()
+
+	signal.Ignore(syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
 	select {}
 }
 
-func ListenChange(envkey string, onChange func(), onInvalid func(), onThrottled func(), onLostConnection func(error), onConnectFailed func(error)) {
+func ListenChange(props ListenChangeProps) {
+	envkey := props.Envkey
+
 	RemoveListener(envkey)
+
+	connIdBytes, err := uuid.NewRandom()
+	if err != nil {
+		props.OnDaemonConnectFailed(err)
+		return
+	}
+
+	connId := connIdBytes.String()
+	composite := strings.Join([]string{envkey, connId}, "|")
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:19410")
 	if err != nil {
-		onConnectFailed(err)
+		props.OnDaemonConnectFailed(err)
 	}
 	client, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		onConnectFailed(err)
+		props.OnDaemonConnectFailed(err)
 	}
 
 	writer := bufio.NewWriter(client)
-	_, err = writer.WriteString(envkey + "\n")
+	_, err = writer.WriteString(composite + "\n")
 
 	if err != nil {
-		onConnectFailed(err)
+		props.OnDaemonConnectFailed(err)
 	}
 
 	err = writer.Flush()
 
 	if err != nil {
-		onConnectFailed(err)
+		props.OnDaemonConnectFailed(err)
 	}
 
 	done := make(chan struct{})
@@ -235,16 +291,20 @@ func ListenChange(envkey string, onChange func(), onInvalid func(), onThrottled 
 			res, err := reader.ReadString('\n')
 
 			if err != nil {
-				onLostConnection(err)
+				props.OnLostDaemonConnection(err)
 			}
 			msg := strings.TrimSpace(res)
 
 			if msg == "envkey_invalid" {
-				onInvalid()
+				props.OnInvalid()
 			} else if msg == "connection_throttled" {
-				onThrottled()
+				props.OnThrottled()
+			} else if msg == "will_reconnect" {
+				props.OnWillReconnect()
+			} else if msg == "reconnected" {
+				props.OnReconnected()
 			} else {
-				onChange()
+				props.OnChange()
 			}
 		}
 	}()
@@ -273,27 +333,40 @@ func RemoveListener(envkey string) {
 }
 
 func ListenChangeWithEnv(envkey, clientName, clientVersion string, onChange func(parser.EnvMap, parser.EnvMap)) {
-	ListenChange(envkey, func() {
-		currentEnv, previousEnv, err := FetchMap(envkey, clientName, clientVersion)
+	ListenChange(ListenChangeProps{
+		Envkey: envkey,
+		OnChange: func() {
+			currentEnv, previousEnv, err := FetchMap(envkey, clientName, clientVersion)
 
-		if err != nil {
-			fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't fetch latest env: "+err.Error(), colors.Red))
+			if err != nil {
+				fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't fetch latest env: "+err.Error(), colors.Red))
+				os.Exit(1)
+			}
+
+			onChange(currentEnv, previousEnv)
+		},
+		OnInvalid: func() {
+			fmt.Fprintln(os.Stderr, FormatTerminal(" | ENVKEY invalid--watcher will exit", colors.Red))
 			os.Exit(1)
-		}
-
-		onChange(currentEnv, previousEnv)
-	}, func() {
-		fmt.Fprintln(os.Stderr, FormatTerminal(" | ENVKEY invalid--watcher will exit", colors.Red))
-		os.Exit(1)
-	}, func() {
-		fmt.Fprintln(os.Stderr, FormatTerminal(" | connection throttled because your org reach its limit--watcher will exit", colors.Red))
-		os.Exit(1)
-	}, func(err error) {
-		fmt.Fprintln(os.Stderr, FormatTerminal(" | lost connection to envkey daemon: "+err.Error(), colors.Red))
-		os.Exit(1)
-	}, func(err error) {
-		fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't connect to envkey daemon: "+err.Error(), colors.Red))
-		os.Exit(1)
+		},
+		OnThrottled: func() {
+			fmt.Fprintln(os.Stderr, FormatTerminal(" | active socket connection limit reached--watcher will exit", colors.Red))
+			os.Exit(1)
+		},
+		OnLostDaemonConnection: func(err error) {
+			fmt.Fprintln(os.Stderr, FormatTerminal(" | lost connection to envkey daemon: "+err.Error(), colors.Red))
+			os.Exit(1)
+		},
+		OnDaemonConnectFailed: func(err error) {
+			fmt.Fprintln(os.Stderr, FormatTerminal(" | couldn't connect to envkey daemon: "+err.Error(), colors.Red))
+			os.Exit(1)
+		},
+		OnWillReconnect: func() {
+			fmt.Fprintln(os.Stderr, FormatTerminal(" | lost connection to EnvKey host--attempting to reconnect...", colors.Red))
+		},
+		OnReconnected: func() {
+			fmt.Fprintln(os.Stderr, FormatTerminal(" | reconnected to EnvKey host--waiting for changes...", colors.Green))
+		},
 	})
 }
 
@@ -314,13 +387,19 @@ func startTcpServer() {
 
 func handleTcpConnection(serverConn net.Conn) {
 	var envkey string
+	var connId string
 
 	defer func() {
+		log.Printf("closing Tcp Connection: %s|%s", idPart(envkey), connId)
 		serverConn.Close()
-
 		mutex.Lock()
-		tcpServerConnsByEnvkey[envkey] = nil
+		delete(tcpServerConnsByEnvkeyByConnId[envkey], connId)
+		lastConnection := len(tcpServerConnsByEnvkeyByConnId[envkey]) == 0
 		mutex.Unlock()
+
+		if lastConnection && websocketsByEnvkey[envkey] != nil {
+			closeWebsocket(envkey)
+		}
 	}()
 
 	for {
@@ -328,20 +407,26 @@ func handleTcpConnection(serverConn net.Conn) {
 		msg, err := reader.ReadString('\n')
 
 		if err != nil {
+			log.Printf("TCP Connection %s|%s error: %s", idPart(envkey), connId, err)
 			return
 		}
 
-		envkey = strings.TrimSpace(msg)
+		composite := strings.TrimSpace(msg)
+		split := strings.Split(composite, "|")
+		envkey = split[0]
+		connId = split[1]
 
-		if err != nil {
-			println("tcp server error:", err)
-		}
+		log.Printf("TCP Connection established: %s|%s", idPart(envkey), connId)
 
 		if currentEnvsByEnvkey[envkey] == nil {
+			log.Printf("TCP Connection %s|%s: no currentEnv", idPart(envkey), connId)
 			return
 		} else {
 			mutex.Lock()
-			tcpServerConnsByEnvkey[envkey] = serverConn
+			if tcpServerConnsByEnvkeyByConnId[envkey] == nil {
+				tcpServerConnsByEnvkeyByConnId[envkey] = map[string]net.Conn{}
+			}
+			tcpServerConnsByEnvkeyByConnId[envkey][connId] = serverConn
 			mutex.Unlock()
 		}
 	}
@@ -366,16 +451,20 @@ func aliveHandler(w http.ResponseWriter, r *http.Request) {
 
 func stopHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "envkey-source daemon stopped'")
+	msg := "envkey-source daemon stopped"
+	fmt.Fprint(w, msg)
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
+	log.Println(msg)
 	os.Exit(0)
 }
 
 func fetchHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	envkey := vars["envkey"]
+
+	log.Printf("fetching env -- %s", idPart(envkey))
 
 	if envkey == "" {
 		w.WriteHeader(http.StatusNotFound)
@@ -384,7 +473,7 @@ func fetchHandler(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		mutex.Lock()
-		previousEnvsByEnvkey[envkey] = nil
+		delete(previousEnvsByEnvkey, envkey)
 		mutex.Unlock()
 	}()
 
@@ -400,12 +489,9 @@ func fetchHandler(w http.ResponseWriter, r *http.Request) {
 	if currentEnv == nil {
 		err := fetchCurrent(envkey, vars["clientName"], vars["clientVersion"])
 
-		mutex.Lock()
-		previousEnv = previousEnvsByEnvkey[envkey]
-		currentEnv = currentEnvsByEnvkey[envkey]
-		mutex.Unlock()
-
 		if err != nil {
+			log.Println("fetch error:", err)
+
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintln(w, "Fetch error", err)
 			return
@@ -414,24 +500,19 @@ func fetchHandler(w http.ResponseWriter, r *http.Request) {
 		go connectEnvkeyWebsocket(envkey, vars["clientName"], vars["clientVersion"])
 
 		if err != nil {
+			log.Println("Connect envkey socket error:", err)
+
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintln(w, "Connect envkey socket error", err)
 			return
 		}
-	} else {
-		if !socket.IsConnected() {
-			err := fetchCurrent(envkey, vars["clientName"], vars["clientVersion"])
+	} else if socket == nil || !socket.IsConnected() {
+		err := fetchCurrent(envkey, vars["clientName"], vars["clientVersion"])
 
-			mutex.Lock()
-			previousEnv = previousEnvsByEnvkey[envkey]
-			currentEnv = currentEnvsByEnvkey[envkey]
-			mutex.Unlock()
-
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintln(w, "Fetch error", err)
-				return
-			}
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintln(w, "Fetch error", err)
+			return
 		}
 	}
 
@@ -461,6 +542,7 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 	mutex.Unlock()
 
 	if connected {
+		log.Printf("websocket for %s already connected", idPart(envkey))
 		return nil
 	}
 
@@ -488,12 +570,17 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 	}
 
 	socket := &ws.ReconnectingWebsocket{
+		OnWillReconnect: func() {
+			writeTCP(envkey, []byte("will_reconnect"))
+		},
 		OnReconnect: func() {
 			err := fetchCurrent(envkey, clientName, clientVersion)
 
 			if err != nil {
-				println("fetchCurrent error:", err.Error())
+				log.Println("fetchCurrent error:", err.Error())
 			}
+
+			writeTCP(envkey, []byte("reconnected"))
 		},
 		OnInvalid: func() {
 			writeTCP(envkey, []byte("envkey_invalid"))
@@ -503,24 +590,13 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 		},
 	}
 	socket.Dial(endpoint, http.Header{"authorization": {string(authorizationJsonBytes)}})
-	fmt.Printf("connected to %s", endpoint)
+	log.Printf("connected to %s", endpoint)
 
 	mutex.Lock()
 	websocketsByEnvkey[envkey] = socket
 	mutex.Unlock()
 
-	defer func() {
-		mutex.Lock()
-		websocketsByEnvkey[envkey] = nil
-		currentEnvsByEnvkey[envkey] = nil
-		previousEnvsByEnvkey[envkey] = nil
-		tcpServerConn := tcpServerConnsByEnvkey[envkey]
-		tcpServerConnsByEnvkey[envkey] = nil
-		mutex.Unlock()
-
-		socket.Close()
-		tcpServerConn.Close()
-	}()
+	defer closeWebsocket(envkey)
 
 	done := make(chan struct{})
 
@@ -530,22 +606,29 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 			_, message, err := socket.ReadMessage()
 
 			if message != nil {
+				log.Printf("%s websocket received message", idPart(envkey))
+
 				err = fetchCurrent(envkey, clientName, clientVersion)
 				if err != nil {
+					log.Printf("fetchCurrent error: %s", err)
 					return
 				}
+				log.Printf("%s fetched latest env", idPart(envkey))
 
 				err = writeTCP(envkey, message)
 				if err != nil {
+					log.Printf("writeTCP error: %s", err)
 					return
 				}
 			}
 
 			if err != nil {
-				// 401 and 404 don't reconnect
+				// 401, 404, 429 (throttled) don't reconnect
 				code := socket.GetHTTPResponse().StatusCode
 
-				if code == 401 || code == 404 {
+				log.Printf("read websocket error: %s, code: %d", err, code)
+
+				if code == 401 || code == 404 || code == 429 || socket.IsClosing() {
 					return
 				}
 			}
@@ -562,24 +645,29 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 
 func writeTCP(envkey string, message []byte) error {
 	mutex.Lock()
-	tcpServerConn := tcpServerConnsByEnvkey[envkey]
+	tcpServerConns := tcpServerConnsByEnvkeyByConnId[envkey]
 	mutex.Unlock()
 
-	if tcpServerConn == nil {
-		return errors.New("No TCP connection")
+	if tcpServerConns == nil {
+		return errors.New("no TCP connections")
 	} else {
-		writer := bufio.NewWriter(tcpServerConn)
-		_, err := writer.WriteString(string(message) + "\n")
+		log.Printf("Sending message %s to %d TCP connections for %s", message, len(tcpServerConns), idPart(envkey))
 
-		if err != nil {
-			return err
+		for _, conn := range tcpServerConns {
+			writer := bufio.NewWriter(conn)
+			_, err := writer.WriteString(string(message) + "\n")
+
+			if err != nil {
+				return err
+			}
+
+			err = writer.Flush()
+
+			if err != nil {
+				return err
+			}
 		}
 
-		err = writer.Flush()
-
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -609,4 +697,38 @@ func fetchCurrent(envkey, clientName, clientVersion string) error {
 	mutex.Unlock()
 
 	return nil
+}
+
+func closeWebsocket(envkey string) {
+	mutex.Lock()
+	conn := websocketsByEnvkey[envkey]
+	mutex.Unlock()
+
+	if conn == nil {
+		return
+	}
+
+	log.Printf("%s websocket closing", idPart(envkey))
+
+	mutex.Lock()
+	socket := websocketsByEnvkey[envkey]
+	delete(websocketsByEnvkey, envkey)
+	delete(currentEnvsByEnvkey, envkey)
+	delete(previousEnvsByEnvkey, envkey)
+	tcpServerConns := tcpServerConnsByEnvkeyByConnId[envkey]
+	delete(tcpServerConnsByEnvkeyByConnId, envkey)
+	mutex.Unlock()
+
+	if len(tcpServerConns) > 0 {
+		log.Printf("Closing %d tcp connections", len(tcpServerConns))
+	}
+
+	for _, conn := range tcpServerConns {
+		conn.Close()
+	}
+	socket.Close()
+}
+
+func idPart(envkey string) string {
+	return strings.Split(envkey, "-")[0]
 }

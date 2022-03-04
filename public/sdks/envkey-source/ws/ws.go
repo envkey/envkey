@@ -2,11 +2,10 @@ package ws
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
-	"os"
 	"sync"
 	"time"
 
@@ -28,9 +27,10 @@ type ReconnectingWebsocket struct {
 	ReconnectIntervalFactor float64
 	HandshakeTimeout        time.Duration
 
-	OnReconnect func()
-	OnInvalid   func()
-	OnThrottled func()
+	OnWillReconnect func()
+	OnReconnect     func()
+	OnInvalid       func()
+	OnThrottled     func()
 
 	Verbose bool
 
@@ -41,6 +41,7 @@ type ReconnectingWebsocket struct {
 	mu            sync.Mutex
 	dialErr       error
 	isConnected   bool
+	isClosing     bool
 	isClosed      bool
 
 	*websocket.Conn
@@ -78,17 +79,26 @@ func (ws *ReconnectingWebsocket) ReadMessage() (messageType int, message []byte,
 			ws.handleErrorCode(ws.httpResponse.StatusCode)
 		}
 	}
-
 	return
 }
 
 func (ws *ReconnectingWebsocket) Close() {
-	ws.mu.Lock()
+	var err error
 	if ws.Conn != nil {
-		ws.Conn.Close()
+		ws.mu.Lock()
+		ws.isClosing = true
+		ws.mu.Unlock()
+
+		err = ws.Conn.Close()
 	}
-	ws.isConnected = false
-	ws.mu.Unlock()
+
+	if err == nil {
+		ws.mu.Lock()
+		ws.isConnected = false
+		ws.isClosed = true
+		ws.isClosing = false
+		ws.mu.Unlock()
+	}
 }
 
 func (ws *ReconnectingWebsocket) CloseAndReconnect() {
@@ -134,11 +144,11 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 	// seed rand for backoff
 	rand.Seed(time.Now().UTC().UnixNano())
 
+	loggedReconnect := false
+
 	for {
 		nextInterval := b.Duration()
-
 		wsConn, httpResp, err := ws.dialer.Dial(ws.url, ws.requestHeader)
-
 		code := httpResp.StatusCode
 
 		ws.mu.Lock()
@@ -149,9 +159,7 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 		ws.mu.Unlock()
 
 		if err == nil {
-			if ws.Verbose {
-				fmt.Fprintf(os.Stderr, "Websocket.Dial: connection was successfully established with %s\n", ws.url)
-			}
+			log.Printf("Websocket.Dial: connection was successfully established with %s\n", ws.url)
 
 			if isReconnect && ws.OnReconnect != nil {
 				ws.OnReconnect()
@@ -159,17 +167,21 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 
 			return
 		} else if code == 401 || code == 404 {
+			log.Printf("Websocket.Dial: connection to %s failed: %d (invalid ENVKEY)\n", ws.url, code)
 			if ws.OnInvalid != nil {
 				ws.OnInvalid()
 			}
 			return
 		} else if code == 429 {
+			log.Printf("Websocket.Dial: connection to %s failed: %d (throttled)\n", ws.url, code)
 			if ws.OnThrottled != nil {
 				ws.OnThrottled()
 			}
+			return
 		} else {
-			if ws.Verbose {
-				fmt.Fprintf(os.Stderr, "Websocket[%s].Dial: can't connect to websocket, will try again in %v\n", ws.url, nextInterval)
+			if !loggedReconnect {
+				log.Printf("Websocket[%s].Dial: can't connect to websocket, attempting to reconnect...\n", ws.url)
+				loggedReconnect = true
 			}
 		}
 
@@ -198,6 +210,13 @@ func (ws *ReconnectingWebsocket) IsConnected() bool {
 	return ws.isConnected
 }
 
+func (ws *ReconnectingWebsocket) IsClosing() bool {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	return ws.isClosing
+}
+
 func (ws *ReconnectingWebsocket) setDefaults() {
 	if ws.ReconnectIntervalMin == 0 {
 		ws.ReconnectIntervalMin = 2 * time.Second
@@ -221,9 +240,16 @@ func (ws *ReconnectingWebsocket) handleErrorCode(code int) {
 		if ws.OnInvalid != nil {
 			ws.OnInvalid()
 		}
-
 		ws.Close()
-	} else {
+	} else if code == 429 {
+		if ws.OnThrottled != nil {
+			ws.OnThrottled()
+		}
+		ws.Close()
+	} else if !ws.IsClosing() {
+		if ws.OnWillReconnect != nil {
+			ws.OnWillReconnect()
+		}
 		ws.CloseAndReconnect()
 	}
 }

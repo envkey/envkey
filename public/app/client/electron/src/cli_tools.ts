@@ -313,9 +313,21 @@ const install = async (
 
   await copyExecFiles(cliFolder, envkeysourceFolder, binDir);
 
-  await fsp
-    .symlink(path.join(binDir, "envkey-source"), path.join(binDir, "es"))
-    .catch((err) => {});
+  // add `es` alias for envkey-source unless an `es` is already in PATH
+  const hasExistingEsCommand = await new Promise((resolve) => {
+    which("es", (err, path) => {
+      if (err) {
+        log("which('es') error:", { err });
+      }
+      resolve(Boolean(path));
+    });
+  });
+
+  if (!hasExistingEsCommand) {
+    await fsp
+      .symlink(path.join(binDir, "envkey-source"), path.join(binDir, "es"))
+      .catch((err) => {});
+  }
 
   log(`CLI tools update: completed successfully`, {
     cli: params.cli?.nextVersion,

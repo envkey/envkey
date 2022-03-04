@@ -146,6 +146,13 @@ export const BillingUI: OrgComponent = (props) => {
                   {license.maxCloudStorageMb}mb
                 </span>
               </div>,
+              <div className="field">
+                <label>Active Socket Connections {refreshStatsIcon}</label>
+                <span>
+                  {orgStats.activeSocketConnections}/
+                  {license.maxCloudActiveSocketConnections}
+                </span>
+              </div>,
             ]
           : ""}
       </div>

@@ -81,6 +81,7 @@ export namespace Model {
     dataTransferBytesThisHour: z.number(),
     dataTransferBytesThisMonth: z.number(),
     blobStorageBytes: z.number(),
+    activeSocketConnections: z.number(),
   });
 
   export type OrgStats = z.infer<typeof OrgStatsSchema>;

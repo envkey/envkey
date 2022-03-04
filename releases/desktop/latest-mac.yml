@@ -1,17 +1,17 @@
-version: 2.0.19
+version: 2.0.20
 files:
-  - url: EnvKey-2.0.19-mac.zip
-    sha512: x4U6AksZwJJvC7MwdjG11HBhhs2ccmFfeDgzN3igCF+skmN+evC6yvHEQvyPZA6zM8favXFfCEwQAIOIpyeYNQ==
-    size: 82837454
-  - url: EnvKey-2.0.19-arm64-mac.zip
-    sha512: CH3Lgos/uWGC0nUgkNI5BiAl3ZiSd0tQ7jVOrSS/qEbDxSj4OCd52wxsv6H1paN5+mCWcQkYqLR8TDfcUhiksg==
-    size: 84497195
-  - url: EnvKey-2.0.19.dmg
-    sha512: Jclqjh6vU8JbZePjtWEdruVA/MxBXdnPU1mMhQ1f5MWecuXvndpl+LtKgjtZJzvBaSninMKwJOe26YfZqbQC2Q==
-    size: 85888398
-  - url: EnvKey-2.0.19-arm64.dmg
-    sha512: pHe9qogrQQCi0awLZ8i4FCtvrxq6GfnHzjirUenHp7JMz6tWS+qJRdhjWHYWLxHVmK1GpF0aQtX+UnINHAXAdQ==
-    size: 87855624
-path: EnvKey-2.0.19-mac.zip
-sha512: x4U6AksZwJJvC7MwdjG11HBhhs2ccmFfeDgzN3igCF+skmN+evC6yvHEQvyPZA6zM8favXFfCEwQAIOIpyeYNQ==
-releaseDate: '2022-03-02T23:26:41.009Z'
+  - url: EnvKey-2.0.20-mac.zip
+    sha512: /CPKeLuh6XwCioTGYg7oDd/3cXa7uNKsOZAFcpr+ZzJOdmSJGt9f4OxvTNhGZDMJqIytdp7AgAz5xXu3sw5CIw==
+    size: 82837459
+  - url: EnvKey-2.0.20-arm64-mac.zip
+    sha512: yoC8Prkg0V85Nc35X7ckwADDUr4EB08opAXzC2LPFQB9aOjMZmhl46Hlkv8XMA9EzT537B6EWnCV/hytB9h9NQ==
+    size: 84497279
+  - url: EnvKey-2.0.20.dmg
+    sha512: pIXJIIukvDmomxEKBtkZ2dFMKpNQ7d7g2VM2i9y76gH651sES4UWS1VAQs9cAS+0Uz1OiVUra3pBewGyqF7S8Q==
+    size: 85889122
+  - url: EnvKey-2.0.20-arm64.dmg
+    sha512: /L1VYDdn7kLMnGgfCO70btaBlH4Mv6hKTgZrECgVgDzoYbd0rXjxV3STfXZVj74zP7OyxQCdrd1zbaQ7dv+LZw==
+    size: 87855480
+path: EnvKey-2.0.20-mac.zip
+sha512: /CPKeLuh6XwCioTGYg7oDd/3cXa7uNKsOZAFcpr+ZzJOdmSJGt9f4OxvTNhGZDMJqIytdp7AgAz5xXu3sw5CIw==
+releaseDate: '2022-03-04T14:47:38.967Z'

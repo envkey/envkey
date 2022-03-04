@@ -208,7 +208,7 @@ namespace Api {
 
   export type ConnectedByDeviceId = Record<
     string,
-    { orgId: string; userId: string }
+    { orgId: string; userId: string; socket: WebSocket }
   >;
 
   export type EnvkeySocketConnections = {
@@ -221,7 +221,7 @@ namespace Api {
 
   export type ConnectedByConnectionId = Record<
     string,
-    { orgId: string; generatedEnvkeyId: string }
+    { orgId: string; generatedEnvkeyId: string; socket: WebSocket }
   >;
 
   export type ClearEnvkeyConnectionSocketFn = (
@@ -245,25 +245,29 @@ namespace Api {
     now: number
   ) => Promise<void>;
 
+  export type UpdateActiveSocketConnectionsFn = (
+    orgId: string,
+    n?: number
+  ) => Promise<void>;
+
   export type ThrottleRequestFn = (
     orgStats: Model.OrgStats,
     license: Billing.License,
     requestBytes: number,
     hasBlobParams: boolean
-  ) => Promise<void>;
+  ) => void;
 
   export type ThrottleResponseFn = (
     orgStats: Model.OrgStats,
     license: Billing.License,
     responseBytes: number
-  ) => Promise<void>;
+  ) => void;
 
   export type ThrottleSocketConnectionFn = (
     connectionType: "device" | "generatedEnvkey",
     license: Billing.License,
-    numHosts: number,
-    numConnected: number
-  ) => Promise<void>;
+    orgStats: Model.OrgStats
+  ) => void;
 
   export type VerifyLicenseFn = (
     orgId: string,

@@ -3,9 +3,13 @@ import * as R from "ramda";
 import WebSocket from "ws";
 import url from "url";
 import { IncomingMessage, createServer } from "http";
-import { Auth, Api, Billing } from "@core/types";
+import { Auth, Api, Model, Billing } from "@core/types";
 import { log, logStderr } from "@core/lib/utils/logger";
-import { authenticate, verifySignedLicense } from "../../../shared/src/auth";
+import {
+  authenticate,
+  verifySignedLicense,
+  getOrgStats,
+} from "../../../shared/src/auth";
 import { okResult } from "./routes/route_helpers";
 import { upTo1Sec, wait } from "@core/lib/utils/wait";
 import {
@@ -19,7 +23,7 @@ type RawSocket = IncomingMessage["socket"];
 
 let socketServer: WebSocket.Server;
 
-const HEARTBEAT_INTERVAL_MILLIS = 60000;
+const HEARTBEAT_INTERVAL_MILLIS = 30000;
 
 let numDeviceConnections = 0;
 const userConnections: Api.UserSocketConnections = {};
@@ -34,32 +38,54 @@ const numConnectionsByOrg: {
 } = {};
 
 let heartbeatTimeout: NodeJS.Timeout;
-const pingAllClientsHeartbeat = async () => {
-  let pingsQueued = 0;
-  for (const wsClient of socketServer.clients) {
-    if (wsClient.readyState != WebSocket.OPEN) {
-      continue;
-    }
 
-    // background
-    wait(upTo1Sec()).then(() => {
-      wsClient.ping((err: Error | null) => {
-        const clientInfo = (wsClient as any)._socket?._peername;
-        if (err) {
-          log("Client WebSocket ping ended with error", {
-            err,
-            client: clientInfo,
-          });
-        }
-        // logDevOnly("Client WebSocket ping OK", { client: clientInfo });
-      });
+const pingClient = async (
+  client: WebSocket,
+  cb: (error: Error | null) => void
+) => {
+  // background
+  wait(upTo1Sec()).then(() => {
+    client.ping((err: Error | null) => {
+      const clientInfo = (client as any)._socket?._peername;
+      if (err) {
+        log("Client WebSocket ping ended with error", {
+          err,
+          client: clientInfo,
+        });
+      }
+      cb(err);
     });
+  });
+};
 
-    // every thousand pings, wait a second to cool off
+const pingAllClientsHeartbeat = async () => {
+  // log("pinging all websocket clients...", {
+  //   numDeviceConnections,
+  //   numEnvkeyConnections,
+  // });
+  let pingsQueued = 0;
+
+  for (let deviceId in connectedByDeviceId) {
+    const { socket, orgId, userId } = connectedByDeviceId[deviceId];
+    pingClient(socket, (error) => {
+      if (error) {
+        clearDeviceSocket(orgId, userId, deviceId);
+      }
+    });
+    // every thousand pings, wait 2 seconds to cool off
     pingsQueued++;
-    if (pingsQueued % 1000 == 0) {
-      await wait(1000);
-    }
+  }
+
+  for (let connectionId in connectedByConnectionId) {
+    const { socket, orgId, generatedEnvkeyId } =
+      connectedByConnectionId[connectionId];
+    pingClient(socket, (error) => {
+      if (error) {
+        clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
+      }
+    });
+    // every thousand pings, wait 2 seconds to cool off
+    pingsQueued++;
   }
 
   heartbeatTimeout = setTimeout(
@@ -67,12 +93,6 @@ const pingAllClientsHeartbeat = async () => {
     HEARTBEAT_INTERVAL_MILLIS
   );
 };
-
-let getNumHostsFn: (() => number) | undefined;
-export const registerGetNumHostsFn = (fn: typeof getNumHostsFn) => {
-  getNumHostsFn = fn;
-};
-const getNumHosts = () => getNumHostsFn?.() ?? 1;
 
 let throttleSocketConnectionFn: Api.ThrottleSocketConnectionFn | undefined;
 export const registerThrottleSocketConnectionFn = (
@@ -84,6 +104,20 @@ export const registerThrottleSocketConnectionFn = (
 let balanceSocketsFn: Api.BalanceSocketsFn | undefined;
 export const registerBalanceSocketsFn = (fn: Api.BalanceSocketsFn) => {
   balanceSocketsFn = fn;
+};
+
+let incrementActiveSocketsFn: Api.UpdateActiveSocketConnectionsFn | undefined;
+export const registerIncrementActiveSocketsFn = (
+  fn: Api.UpdateActiveSocketConnectionsFn
+) => {
+  incrementActiveSocketsFn = fn;
+};
+
+let decrementActiveSocketsFn: Api.UpdateActiveSocketConnectionsFn | undefined;
+export const registerDecrementActiveSocketsFn = (
+  fn: Api.UpdateActiveSocketConnectionsFn
+) => {
+  decrementActiveSocketsFn = fn;
 };
 
 const start: Api.SocketServer["start"] = () => {
@@ -105,7 +139,10 @@ const start: Api.SocketServer["start"] = () => {
       res.writeHead(404, { "Content-Type": "text/plain" });
       res.end("Not found");
     });
-    socketServer = new WebSocket.Server({ noServer: true });
+    socketServer = new WebSocket.Server({
+      noServer: true,
+      maxPayload: 5 * 1024, // 5 KB
+    });
 
     socketServer.on(
       "connection",
@@ -146,12 +183,18 @@ const start: Api.SocketServer["start"] = () => {
           connectedByDeviceId[context.orgUserDevice.id] = {
             orgId,
             userId: context.user.id,
+            socket,
           };
           numDeviceConnections++;
           if (!numConnectionsByOrg[orgId]) {
             numConnectionsByOrg[orgId] = 1;
           } else {
             numConnectionsByOrg[orgId]++;
+          }
+
+          if (incrementActiveSocketsFn) {
+            // increment active sockets in background
+            incrementActiveSocketsFn(orgId);
           }
 
           socket.on("close", getClearSocketFn("close", context));
@@ -196,11 +239,16 @@ const start: Api.SocketServer["start"] = () => {
           connectedByConnectionId[connectionId] = {
             orgId,
             generatedEnvkeyId,
+            socket,
           };
           if (!numConnectionsByOrg[orgId]) {
             numConnectionsByOrg[orgId] = 1;
           } else {
             numConnectionsByOrg[orgId]++;
+          }
+          if (incrementActiveSocketsFn) {
+            // increment active sockets in background
+            incrementActiveSocketsFn(orgId);
           }
 
           socket.on("close", getClearSocketFn("close", context));
@@ -211,6 +259,8 @@ const start: Api.SocketServer["start"] = () => {
             orgId,
             generatedEnvkeyId,
             connectionId,
+            numDeviceConnections,
+            numEnvkeyConnections,
           });
         }
       }
@@ -251,13 +301,12 @@ const start: Api.SocketServer["start"] = () => {
               releaseTransaction(transactionConn);
             }
 
-            if (throttleSocketConnectionFn) {
+            if (throttleSocketConnectionFn && context.orgStats!) {
               try {
                 throttleSocketConnectionFn(
                   "device",
                   context.license,
-                  getNumHosts(),
-                  numConnectionsByOrg[context.org.id] ?? 0
+                  context.orgStats
                 );
               } catch (err) {
                 log("socket connection throttle error", { err });
@@ -272,6 +321,7 @@ const start: Api.SocketServer["start"] = () => {
           } else if (authParams.type == "fetchEnvkeySocketAuthParams") {
             let generatedEnvkey: Api.Db.GeneratedEnvkey | undefined;
             let org: Api.Db.Org | undefined;
+            let orgStats: Model.OrgStats | undefined;
             let license: Billing.License | undefined;
             try {
               generatedEnvkey = await getDb<Api.Db.GeneratedEnvkey>(
@@ -283,10 +333,13 @@ const start: Api.SocketServer["start"] = () => {
               );
 
               if (generatedEnvkey && throttleSocketConnectionFn) {
-                org = await getOrg(generatedEnvkey.pkey, transactionConn);
-                if (!org) {
+                [org, orgStats] = await Promise.all([
+                  getOrg(generatedEnvkey.pkey, transactionConn),
+                  getOrgStats(generatedEnvkey.pkey, transactionConn),
+                ]);
+                if (!org || !orgStats) {
                   log("socket httpServer.authenticate error", {
-                    err: "org missing",
+                    err: "org or orgStats missing",
                   });
                   socketAuthErr(socket);
                   return;
@@ -307,15 +360,16 @@ const start: Api.SocketServer["start"] = () => {
             }
 
             if (generatedEnvkey) {
-              if (throttleSocketConnectionFn && org && license) {
+              if (throttleSocketConnectionFn && org && license && orgStats) {
                 try {
+                  log("throttle socket...");
                   throttleSocketConnectionFn(
-                    "device",
+                    "generatedEnvkey",
                     license,
-                    getNumHosts(),
-                    numConnectionsByOrg[org.id] ?? 0
+                    orgStats
                   );
                 } catch (err) {
+                  log("caught throttle error...");
                   log("socket connection throttle error", { err });
                   socketThrottleErr(socket);
                   return;
@@ -380,11 +434,21 @@ const start: Api.SocketServer["start"] = () => {
         }
         const conn = byDeviceId[deviceId];
         if (conn.readyState == WebSocket.OPEN) {
-          conn.send(JSON.stringify(msg));
+          conn.send(JSON.stringify(msg), (err) => {
+            if (err) {
+              log("Error sending to socket. Closing...", {
+                orgId,
+                userId,
+                deviceId,
+                err,
+              });
+              clearDeviceSocket(orgId, userId, deviceId);
+            } else {
+              // bring to the front (for balancing logic)
+              connectedByDeviceId[deviceId] = { orgId, userId, socket: conn };
+            }
+          });
           devicesPublishedTo++;
-
-          // bring to the front (for balancing logic)
-          connectedByDeviceId[deviceId] = { orgId, userId };
         }
       }
     }
@@ -404,11 +468,25 @@ const start: Api.SocketServer["start"] = () => {
     for (let connectionId in byConnectionId) {
       const conn = byConnectionId[connectionId];
       if (conn.readyState == WebSocket.OPEN) {
-        conn.send(JSON.stringify(msg));
+        conn.send(JSON.stringify(msg), (err) => {
+          if (err) {
+            log("Error sending to socket. Closing...", {
+              orgId,
+              generatedEnvkeyId,
+              connectionId,
+              err,
+            });
+            clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
+          } else {
+            // bring to the front (for balancing logic)
+            connectedByConnectionId[connectionId] = {
+              orgId,
+              generatedEnvkeyId,
+              socket: conn,
+            };
+          }
+        });
         connectionsPublishedTo++;
-
-        // bring to the front (for balancing logic)
-        connectedByConnectionId[connectionId] = { orgId, generatedEnvkeyId };
       }
     }
 
@@ -419,6 +497,10 @@ const start: Api.SocketServer["start"] = () => {
     userId,
     deviceId
   ) => {
+    if (connectedByDeviceId) {
+      delete connectedByDeviceId[deviceId];
+    }
+
     if (
       userConnections[orgId] &&
       userConnections[orgId][userId] &&
@@ -436,7 +518,7 @@ const start: Api.SocketServer["start"] = () => {
       }
 
       delete userConnections[orgId][userId][deviceId];
-      numEnvkeyConnections--;
+      numDeviceConnections--;
       if (numConnectionsByOrg[orgId]) {
         numConnectionsByOrg[orgId]--;
       }
@@ -448,10 +530,10 @@ const start: Api.SocketServer["start"] = () => {
       if (R.isEmpty(userConnections[orgId])) {
         delete userConnections[orgId];
       }
-    }
 
-    if (connectedByDeviceId) {
-      delete connectedByDeviceId[deviceId];
+      if (decrementActiveSocketsFn && !exiting) {
+        decrementActiveSocketsFn(orgId);
+      }
     }
   },
   clearEnvkeyConnectionSocket: Api.ClearEnvkeyConnectionSocketFn = (
@@ -459,6 +541,9 @@ const start: Api.SocketServer["start"] = () => {
     generatedEnvkeyId,
     connectionId
   ) => {
+    if (connectedByConnectionId) {
+      delete connectedByConnectionId[connectionId];
+    }
     if (
       envkeyConnections[orgId] &&
       envkeyConnections[orgId][generatedEnvkeyId] &&
@@ -497,10 +582,10 @@ const start: Api.SocketServer["start"] = () => {
       if (R.isEmpty(envkeyConnections[orgId])) {
         delete envkeyConnections[orgId];
       }
-    }
 
-    if (connectedByConnectionId) {
-      delete connectedByConnectionId[connectionId];
+      if (decrementActiveSocketsFn && !exiting) {
+        decrementActiveSocketsFn(orgId);
+      }
     }
   },
   clearEnvkeySockets: Api.SocketServer["clearEnvkeySockets"] = (
@@ -549,7 +634,7 @@ const start: Api.SocketServer["start"] = () => {
     socket.destroy();
   },
   socketThrottleErr = (socket: RawSocket) => {
-    socket.write("HTTP/1.1 413 Too Many Connections\r\n\r\n");
+    socket.write("HTTP/1.1 429 Too Many Connections\r\n\r\n");
     socket.removeAllListeners();
     socket.destroy();
   },
@@ -585,6 +670,8 @@ const start: Api.SocketServer["start"] = () => {
       }
     };
 
+let exiting = false;
+
 for (let exitSignal of [
   "SIGINT",
   "SIGUSR1",
@@ -598,15 +685,33 @@ for (let exitSignal of [
       `Received ${exitSignal} - clearing socket connections before exiting...`
     );
 
-    for (let orgId in userConnections) {
-      clearOrgSockets(orgId);
+    exiting = true;
+    const promises: Promise<any>[] = [];
+
+    if (decrementActiveSocketsFn) {
+      for (let orgId in numConnectionsByOrg) {
+        const numConnections = numConnectionsByOrg[orgId];
+        promises.push(decrementActiveSocketsFn(orgId, numConnections));
+      }
     }
 
-    for (let orgId in envkeyConnections) {
-      clearOrgEnvkeySockets(orgId);
-    }
+    const clearFn = () => {
+      for (let orgId in userConnections) {
+        clearOrgSockets(orgId);
+      }
 
-    process.exit(0);
+      for (let orgId in envkeyConnections) {
+        clearOrgEnvkeySockets(orgId);
+      }
+
+      process.exit(0);
+    };
+
+    if (promises.length > 0) {
+      Promise.all(promises).then(clearFn);
+    } else {
+      clearFn();
+    }
   });
 }
 
