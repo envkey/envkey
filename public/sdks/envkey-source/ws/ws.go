@@ -3,7 +3,6 @@ package ws
 import (
 	"errors"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"sync"
@@ -140,9 +139,6 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 		Factor: ws.ReconnectIntervalFactor,
 		Jitter: true,
 	}
-
-	// seed rand for backoff
-	rand.Seed(time.Now().UTC().UnixNano())
 
 	loggedReconnect := false
 
