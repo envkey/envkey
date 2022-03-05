@@ -325,7 +325,10 @@ const install = async (
 
   if (!hasExistingEsCommand) {
     await fsp
-      .symlink(path.join(binDir, "envkey-source"), path.join(binDir, "es"))
+      .symlink(
+        path.join(binDir, `envkey-source${ext}`),
+        path.join(binDir, "es")
+      )
       .catch((err) => {});
   }
 

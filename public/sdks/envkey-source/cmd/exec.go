@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/daemon"
@@ -134,6 +135,10 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 
 func execute(c string, env []string, copyOrAttach string, includeStdin bool, copyOutputPrefix string) *exec.Cmd {
 	command := exec.Command("sh", "-c", c)
+	if runtime.GOOS == "windows" {
+		command = exec.Command(c)
+	}
+
 	command.Env = env
 
 	if copyOrAttach == "copy" {
