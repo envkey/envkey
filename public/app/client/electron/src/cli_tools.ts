@@ -526,22 +526,15 @@ const copyExecFiles = async (
       if (platform == "win32" && err.code == "EBUSY") {
         await dialog.showMessageBox({
           title: "EnvKey CLI",
-          message: `In order to upgrade, any* running envkey.exe or envkey-source.exe processes will be closed`,
+          message: `In order to upgrade, any running envkey-source.exe processes will be closed`,
           buttons: ["Continue"],
         });
 
-        await Promise.all([
-          new Promise<void>((resolve, reject) => {
-            exec(`taskkill /F /IM envkey-source.exe /T`, (err) =>
-              err ? reject(err) : resolve()
-            );
-          }),
-          new Promise<void>((resolve, reject) => {
-            exec(`taskkill /F /IM envkey.exe /T`, (err) =>
-              err ? reject(err) : resolve()
-            );
-          }),
-        ]);
+        await new Promise<void>((resolve, reject) => {
+          exec(`taskkill /F /IM envkey-source.exe /T`, (err) =>
+            err ? reject(err) : resolve()
+          );
+        });
 
         return copyExecFiles(
           cliFolder,
