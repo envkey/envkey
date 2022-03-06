@@ -23,11 +23,12 @@ var localDevHost bool
 
 var daemonMode bool
 var killDaemon bool
-var execCmd string
+var execCmdArg string
 var watch bool
-var onChangeCmd string
+var onChangeCmdArg string
 var watchVars []string
 var memCache bool
+var watchThrottle float64
 
 var shellHook string
 var ignoreMissing bool
@@ -58,10 +59,12 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.Flags().StringVarP(&execCmd, "exec", "e", "", "command to execute with EnvKey environment (default is none)")
+	RootCmd.Flags().StringVarP(&execCmdArg, "exec", "e", "", "command to execute with EnvKey environment (default is none)")
 	RootCmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-run --exec command whenever environment is updated (default is false)")
-	RootCmd.Flags().StringVarP(&onChangeCmd, "on-reload", "r", "", "command to execute when environment is updated (default is none)")
+	RootCmd.Flags().StringVarP(&onChangeCmdArg, "on-reload", "r", "", "command to execute when environment is updated (default is none)")
 	RootCmd.Flags().StringSliceVar(&watchVars, "only", nil, "when using -w or -r, reload only when specific vars change (comma-delimited list)")
+	RootCmd.Flags().Float64Var(&watchThrottle, "watch-throttle-ms", 10000, "min delay between restarts or reloads when using --watch/-w or --on-reload/-r")
+
 	RootCmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite existing environment variables and/or other entries in .env file")
 	RootCmd.Flags().StringVar(&envFileOverride, "env-file", "", "Explicitly set path to ENVKEY-containing .env file (optional)")
 

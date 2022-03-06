@@ -5,8 +5,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/daemon"
 	"github.com/envkey/envkey/public/sdks/envkey-source/parser"
@@ -19,10 +20,18 @@ import (
 
 var stdoutLogger = log.New(os.Stdout, "", 0)
 var stderrLogger = log.New(os.Stderr, "", 0)
-var restarting = false
+
+var killingWatch = false
+var throttlingChanges = false
+
+var changeQueued []parser.EnvMap
+
+var watchCommand *exec.Cmd
+
+var mutex sync.Mutex
 
 func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVersion string) {
-	if execCmd == "" && onChangeCmd == "" {
+	if execCmdArg == "" && onChangeCmdArg == "" {
 		var res string
 		var err error
 
@@ -36,48 +45,70 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 			res, err = shell.Source(env, force, pamCompatible, dotEnvCompatible)
 		}
 
-		utils.CheckError(err, execCmd == "")
+		utils.CheckError(err, execCmdArg == "")
 		stdoutLogger.Println(res)
 
 		os.Exit(0)
 	}
 
-	var command *exec.Cmd
+	execFn := func(latestEnv parser.EnvMap, previousEnv parser.EnvMap, onFinish func(), runSync bool) {
+		fn := func() {
+			watchCommand = execute(execCmdArg, shell.ToPairs(latestEnv, previousEnv, true, force), "attach", true, "")
+			watchCommand.Wait()
+		}
 
-	execFn := func(latestEnv parser.EnvMap, previousEnv parser.EnvMap, onFinish func()) {
-		command = execute(execCmd, shell.ToPairs(latestEnv, previousEnv, true, force), "attach", true, "")
-
-		command.Wait()
+		if runSync {
+			fn()
+		} else {
+			go fn()
+		}
 
 		if onFinish != nil {
 			onFinish()
 		}
 	}
 
-	if onChangeCmd != "" || (execCmd != "" && watch) {
+	if onChangeCmdArg != "" || (execCmdArg != "" && watch) {
 		execFn(
 			env,
 			nil,
 			func() {
-				if !restarting {
+				if !isKillingWatch() {
 					var msg string
-					if execCmd != "" {
-						msg = " | command finished--waiting for changes..."
-					} else if onChangeCmd != "" {
+					if execCmdArg != "" {
+						msg = " | executing command and waiting for changes..."
+					} else {
 						msg = " | waiting for changes..."
 					}
+
 					stderrLogger.Println(utils.FormatTerminal(msg, nil))
 				}
 			},
+			false,
 		)
 	} else {
-		execFn(env, nil, nil)
+		execFn(env, nil, nil, true)
 		return
 	}
 
-	var onChange func(parser.EnvMap, parser.EnvMap)
-
+	var onChange func(updatedEnv parser.EnvMap, previousEnv parser.EnvMap)
 	onChange = func(updatedEnv parser.EnvMap, previousEnv parser.EnvMap) {
+		if isThrottlingChanges() {
+			setChangeQueued([]parser.EnvMap{updatedEnv, previousEnv})
+			return
+		}
+
+		setIsThrottlingChanges(true)
+		go func() {
+			time.Sleep(time.Duration(watchThrottle) * time.Millisecond)
+			queued := getChangeQueued()
+			setChangeQueued(nil)
+			setIsThrottlingChanges(false)
+			if queued != nil {
+				onChange(queued[0], queued[1])
+			}
+		}()
+
 		if watchVars != nil && len(watchVars) > 0 {
 			watchVarChanged := false
 			for _, k := range watchVars {
@@ -92,39 +123,42 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 			}
 		}
 
-		if onChangeCmd != "" {
+		if onChangeCmdArg != "" {
 			go func() {
-				stderrLogger.Println(utils.FormatTerminal(" | executing on-change...", colors.Cyan))
-				command = execute(
-					onChangeCmd,
+				stderrLogger.Println(utils.FormatTerminal(" | executing on-reload...", colors.Cyan))
+
+				execute(
+					onChangeCmdArg,
 					shell.ToPairs(updatedEnv, previousEnv, true, force),
 					"copy",
 					false,
-					utils.FormatTerminal(" | on-change > ", colors.Cyan),
-				)
-				command.Wait()
-				stderrLogger.Println(utils.FormatTerminal(" | on-change finished--waiting for changes...", colors.Cyan))
+					utils.FormatTerminal(" | on-reload > ", colors.Cyan),
+				).Wait()
+
+				stderrLogger.Println(utils.FormatTerminal(" | executed on-reload--waiting for changes...", colors.Cyan))
 			}()
 		}
 
-		if execCmd != "" && watch {
+		if execCmdArg != "" && watch {
 			go func() {
 				stderrLogger.Println(utils.FormatTerminal(" | restarting after update...", nil))
 
 				// ignore error since process may already have finished
-				restarting = true
-				command.Process.Kill()
-				command.Process.Wait()
-				restarting = false
+				setIsKillingWatch(true)
+				c := getWatchCommand()
+				c.Process.Kill()
+				c.Process.Wait()
+				setIsKillingWatch(false)
 
 				execFn(
 					updatedEnv,
 					previousEnv,
 					func() {
-						if !restarting {
-							stderrLogger.Println(utils.FormatTerminal(" | command finished--waiting for changes...", nil))
+						if !isKillingWatch() {
+							stderrLogger.Println(utils.FormatTerminal(" | executing command and waiting for changes...", nil))
 						}
 					},
+					false,
 				)
 			}()
 		}
@@ -134,8 +168,13 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 }
 
 func execute(c string, env []string, copyOrAttach string, includeStdin bool, copyOutputPrefix string) *exec.Cmd {
-	command := exec.Command("sh", "-c", c)
-	if runtime.GOOS == "windows" {
+	// if we're in an environment where a shell (`sh`) is defined, use that
+	// so we get shell expansion/other shell features.
+	// otherwise just pass the command directly to the system.
+	var command *exec.Cmd
+	if utils.CommandExists("sh") {
+		command = exec.Command("sh", "-c", c)
+	} else {
 		command = exec.Command(c)
 	}
 
@@ -143,17 +182,17 @@ func execute(c string, env []string, copyOrAttach string, includeStdin bool, cop
 
 	if copyOrAttach == "copy" {
 		outPipe, err := command.StdoutPipe()
-		utils.CheckError(err, execCmd == "")
+		utils.CheckError(err, execCmdArg == "")
 		errPipe, err := command.StderrPipe()
-		utils.CheckError(err, execCmd == "")
+		utils.CheckError(err, execCmdArg == "")
 
 		var inPipe io.WriteCloser
 		if includeStdin {
 			inPipe, err = command.StdinPipe()
-			utils.CheckError(err, execCmd == "")
+			utils.CheckError(err, execCmdArg == "")
 		}
 
-		utils.CheckError(err, execCmd == "")
+		utils.CheckError(err, execCmdArg == "")
 
 		go io.Copy(os.Stdout, prefixer.New(outPipe, copyOutputPrefix))
 		go io.Copy(os.Stderr, prefixer.New(errPipe, copyOutputPrefix))
@@ -172,7 +211,53 @@ func execute(c string, env []string, copyOrAttach string, includeStdin bool, cop
 	}
 
 	err := command.Start()
-	utils.CheckError(err, execCmd == "")
+	utils.CheckError(err, execCmdArg == "")
 
 	return command
+}
+
+func isKillingWatch() bool {
+	var res bool
+	mutex.Lock()
+	res = killingWatch
+	mutex.Unlock()
+	return res
+}
+
+func setIsKillingWatch(val bool) {
+	mutex.Lock()
+	killingWatch = val
+	mutex.Unlock()
+}
+
+func isThrottlingChanges() bool {
+	var res bool
+	mutex.Lock()
+	res = throttlingChanges
+	mutex.Unlock()
+	return res
+}
+
+func setIsThrottlingChanges(val bool) {
+	mutex.Lock()
+	throttlingChanges = val
+	mutex.Unlock()
+}
+
+func getChangeQueued() []parser.EnvMap {
+	var res []parser.EnvMap
+	mutex.Lock()
+	res = changeQueued
+	mutex.Unlock()
+	return res
+}
+
+func setChangeQueued(val []parser.EnvMap) {
+	mutex.Lock()
+	changeQueued = val
+	mutex.Unlock()
+}
+
+func getWatchCommand() *exec.Cmd {
+	return watchCommand
 }

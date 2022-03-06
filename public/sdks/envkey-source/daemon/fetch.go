@@ -3,7 +3,6 @@ package daemon
 import (
 	"bytes"
 	"encoding/gob"
-	"log"
 	"math/rand"
 	"reflect"
 	"time"
@@ -36,8 +35,6 @@ func fetchAndConnect(envkey, clientName, clientVersion string) (buf bytes.Buffer
 	mutex.Unlock()
 
 	if currentEnv == nil {
-		log.Println("currentEnv == nil")
-
 		_, err = fetchCurrent(envkey, clientName, clientVersion)
 
 		if err != nil {

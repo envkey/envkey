@@ -49,7 +49,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 
 	if (clientNameArg != "" && clientVersionArg == "") ||
 		(clientVersionArg != "" && clientNameArg == "") {
-		utils.Fatal("if one of --client-name or --client-version is set, the other must also be set", execCmd == "")
+		utils.Fatal("if one of --client-name or --client-version is set, the other must also be set", execCmdArg == "")
 	}
 
 	var envkey string
@@ -69,17 +69,17 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
 		envkey = strings.TrimSpace(args[0])
 	} else {
-		envkey, appConfig = env.GetEnvkey(verboseOutput, envFileOverride, execCmd == "", localDevHost)
+		envkey, appConfig = env.GetEnvkey(verboseOutput, envFileOverride, execCmdArg == "", localDevHost)
 	}
 
 	if envkey == "" {
-		if execCmd != "" {
+		if execCmdArg != "" {
 			cmd.Help()
 			os.Exit(0)
 		} else if ignoreMissing {
 			os.Exit(0)
 		} else {
-			utils.Fatal("ENVKEY missing\n", execCmd == "")
+			utils.Fatal("ENVKEY missing\n", execCmdArg == "")
 		}
 	}
 
@@ -102,7 +102,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 
 	fetchOpts := fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion, verboseOutput, timeoutSeconds, retries, retryBackoff}
 
-	if memCache || onChangeCmd != "" || (execCmd != "" && watch) {
+	if memCache || onChangeCmdArg != "" || (execCmdArg != "" && watch) {
 		daemon.LaunchDetachedIfNeeded(daemon.DaemonOptions{
 			verboseOutput,
 		})
@@ -123,7 +123,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 		return
 	}
 
-	utils.CheckError(err, execCmd == "")
+	utils.CheckError(err, execCmdArg == "")
 
 	execWithEnv(envkey, res, clientName, clientVersion)
 }

@@ -500,23 +500,7 @@ const copyExecFiles = async (
 
         return fsp
           .rm(destinationPath)
-          .catch(async (err) => {
-            if (platform == "win32" && err.code == "EBUSY") {
-              await dialog.showMessageBox({
-                title: "EnvKey CLI",
-                message: `In order to upgrade, currently running ${file} processes will be closed`,
-                buttons: ["Continue"],
-              });
-
-              await new Promise<void>((resolve, reject) => {
-                exec(`taskkill /F /IM ${file} /T`, (err) =>
-                  err ? reject(err) : resolve()
-                );
-              });
-
-              return fsp.rm(destinationPath);
-            }
-          })
+          .catch(async (err) => {})
           .then(() => {
             return fsp
               .copyFile(tmpPath, destinationPath)
@@ -539,8 +523,37 @@ const copyExecFiles = async (
         files
       );
     } else {
-      log("copy exec files error", { err });
-      throw err;
+      if (platform == "win32" && err.code == "EBUSY") {
+        await dialog.showMessageBox({
+          title: "EnvKey CLI",
+          message: `In order to upgrade, any* running envkey.exe or envkey-source.exe processes will be closed`,
+          buttons: ["Continue"],
+        });
+
+        await Promise.all([
+          new Promise<void>((resolve, reject) => {
+            exec(`taskkill /F /IM envkey-source.exe /T`, (err) =>
+              err ? reject(err) : resolve()
+            );
+          }),
+          new Promise<void>((resolve, reject) => {
+            exec(`taskkill /F /IM envkey.exe /T`, (err) =>
+              err ? reject(err) : resolve()
+            );
+          }),
+        ]);
+
+        return copyExecFiles(
+          cliFolder,
+          envkeysourceFolder,
+          destinationFolder,
+          withSudoPrompt,
+          files
+        );
+      } else {
+        log("copy exec files error", { err });
+        throw err;
+      }
     }
   }
 };
