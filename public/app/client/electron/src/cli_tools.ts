@@ -500,7 +500,23 @@ const copyExecFiles = async (
 
         return fsp
           .rm(destinationPath)
-          .catch((err) => {})
+          .catch(async (err) => {
+            if (platform == "win32" && err.code == "EBUSY") {
+              await dialog.showMessageBox({
+                title: "EnvKey CLI",
+                message: `In order to upgrade, currently running ${file} processes will be closed`,
+                buttons: ["Continue"],
+              });
+
+              await new Promise<void>((resolve, reject) => {
+                exec(`taskkill /F /IM ${file} /T`, (err) =>
+                  err ? reject(err) : resolve()
+                );
+              });
+
+              return fsp.rm(destinationPath);
+            }
+          })
           .then(() => {
             return fsp
               .copyFile(tmpPath, destinationPath)
