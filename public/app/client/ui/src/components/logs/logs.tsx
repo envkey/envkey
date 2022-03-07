@@ -1,10 +1,4 @@
-import React, {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-  useCallback,
-} from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   OrgComponent,
   ReactSelectOption,
@@ -21,6 +15,7 @@ import * as styles from "@styles";
 import * as ui from "@ui";
 import { style } from "typestyle";
 import moment from "moment";
+import "moment-timezone";
 import { pick } from "@core/lib/utils/pick";
 import { isValidIP } from "@core/lib/utils/string";
 import { getPastTense } from "@core/lib/utils/grammar";
@@ -28,6 +23,7 @@ import Datetime from "react-datetime";
 import { SvgImage, SmallLoader } from "@images";
 import { Link } from "react-router-dom";
 import { getEnvParentPath, getUserPath } from "@ui_lib/paths";
+import { TZ_ABBREV } from "@constants";
 
 const PAGE_SIZE = 25;
 
@@ -1227,7 +1223,8 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
             <span className="actor">{performedBy}</span>
             <span className="date">
               <label>When</label>
-              {moment(logged.createdAt).format("YYYY-MM-DD H:mm:ss.SSS")}
+              {moment(logged.createdAt).format(`YYYY-MM-DD HH:mm:ss.SSS`) +
+                ` ${TZ_ABBREV}`}
             </span>
           </div>
 

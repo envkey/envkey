@@ -19,6 +19,8 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+var ClientLogEnabled = false
+
 func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	if printVersion {
 		fmt.Println(version.Version)
@@ -131,13 +133,13 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 func initClientLogging() {
 	home, err := homedir.Dir()
 	if err != nil {
-		panic(err)
+		return
 	}
 
 	logDir := filepath.Join(home, ".envkey", "logs")
 	err = os.MkdirAll(logDir, os.ModePerm)
 	if err != nil {
-		panic(err)
+		return
 	}
 
 	log.SetOutput(&lumberjack.Logger{
@@ -147,4 +149,6 @@ func initClientLogging() {
 		MaxAge:     30, //days
 		Compress:   false,
 	})
+
+	ClientLogEnabled = true
 }

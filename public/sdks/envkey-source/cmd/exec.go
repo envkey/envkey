@@ -56,10 +56,7 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 	execFn := func(latestEnv parser.EnvMap, previousEnv parser.EnvMap, onFinish func(), runSync bool) {
 		fn := func() {
 			watchCommand = execute(execCmdArg, shell.ToPairs(latestEnv, previousEnv, true, force), "attach", true, "")
-			err := watchCommand.Wait()
-			if err != nil {
-				log.Println("watchCommand.Wait() err:", err)
-			}
+			watchCommand.Wait()
 		}
 
 		if runSync {
@@ -148,23 +145,15 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 			go func() {
 				stderrLogger.Println(utils.FormatTerminal(" | restarting after update...", nil))
 
-				log.Println("Killing watch command if it's running")
-
 				setIsKillingWatch(true)
-				log.Println("setIsKillingWatch(true)")
 				c := getWatchCommand()
-				log.Println("getWatchCommand")
 				// ignore errors on Kill/Wait since process may already have finished
 				err := c.Process.Kill()
-				log.Println("c.Process.Kill - err:", err)
 				if err == nil {
 					_, err = c.Process.Wait()
-					log.Println("c.Process.Wait - err:", err)
 				}
 
 				setIsKillingWatch(false)
-
-				log.Println("Finished killing watch command")
 
 				execFn(
 					updatedEnv,

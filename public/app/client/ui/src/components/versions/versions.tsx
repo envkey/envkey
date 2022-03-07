@@ -21,6 +21,7 @@ import { v4 as uuid } from "uuid";
 import { Link } from "react-router-dom";
 import { getUserPath } from "@ui_lib/paths";
 import { pick } from "@core/lib/utils/pick";
+import { TZ_ABBREV } from "@constants";
 
 type RouteProps = {
   appId?: string;
@@ -625,7 +626,8 @@ export const Versions: OrgComponent<RouteProps> = (props) => {
               <span className="sep">{"●"}</span>
 
               <label className="created-at">
-                {moment(changeset.createdAt).format("MMM D YYYY h:mm:ss.SSS A")}
+                {moment(changeset.createdAt).format(`YYYY-MM-DD HH:mm:ss.SSS`) +
+                  ` ${TZ_ABBREV}`}
               </label>
             </div>
           </div>

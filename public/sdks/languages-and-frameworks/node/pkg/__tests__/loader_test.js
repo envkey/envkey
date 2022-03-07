@@ -1,7 +1,8 @@
-const VALID_ENVKEY = "ek3H3qNvXeyVvNv3sYYKChse-34QjA4A7oQskXPMYmjDzLS",
-      INVALID_ENVKEY = "ek3H3qNvXeyVvNv3sYYKChse-34QjA4A7oQskXPMinvalid",
-      INVALID_ENVKEY2 = "ek3H3qNvXeyVvNv3sinvalid-34QjA4A7oQskXPMYmjDzLS",
-      INVALID_ENVKEY3 = "invalid"
+
+const VALID_ENVKEY = "ekunDrefdPeELwPpupdzJpsz-2Hs3HCiscoY1TfGcVdefum",
+  INVALID_ENVKEY = "ekunDrefdPeELwPpupdzJpsz-2Hs3HCiscoY1TfGinvalid",
+  INVALID_ENVKEY2 = "ekunDrefdPeELwPpuinvalid-2Hs3HCiscoY1TfGcVdefum",
+  INVALID_ENVKEY3 = "invalid"
 
 function clearEnv(){
   delete process.env.ENVKEY

@@ -3,7 +3,6 @@ import * as colors from "../colors";
 import * as fonts from "../fonts";
 import * as layout from "../layout";
 import { deepMergeStyles, multi } from "../helpers";
-import { color } from "csx";
 import { tertiaryButton } from "../mixins";
 
 export const Logs = style({
@@ -30,6 +29,7 @@ export const Logs = style({
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
+      zIndex: 2,
       $nest: {
         button: deepMergeStyles(tertiaryButton({ bgMode: "light" }), {
           fontSize: "16px",
