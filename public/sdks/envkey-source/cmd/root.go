@@ -118,57 +118,61 @@ To execute a command directly with your EnvKey environment set:
 
 envkey-source -e 'command' [flags]
 
-To type less, use the ` + "`es`" + ` alias.
+To type less, use the ` + "`es`" + ` alias:
+
+es -e 'command'
 
 To automatically re-run the command when the environment changes, use:
 
-envkey-source -e 'command' -w
+es -e 'command' -w
 
 You can run a different command when the environment changes instead:
 
-envkey-source -e 'command' -r 'reload-command'
+es -e 'command' -r 'reload-command'
 
 Or run a command *only* when the environment changes:
 
-envkey-source -r 'reload-command'
+es -r 'reload-command'
 
 With either -w or -r, you can reload only when specific variables change:
 
-envkey-source -e 'command' -w --only SOME_VAR,ANOTHER_VAR
+es -e 'command' -w --only SOME_VAR,ANOTHER_VAR
 
 Your EnvKey variables are available to use in both -e and -r. Just be sure to use **single quotes** instead of double quotes (with double quotes, variables will resolve *before* envkey-source loads your config).
 
 Will work:
 
-envkey-source -e 'echo $SOME_VAR' -w
+es -e 'echo $SOME_VAR' -w
 
 Won't work:
 
-envkey-source -e "echo $SOME_VAR" -w
+es -e "echo $SOME_VAR" -w
 
 When using the -w or -r flags, you can see the **previous** value of an EnvKey environment variable after a reload by prefixing it with __PREV_:
 
-envkey-source -e 'echo "initial value: $SOME_VAR"' -r 'echo "previous value: $__PREV_SOME_VAR | new value: $SOME_VAR"'
+es -e 'echo "initial value: $SOME_VAR"' -r 'echo "previous value: $__PREV_SOME_VAR | new value: $SOME_VAR"'
 
 You can set your EnvKey environment in the current shell:
 	
-eval "$(envkey-source [flags])"
+eval "$(es [flags])"
 
 Or output your environment variables to a file:
 
-envkey-source --dot-env > .env
-envkey-source --pam > /etc/environment
+es --dot-env > .env
+es --pam > /etc/environment
+es --json > .env.json
+es --yaml > .env.yaml
 
 You can pass an ENVKEY directly (not recommended for real workflows):
 
-envkey-source ENVKEY -e 'command' [flags]
-eval "$(envkey-source ENVKEY [flags])"
+es ENVKEY -e 'command' [flags]
+eval "$(es ENVKEY [flags])"
 
 You can automatically set your EnvKey environment whenever you enter an EnvKey-enabled directory. Add the following to your shell config for each shell type.
 
 bash (~/.bashrc or ~/.bash_profile):
-eval "$(envkey-source --hook bash)"
+eval "$(es --hook bash)"
 
 zsh (~/.zshrc):
-eval "$(envkey-source --hook zsh)"
+eval "$(es --hook zsh)"
 `

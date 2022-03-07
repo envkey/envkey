@@ -323,13 +323,44 @@ const install = async (
     });
   });
 
-  if (!hasExistingEsCommand) {
-    await fsp
-      .symlink(
-        path.join(binDir, `envkey-source${ext}`),
-        path.join(binDir, "es")
-      )
-      .catch((err) => {});
+  const symlinkExists = await fileExists(path.join(binDir, "es"));
+
+  if (!hasExistingEsCommand && !symlinkExists) {
+    // windows requires admin privileges to create a symlink
+    if (platform == "win32") {
+      await sudoNeededDialog();
+
+      await new Promise<void>((resolve, reject) => {
+        try {
+          sudoPrompt.exec(
+            `mklink ${path.join(binDir, "es")} ${path.join(
+              binDir,
+              "envkey-source.exe"
+            )}`,
+            {
+              name: `EnvKey CLI Tools Installer`,
+            },
+            (err: Error | undefined) => {
+              if (err) {
+                log(`Windows sudo-prompt create symlink error`, { err });
+                return reject(err);
+              }
+              log("Windows: created symlink with administrator privileges");
+              resolve();
+            }
+          );
+        } catch (err) {
+          log(`Windows sudo-prompt create symlink error`, { err });
+          reject(err);
+        }
+      });
+    } else {
+      await fsp
+        .symlink(path.join(binDir, "envkey-source"), path.join(binDir, "es"))
+        .catch(async (err) => {
+          log("create symlink err", { err });
+        });
+    }
   }
 
   log(`CLI tools update: completed successfully`, {

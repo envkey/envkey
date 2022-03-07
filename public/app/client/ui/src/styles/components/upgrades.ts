@@ -1,9 +1,5 @@
 import { style } from "typestyle";
-import { multi } from "../helpers";
 import * as colors from "../colors";
-import * as fonts from "../fonts";
-import { color } from "csx";
-import * as layout from "../layout";
 import { Modal } from "./modal";
 import { OrgContainer } from "./org_container";
 
@@ -141,8 +137,7 @@ export const Upgrades =
           ".bar": {
             height: 50,
             backgroundColor: colors.ORANGE,
-            transitionProperty: "width",
-            transitionDelay: "0.5s",
+            transition: "width .2s linear",
             position: "absolute",
             left: 0,
           },

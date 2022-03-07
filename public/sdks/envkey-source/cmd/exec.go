@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -54,7 +56,10 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 	execFn := func(latestEnv parser.EnvMap, previousEnv parser.EnvMap, onFinish func(), runSync bool) {
 		fn := func() {
 			watchCommand = execute(execCmdArg, shell.ToPairs(latestEnv, previousEnv, true, force), "attach", true, "")
-			watchCommand.Wait()
+			err := watchCommand.Wait()
+			if err != nil {
+				log.Println("watchCommand.Wait() err:", err)
+			}
 		}
 
 		if runSync {
@@ -135,7 +140,7 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 					utils.FormatTerminal(" | on-reload > ", colors.Cyan),
 				).Wait()
 
-				stderrLogger.Println(utils.FormatTerminal(" | executed on-reload--waiting for changes...", colors.Cyan))
+				stderrLogger.Println(utils.FormatTerminal(" | executed on-reload–waiting for changes...", colors.Cyan))
 			}()
 		}
 
@@ -143,12 +148,23 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 			go func() {
 				stderrLogger.Println(utils.FormatTerminal(" | restarting after update...", nil))
 
-				// ignore error since process may already have finished
+				log.Println("Killing watch command if it's running")
+
 				setIsKillingWatch(true)
+				log.Println("setIsKillingWatch(true)")
 				c := getWatchCommand()
-				c.Process.Kill()
-				c.Process.Wait()
+				log.Println("getWatchCommand")
+				// ignore errors on Kill/Wait since process may already have finished
+				err := c.Process.Kill()
+				log.Println("c.Process.Kill - err:", err)
+				if err == nil {
+					_, err = c.Process.Wait()
+					log.Println("c.Process.Wait - err:", err)
+				}
+
 				setIsKillingWatch(false)
+
+				log.Println("Finished killing watch command")
 
 				execFn(
 					updatedEnv,
@@ -170,10 +186,16 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 func execute(c string, env []string, copyOrAttach string, includeStdin bool, copyOutputPrefix string) *exec.Cmd {
 	// if we're in an environment where a shell (`sh`) is defined, use that
 	// so we get shell expansion/other shell features.
-	// otherwise just pass the command directly to the system.
+	// if we're on windows and not a bash-link env where `sh` is defined, pass to `cmd`.
+	// otherwise, try passing the command directly to the system.
 	var command *exec.Cmd
 	if utils.CommandExists("sh") {
 		command = exec.Command("sh", "-c", c)
+	} else if runtime.GOOS == "windows" {
+		re := regexp.MustCompile(`\s+`)
+		args := []string{"/C"}
+		args = append(args, re.Split(c, -1)...)
+		command = exec.Command("cmd", args...)
 	} else {
 		command = exec.Command(c)
 	}

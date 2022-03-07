@@ -31,9 +31,11 @@ func CheckError(err error, toStderr bool) {
 }
 
 func FormatTerminal(s string, color func(interface{}) colors.Value) string {
+	msg := "envkey | " +
+		time.Now().Local().Format("2006-01-02 15:04:05.000 MST") + s
+
 	if !terminalSupportsColors() {
-		return "envkey | " +
-			time.Now().UTC().Format("2006-01-02T15:04:05.0000Z") + s
+		return msg
 	}
 
 	colorFn := color
@@ -41,14 +43,7 @@ func FormatTerminal(s string, color func(interface{}) colors.Value) string {
 		colorFn = colors.Green
 	}
 
-	return colors.Sprintf(
-		colors.Bold(
-			colorFn(
-				"🔑 envkey | " +
-					time.Now().UTC().Format("2006-01-02T15:04:05.0000Z") + s,
-			),
-		),
-	)
+	return colors.Sprintf(colors.Bold(colorFn(msg)))
 }
 
 func IdPart(envkey string) string {

@@ -74,7 +74,7 @@ export const ClientUpgrades: React.FC<
     } else if (
       !showFinalLoader &&
       !showFinalLoaderTimeout &&
-      progressPct >= 0.9
+      progressPct >= 0.95
     ) {
       showFinalLoaderTimeout = setTimeout(() => {
         setShowFinalLoader(true);
@@ -138,12 +138,12 @@ export const ClientUpgrades: React.FC<
         {startedUpgrade ? (
           [
             <div className="progress">
-              {showInitialLoader ? (
+              {showInitialLoader || showFinalLoader ? (
                 <SmallLoader />
               ) : (
                 <div
                   className="bar"
-                  style={{ width: `${progressPct * 100}%` }}
+                  style={{ width: `${Math.min(progressPct * 100, 100)}%` }}
                 ></div>
               )}
             </div>,

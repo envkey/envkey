@@ -39,7 +39,7 @@ func LaunchDetachedIfNeeded(opts DaemonOptions) error {
 		}
 	} else {
 		if opts.VerboseOutput {
-			stderrLogger.Println(utils.FormatTerminal(" | envkey-source daemon not running--starting", nil))
+			stderrLogger.Println(utils.FormatTerminal(" | envkey-source daemon not running–starting", nil))
 		}
 
 		name := os.Args[0]
@@ -261,11 +261,11 @@ func ListenChangeWithEnv(envkey, clientName, clientVersion string, onChange func
 			onChange(currentEnv, previousEnv)
 		},
 		OnInvalid: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | ENVKEY invalid--watcher will exit", colors.Red))
+			stderrLogger.Println(utils.FormatTerminal(" | ENVKEY invalid–watcher will exit", colors.Red))
 			os.Exit(1)
 		},
 		OnThrottled: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | active socket connection limit reached--watcher will exit", colors.Red))
+			stderrLogger.Println(utils.FormatTerminal(" | active socket connection limit reached–watcher will exit", colors.Red))
 			os.Exit(1)
 		},
 		OnLostDaemonConnection: func(err error) {
@@ -277,19 +277,19 @@ func ListenChangeWithEnv(envkey, clientName, clientVersion string, onChange func
 			os.Exit(1)
 		},
 		OnWillReconnect: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | lost connection to EnvKey host--attempting to reconnect...", colors.Red))
+			stderrLogger.Println(utils.FormatTerminal(" | lost connection to EnvKey host–attempting to reconnect...", colors.Red))
 		},
 		OnReconnected: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | reconnected to EnvKey host--checking for changes...", colors.Green))
+			stderrLogger.Println(utils.FormatTerminal(" | reconnected to EnvKey host–checking for changes...", colors.Green))
 		},
 		OnReconnectedNoChange: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | nothing changed--waiting for changes...", colors.Green))
+			stderrLogger.Println(utils.FormatTerminal(" | nothing changed–waiting for changes...", colors.Green))
 		},
 		OnSuspended: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | process was suspended--checking for changes...", colors.Green))
+			stderrLogger.Println(utils.FormatTerminal(" | process was suspended–checking for changes...", colors.Green))
 		},
 		OnSuspendedNoChange: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | nothing changed--waiting for changes...", colors.Green))
+			stderrLogger.Println(utils.FormatTerminal(" | nothing changed–waiting for changes...", colors.Green))
 		},
 	})
 }
