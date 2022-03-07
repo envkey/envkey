@@ -155,6 +155,7 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 
 	go func() {
 		defer close(done)
+
 		for {
 			_, message, err := socket.ReadMessage()
 
@@ -185,6 +186,9 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 				log.Printf("read websocket error: %s, code: %d", err, code)
 
 				if code == 401 || code == 404 || code == 429 || socket.IsClosing() {
+					return
+				} else if code == 101 {
+					closeWebsocket(envkey)
 					return
 				}
 			}

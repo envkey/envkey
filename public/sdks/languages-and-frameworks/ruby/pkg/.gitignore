@@ -10,3 +10,5 @@
 /tmp/
 *.gem
 .byebug_history
+
+*.version.shasum
