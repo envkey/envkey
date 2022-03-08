@@ -1,6 +1,5 @@
 import { style } from "typestyle";
 import * as colors from "../../colors";
-import * as fonts from "../../fonts";
 import { HomeContainerForm } from "./home_container";
 
 export const RedeemRecoveryKey =
@@ -21,6 +20,12 @@ export const RedeemRecoveryKey =
             color: "#fff",
             fontWeight: 500,
             textDecoration: "underline",
+            $nest: {
+              "&:hover": {
+                color: colors.LIGHTEST_BLUE,
+                borderBottom: "none",
+              },
+            },
           },
         },
       },

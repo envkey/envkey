@@ -15,19 +15,25 @@ Welcome to the [EnvKey](https://www.envkey.com) v2 monorepo! All EnvKey's open s
 ## Easy integration
 
 ```bash
-$ envkey-source -e 'any-shell-command'
+$ envkey-source -- any-shell-command
 # That's it! Your command runs with the latest environment variables.
 
-$ envkey-source -e './start-server' -w
+$ es -- any-shell-command
+# To type less, use the ` + "`es`" + ` alias.
+
+$ es -- ping '$DATABASE_URL'
+# You can reference EnvKey variables in your shell command by wrapping them in single quotes.
+
+$ es -w -- ./start-server
 # Your server automatically restarts when there's a change.
 
-$ envkey-source -e './start-server' -r './reload-env.sh'
+$ es -r ./reload-env -- ./start-server
 # Run custom reload logic when there's a change.
 
-$ eval "$(envkey-source)"
+$ eval "$(es)"
 # Set environment variables in the current shell.
 
-$ echo $'\n\neval "$(envkey-source --hook bash)"\n' >> ~/.bash_profile
+$ echo $'\n\neval "$(es --hook bash)"\n' >> ~/.bash_profile
 # Auto-load the latest environment in any EnvKey-enabled directory.
 ```
 

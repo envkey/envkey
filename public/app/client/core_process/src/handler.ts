@@ -112,7 +112,10 @@ export const clientAction = async <
 
     if (actionParams.type == "clientAction") {
       const clientAction = action as Client.Action.ClientAction;
+
       dispatchStore<DispatchContextType>(clientAction, context, tempId, store);
+
+      accountState = getState(store, context);
 
       if (actionParams.handler) {
         await (actionParams.handler as Client.ActionHandler)(

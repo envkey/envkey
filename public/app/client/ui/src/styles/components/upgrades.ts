@@ -87,7 +87,7 @@ export const Upgrades =
       ".project-changelogs": {
         width: "100%",
         display: "flex",
-        height: "calc(100% - 215px)",
+        height: "calc(100% - 140px)",
         $nest: {
           "> div": {
             display: "flex",

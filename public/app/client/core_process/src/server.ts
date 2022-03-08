@@ -132,10 +132,12 @@ export const start = async (port = 19047, wsport = 19048) => {
         return;
       }
 
+      let unlocked = false;
       if (isLocked()) {
         if (action.type == Client.ActionType.UNLOCK_DEVICE) {
           try {
             await unlockDevice(action.payload.passphrase);
+            unlocked = true;
           } catch (err) {
             log("Error unlocking device:", { err });
             res.status(403).json({ error: err.message });
@@ -147,6 +149,7 @@ export const start = async (port = 19047, wsport = 19048) => {
               "Re-initializing locked device before handling LOAD_RECOVERY_KEY"
             );
             await init(true);
+            unlocked = true;
           } catch (err) {
             log(
               "Error resetting device key for LOAD_RECOVERY_KEY with locked device:",
@@ -155,9 +158,19 @@ export const start = async (port = 19047, wsport = 19048) => {
             res.status(500).json({ error: err.message });
             return;
           }
+        } else if (action.type == Client.ActionType.INIT_DEVICE) {
+          try {
+            log("Re-initializing locked device");
+            await init(true);
+            unlocked = true;
+          } catch (err) {
+            log("Error resetting device key ", { err });
+            res.status(500).json({ error: err.message });
+            return;
+          }
         } else {
           const msg =
-            "Error: EnvKey is LOCKED. Can only receive UNLOCK_DEVICE or LOAD_RECOVERY_KEY action.";
+            "Error: EnvKey is LOCKED. Can only receive UNLOCK_DEVICE, INIT_DEVICE, or LOAD_RECOVERY_KEY actions.";
           log(msg);
           res.status(403).json({ error: msg });
           return;
@@ -192,7 +205,9 @@ export const start = async (port = 19047, wsport = 19048) => {
         return;
       }
 
-      const initialClientState = getState(reduxStore, context);
+      const initialClientState = unlocked
+        ? Client.lockedState
+        : getState(reduxStore, context);
 
       const actionParams = getActionParams(action.type);
       const dispatchPromise = dispatch(action, context);
@@ -205,7 +220,8 @@ export const start = async (port = 19047, wsport = 19048) => {
 
       const shouldSendSocketUpdate =
         !skipSocketUpdate &&
-        (actionParams.type == "asyncClientAction" ||
+        (context.client.clientName == "cli" ||
+          actionParams.type == "asyncClientAction" ||
           actionParams.type == "apiRequestAction");
 
       if (shouldSendSocketUpdate) {
@@ -233,9 +249,9 @@ export const start = async (port = 19047, wsport = 19048) => {
       res.status(200).json({
         ...R.omit(["state"], dispatchRes),
         diffs: createPatch(
-          shouldSendSocketUpdate
-            ? afterDispatchClientState
-            : initialClientState,
+          actionParams.type == "clientAction" || !shouldSendSocketUpdate
+            ? initialClientState
+            : afterDispatchClientState,
           dispatchRes.state
         ),
       });

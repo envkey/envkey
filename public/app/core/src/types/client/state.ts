@@ -32,7 +32,7 @@ export type ProcState = {
   defaultAccountId: string | undefined;
   defaultDeviceName: string | undefined;
   lockoutMs: number | undefined;
-  requiresPassphrase?: true;
+  requiresPassphrase: true | undefined;
   deviceKeyUpdatedAt: number | undefined;
   locked: boolean;
   unlockedAt: number | undefined;
@@ -653,6 +653,7 @@ export const defaultAccountState: PartialAccountState = {
     clientStates: {},
     defaultAccountId: undefined,
     defaultDeviceName: undefined,
+    requiresPassphrase: undefined,
     lockoutMs: undefined,
     deviceKeyUpdatedAt: undefined,
     locked: false,

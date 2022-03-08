@@ -201,6 +201,7 @@ export const getState = () => state,
     );
 
     const newState = R.clone(state);
+
     if (res.diffs && res.diffs.length > 0) {
       applyPatch(newState, res.diffs);
     }

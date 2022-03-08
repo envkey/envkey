@@ -9,12 +9,11 @@ export const envkeyFetch = async (
 ) => {
   const envkey = [envkeyIdPart, encryptionKey, hostUrl].join("-");
 
-  // console.log("./envkey-source", envkey, "--json", "--verbose");
-
-  const res = execFileSync(path.join(process.cwd(), "envkey-source"), [
-    envkey,
-    "--json",
-  ]).toString();
+  const res = execFileSync(
+    path.join(process.cwd(), "envkey-source"),
+    ["--json"],
+    { env: { ENVKEY: envkey } }
+  ).toString();
   expect(res).toBeString();
   const vars = JSON.parse(res.trim()) as Client.Env.RawEnv;
   expect(vars).toBeObject();

@@ -134,7 +134,7 @@ function fetch(optsOrCb, maybeCb){
 
   var ext = platformPart == "windows" ? ".exe" : "",
       filePath = path.join(__dirname, "ext", ["envkey-source", ENVKEY_SOURCE_VERSION, platformPart, archPart].join("_"), ("envkey-source" + ext)),
-      execArgs = ["--json", (shouldCache ? "--cache" : ""), "--client-name", "envkey-node", "--client-version", "2.0.0"]
+      execArgs = ["--json", (shouldCache ? "--cache" : ""), "--client-name", "envkey-node", "--client-version", "2.0.2"]
 
   if (cb){
     execFile(filePath, execArgs, { env: { ENVKEY: process.env.ENVKEY }}, function(err, stdoutStr, stderrStr){

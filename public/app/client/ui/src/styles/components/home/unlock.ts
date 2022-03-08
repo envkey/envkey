@@ -24,6 +24,7 @@ export const Unlock =
       },
       "h3 > strong": {
         marginLeft: 6,
+        marginRight: 6,
         color: important(colors.LIGHTEST_BLUE),
         textTransform: "uppercase",
         fontWeight: 600,
@@ -39,15 +40,18 @@ export const Unlock =
         marginTop: 50,
         paddingTop: 40,
         borderTop: "1px solid #000",
-        display: "flex",
-        alignItems: "top",
-        justifyContent: "center",
+        textAlign: "center",
         $nest: {
-          span: {
+          h4: {
             color: "rgba(255,255,255,0.6)",
-            fontSize: "14px",
-            marginRight: 10,
+            fontSize: "16px",
+            marginBottom: 30,
           },
+          ".actions": {
+            display: "flex",
+            justifyContent: "center",
+          },
+
           a: imgLink({ bgMode: "dark", fontSize: "14px" }),
         },
       },

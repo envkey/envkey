@@ -29,6 +29,7 @@ const SvgComponents = {
   copy: require("./copy.svg").default,
   info: require("./info.svg").default,
   folder: require("./folder.svg").default,
+  reset: require("./reset.svg").default,
 } as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>;
 
 const UseOwnDefaultViewBox = new Set<keyof typeof SvgComponents>([

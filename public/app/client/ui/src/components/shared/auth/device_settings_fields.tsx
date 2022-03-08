@@ -17,7 +17,7 @@ type Props = {
     requiresPassphrase?: boolean;
     passphrase?: string;
     requiresLockout?: boolean;
-    lockoutMs?: number;
+    lockoutMs: number;
   }) => void;
 };
 
@@ -32,8 +32,8 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
   const [requiresLockout, setRequiresLockout] = useState(
     typeof core.lockoutMs == "number"
   );
-  const [lockoutMs, setLockoutMs] = useState<number | null>(
-    core.lockoutMs ?? null
+  const [lockoutMs, setLockoutMs] = useState<number>(
+    core.lockoutMs ?? 120 * 1000 * 60
   );
 
   const [requiresPassphrase, setRequiresPassphrase] = useState(
@@ -54,7 +54,7 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
       requiresPassphrase,
       passphrase,
       requiresLockout,
-      lockoutMs: lockoutMs || undefined,
+      lockoutMs,
     });
   };
 
@@ -136,9 +136,9 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
             reset={props.reset}
             strengthInputs={[
               ...R.flatten(
-                (Object.values(
-                  core.orgUserAccounts
-                ) as Client.ClientUserAuth[]).map(
+                (
+                  Object.values(core.orgUserAccounts) as Client.ClientUserAuth[]
+                ).map(
                   R.props([
                     "orgName",
                     "firstName",
@@ -185,9 +185,6 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
           }
           const shouldRequire = !requiresLockout;
           setRequiresLockout(shouldRequire);
-          if (!shouldRequire) {
-            setLockoutMs(null);
-          }
         }}
       >
         <label>Set device lockout</label>

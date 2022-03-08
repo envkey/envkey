@@ -3,8 +3,8 @@ import { DeviceSettingsFields } from "@ui";
 import { Component } from "@ui_types";
 import { Client } from "@core/types";
 import { HomeContainer } from "./home_container";
-import { wait } from "@core/lib/utils/wait";
 import * as styles from "@styles";
+import { wait } from "@core/lib/utils/wait";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 
 export const DeviceSettings: Component = (props) => {
@@ -20,7 +20,7 @@ export const DeviceSettings: Component = (props) => {
     typeof core.lockoutMs == "number"
   );
   const [lockoutMs, setLockoutMs] = useState<number | null>(
-    core.lockoutMs ?? null
+    core.lockoutMs ?? 120 * 1000 * 60
   );
   const [requiresPassphrase, setRequiresPassphrase] = useState(
     core.requiresPassphrase === true
@@ -33,6 +33,7 @@ export const DeviceSettings: Component = (props) => {
     (defaultDeviceName && defaultDeviceName != core.defaultDeviceName) ||
       (requiresPassphrase && passphrase) ||
       (core.requiresPassphrase && !requiresPassphrase) ||
+      (requiresLockout && !core.lockoutMs) ||
       (requiresPassphrase &&
         requiresLockout &&
         lockoutMs &&
@@ -61,6 +62,7 @@ export const DeviceSettings: Component = (props) => {
         type: Client.ActionType.SET_DEVICE_PASSPHRASE,
         payload: { passphrase },
       });
+
       updated = true;
     } else if (core.requiresPassphrase && !requiresPassphrase) {
       await dispatch({ type: Client.ActionType.CLEAR_DEVICE_PASSPHRASE });
@@ -146,7 +148,7 @@ export const DeviceSettings: Component = (props) => {
             setRequiresPassphrase(requiresPassphrase ?? false);
             setPassphrase(passphrase);
             setRequiresLockout(requiresLockout ?? false);
-            setLockoutMs(lockoutMs ?? null);
+            setLockoutMs(lockoutMs);
             setReset(false);
           }}
           focus

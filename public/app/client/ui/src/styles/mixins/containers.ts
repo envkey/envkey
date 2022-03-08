@@ -590,7 +590,7 @@ export const baseContainer = (params: {
         },
       }),
 
-      ".field p:not(.error)": {
+      ".field p:not(.error):not(.important)": {
         paddingLeft: 5,
         $nest: multi(["&", "& *"], {
           fontSize: "16px",

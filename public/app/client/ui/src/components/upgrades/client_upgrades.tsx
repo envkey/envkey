@@ -56,7 +56,7 @@ export const ClientUpgrades: React.FC<
   const [startedUpgrade, setStartedUpgrade] = useState(false);
 
   const [showInitialLoader, setShowInitialLoader] = useState(true);
-  const [showFinalLoader, setShowFinalLoader] = useState(true);
+  const [showFinalLoader, setShowFinalLoader] = useState(false);
 
   useLayoutEffect(() => {
     const pct =

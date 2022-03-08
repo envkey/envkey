@@ -20,6 +20,7 @@ import (
 )
 
 var ClientLogEnabled = false
+var execCmdArg = ""
 
 func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	if printVersion {
@@ -49,6 +50,13 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 
 	initClientLogging()
 
+	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
+		execCmdArg = strings.Join(args, " ")
+	}
+
+	log.Println("execCmdArg:", execCmdArg)
+	log.Println("args:", args)
+
 	if (clientNameArg != "" && clientVersionArg == "") ||
 		(clientVersionArg != "" && clientNameArg == "") {
 		utils.Fatal("if one of --client-name or --client-version is set, the other must also be set", execCmdArg == "")
@@ -57,7 +65,6 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	var envkey string
 	var appConfig env.AppConfig
 	var err error
-
 	/*
 	* ENVKEY lookup order:
 	* 	1 - Argument passed via command line
@@ -68,11 +75,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	*	  5 - .env file at ~/.env
 	 */
 
-	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-		envkey = strings.TrimSpace(args[0])
-	} else {
-		envkey, appConfig = env.GetEnvkey(verboseOutput, envFileOverride, execCmdArg == "", localDevHost)
-	}
+	envkey, appConfig = env.GetEnvkey(verboseOutput, envFileOverride, execCmdArg == "", localDevHost)
 
 	if envkey == "" {
 		if execCmdArg != "" {

@@ -138,7 +138,7 @@ clientAction<Client.Action.ClientActions["ClearDeviceLockout"]>({
       );
     }
 
-    delete draft.lockoutMs;
+    draft.lockoutMs = undefined;
   },
 });
 
