@@ -201,9 +201,7 @@ const clientParams: Client.ClientParams<"app"> = {
       client.addEventListener("message", (e) => {
         const msg = JSON.parse(e.data) as Client.LocalSocketMessage;
 
-        if (msg.type == "closing") {
-          // window.electron.quit();
-        } else if (msg.type == "update") {
+        if (msg.type == "update") {
           onSocketUpdate(e);
         } else if (msg.type == "diffs") {
           const newState = R.clone(coreStateRef.current!);

@@ -272,16 +272,19 @@ export const decryptEnvs = async (
         }
       }
 
+      // if changesets were specifically requested (meaning we got them all), set changesetsFetchetAt
+      // otherwise we only got a small set to notify user of a potential conflict--in that case, clear out changesetsFetchedAt
       for (let envParentId of updatedEnvParentIds) {
         if (
           fetchAction &&
-          fetchAction.payload.byEnvParentId[envParentId]?.changesets &&
-          typeof fetchAction.payload.byEnvParentId[envParentId]
-            ?.changesetOptions?.createdAfter == "number"
+          fetchAction.payload.byEnvParentId[envParentId]?.changesets
+        ) {
+          draft.changesetsFetchedAt[envParentId] = timestamp;
+        } else if (
+          fetchAction &&
+          !fetchAction.payload.byEnvParentId[envParentId]?.changesets
         ) {
           delete draft.changesetsFetchedAt[envParentId];
-        } else {
-          draft.changesetsFetchedAt[envParentId] = timestamp;
         }
       }
     }

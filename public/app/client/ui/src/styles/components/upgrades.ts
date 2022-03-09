@@ -43,7 +43,7 @@ export const Upgrades =
       ".changelog": {
         background: "rgba(0,0,0,0.05)",
         overflow: "auto",
-        marginBottom: 20,
+        marginBottom: 30,
         padding: 20,
         flex: 1,
         $nest: {
@@ -87,7 +87,7 @@ export const Upgrades =
       ".project-changelogs": {
         width: "100%",
         display: "flex",
-        height: "calc(100% - 140px)",
+        height: "calc(100% - 142px)",
         $nest: {
           "> div": {
             display: "flex",

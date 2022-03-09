@@ -792,7 +792,7 @@ clientAction<
       delete draft.changesets[environmentId];
     }
 
-    decryptedEnvsStateProducer(draft, action);
+    decryptedEnvsStateProducer(draft, action, action.meta.rootAction);
   },
   handler: async (
     initialState,

@@ -356,7 +356,10 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         pendingConflicts,
         numPendingConflicts,
       };
-    }, [props.core.pendingEnvsUpdatedAt]);
+    }, [
+      props.core.pendingEnvsUpdatedAt,
+      JSON.stringify(props.core.envsFetchedAt),
+    ]);
 
   useEffect(() => {
     if (
