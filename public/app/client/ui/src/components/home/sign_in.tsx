@@ -55,7 +55,6 @@ export const SignIn: Component<{ accountId: string }> = (props) => {
     wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
     const hostUrl = account.hostUrl;
-    console.log({ hostUrl });
 
     dispatch(
       {

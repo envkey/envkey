@@ -128,7 +128,15 @@ export const getLatestReleaseVersion = async (params: {
     key: `latest/${project}-version.txt`,
     profile,
     creds,
-  }).then((contents) => contents.toString().trim());
+  }).then((contents) => {
+    const version = contents.toString().trim();
+
+    if (semver.valid(version)) {
+      return version;
+    } else {
+      throw new Error("Invalid version");
+    }
+  });
 };
 
 // tagPrefix like "apienterprise" and currentVersionNumber like "0.0.0"

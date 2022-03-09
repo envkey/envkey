@@ -212,7 +212,9 @@ export const SubEnvs: EnvManagerComponent = (props) => {
           </span>
         </div>
       ) : (
-        ""
+        <div className="actions">
+          <span className="add" style={{ visibility: "hidden" }}></span>
+        </div>
       )}
     </li>
   );

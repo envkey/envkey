@@ -76,8 +76,8 @@ export const checkUpdate = async (fromContextMenu = false) => {
       autoUpdater.checkForUpdates().catch((err) => {
         // error gets logged thanks to logger init at top
       }),
-      isLatestCliInstalled(),
-      isLatestEnvkeysourceInstalled(),
+      isLatestCliInstalled().catch((err) => <const>true),
+      isLatestEnvkeysourceInstalled().catch((err) => <const>true),
     ]);
 
   const nextCliVersion =

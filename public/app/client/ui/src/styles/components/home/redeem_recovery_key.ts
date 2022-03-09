@@ -9,7 +9,7 @@ export const RedeemRecoveryKey =
     $nest: {
       textarea: {
         width: "100%",
-        height: 75,
+        height: 100,
         textAlign: "center",
       },
       "p.important": {

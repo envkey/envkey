@@ -79,7 +79,7 @@ export const ClientUpgrades: React.FC<
       showFinalLoaderTimeout = setTimeout(() => {
         setShowFinalLoader(true);
         showFinalLoaderTimeout = undefined;
-      }, 1000);
+      }, 500);
     }
   }, [progressPct]);
 

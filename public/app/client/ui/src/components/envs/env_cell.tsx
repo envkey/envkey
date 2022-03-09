@@ -77,6 +77,7 @@ const memoizeableProps = (props: EnvManagerComponentProps<{}, Props>) => {
     props.ui.loadedAccountId,
     props.envParentId,
     props.type,
+    props.editingMultiline,
     cellId,
     "cell" in props && JSON.stringify(props.cell),
     isEditing,

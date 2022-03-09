@@ -54,9 +54,6 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 		execCmdArg = strings.Join(args, " ")
 	}
 
-	log.Println("execCmdArg:", execCmdArg)
-	log.Println("args:", args)
-
 	if (clientNameArg != "" && clientVersionArg == "") ||
 		(clientVersionArg != "" && clientNameArg == "") {
 		utils.Fatal("if one of --client-name or --client-version is set, the other must also be set", execCmdArg == "")

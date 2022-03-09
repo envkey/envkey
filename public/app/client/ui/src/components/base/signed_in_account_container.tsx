@@ -180,8 +180,11 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       !props.core.fetchSessionError
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (shouldFetchSession) {
+      if (document.documentElement.classList.contains("loaded")) {
+        document.documentElement.classList.remove("loaded");
+      }
       props.dispatch({ type: Client.ActionType.GET_SESSION });
     }
   }, [props.ui.loadedAccountId, shouldFetchSession]);
@@ -270,8 +273,13 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       return false;
     }
 
-    if (auth && props.location.pathname.endsWith(orgId)) {
+    if (
+      auth &&
+      props.core.graphUpdatedAt &&
+      props.location.pathname.endsWith(orgId)
+    ) {
       const { apps } = g.graphTypes(props.core.graph);
+
       if (apps.length > 0) {
         return getEnvParentPath(apps[0]);
       } else {

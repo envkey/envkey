@@ -113,11 +113,12 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
     };
   }, [props.ui.envManager]);
 
-  const { connectedBlocks, connectedBlockIds } = useMemo(() => {
+  const { connectedBlocks, connectedBlockIds, appRoleId } = useMemo(() => {
     if (envParentType == "block") {
       return {
         connectedBlocks: [],
         connectedBlockIds: [],
+        appRoleId: undefined,
       };
     }
     const connectedBlocks = g.getConnectedBlocksForApp(graph, envParentId);
@@ -125,6 +126,8 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
     return {
       connectedBlocks,
       connectedBlockIds: connectedBlocks.map(R.prop("id")),
+      appRoleId: g.getAppRoleForUserOrInvitee(graph, envParentId, currentUserId)
+        ?.id,
     };
   }, [envParentId, graphUpdatedAt]);
 
@@ -162,8 +165,9 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
     }
 
     setInitialEnvsUpdatedAtByEnvParentId(tempInitialEnvsUpdatedAtByEnvParentId);
+
     setInitialEnvWithMetaByEnvironmentId(tempInitialEnvWithMetaByEnvironmentId);
-  }, [envParentId, JSON.stringify(connectedBlockIds)]);
+  }, [envParentId, appRoleId, JSON.stringify(connectedBlockIds)]);
 
   useEffect(() => {
     let latestJustUpdatedAt = 0;
@@ -202,7 +206,14 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
         if (
           encryptedById &&
           encryptedById != currentDeviceId &&
-          updatedEnvironmentId
+          updatedEnvironmentId &&
+          !R.equals(
+            initialEnvWithMetaByEnvironmentId[updatedEnvironmentId],
+            getEnvWithMeta(core, {
+              envParentId,
+              environmentId: updatedEnvironmentId,
+            })
+          )
         ) {
           updatedEnvironmentIds.push(updatedEnvironmentId);
 
@@ -225,7 +236,11 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
       }
     }
 
-    if (latestJustUpdatedAt && updatedById) {
+    if (
+      latestJustUpdatedAt &&
+      updatedById &&
+      updatedEnvironmentIds.length > 0
+    ) {
       setEnvsJustUpdated({
         updatedAt: latestJustUpdatedAt,
         compareEnvWithMetaByEnvironmentId: initialEnvWithMetaByEnvironmentId,
@@ -242,6 +257,7 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
     }
   }, [
     envParentId,
+    appRoleId,
     JSON.stringify(connectedBlockIds),
     JSON.stringify(
       Object.values(
@@ -484,7 +500,7 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
             className={
               "title-row " +
               style({
-                width: `calc(100% - ${isSub ? entryColWidth : 0}px)`,
+                width: `calc(100% - ${isSub ? subEnvsListWidth : 0}px)`,
               })
             }
           >
