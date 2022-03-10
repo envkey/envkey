@@ -46,6 +46,10 @@ export interface ElectronWindow extends Window {
       handler: (progress: UpgradeProgress) => void
     ) => void;
 
+    registerNewerUpgradeAvailableHandler: (
+      handler: (available: AvailableClientUpgrade) => void
+    ) => void;
+
     registerUpgradeCompleteHandler: (handler: () => void) => void;
 
     registerUpgradeErrorHandler: (handler: () => void) => void;

@@ -44,7 +44,7 @@ const actions: {
   [type: string]: Client.ActionParams;
 } = {};
 
-export const clientAction = async <
+export const clientAction = <
     ActionType extends Client.Action.EnvkeyAction = Client.Action.EnvkeyAction,
     SuccessType = any,
     FailureType = Client.ClientError,
@@ -59,6 +59,10 @@ export const clientAction = async <
       RootActionType
     >
   ) => {
+    if (actions[params.actionType]) {
+      throw new Error("A client action with this type was already defined");
+    }
+
     actions[params.actionType] = params as Client.ActionParams;
   },
   getActionParams = (type: Client.Action.EnvkeyAction["type"]) => {

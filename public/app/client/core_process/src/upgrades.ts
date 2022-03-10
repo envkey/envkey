@@ -11,6 +11,8 @@ import {
 
 const CHECK_UPGRADES_INTERVAL = 1000 * 60 * 10; // 10 minutes
 
+let checkUpgradesTimeout: NodeJS.Timeout | undefined;
+
 export const checkUpgradesAvailableLoop = async (
   store: Client.ReduxStore,
   localSocketUpdate: () => void
@@ -28,10 +30,16 @@ export const checkUpgradesAvailableLoop = async (
     log("Error checking self-hosted upgrades available:", { err });
   }
 
-  setTimeout(
+  checkUpgradesTimeout = setTimeout(
     () => checkUpgradesAvailableLoop(store, localSocketUpdate),
     CHECK_UPGRADES_INTERVAL
   );
+};
+
+export const clearUpgradesLoop = () => {
+  if (checkUpgradesTimeout) {
+    clearTimeout(checkUpgradesTimeout);
+  }
 };
 
 const checkSelfHostedUpgradesAvailable = async (

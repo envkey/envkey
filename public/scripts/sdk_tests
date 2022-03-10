@@ -1,0 +1,16 @@
+#!/bin/bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+cd $SCRIPT_DIR/../sdks/languages-and-frameworks
+
+echo "Running envkeygo tests..."
+(cd go/envkeygo && go test ./...)
+
+echo "Running envkey-node tests..."
+(cd node/pkg && npm test)
+
+echo "Running envkey-python tests..."
+(cd python/pkg && make test)
+
+echo "Running envkey-ruby tests..."
+(cd ruby/pkg && rake)

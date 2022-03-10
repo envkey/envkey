@@ -51,6 +51,13 @@ const exposeInterface: ElectronWindow["electron"] = {
       handler(available as AvailableClientUpgrade);
     }),
 
+  registerNewerUpgradeAvailableHandler: (handler) =>
+    ipcRenderer.on("newer-upgrade-available", (event, available) => {
+      console.log("on newer-upgrade-available", available);
+
+      handler(available as AvailableClientUpgrade);
+    }),
+
   registerUpgradeProgressHandler: (handler) => {
     if (progressHandler) {
       ipcRenderer.off("upgrade-progress", progressHandler);
@@ -74,7 +81,6 @@ const exposeInterface: ElectronWindow["electron"] = {
   registerUpgradeErrorHandler: (handler) =>
     ipcRenderer.on("upgrade-error", (event) => {
       console.log("on upgrade-error");
-
       handler();
     }),
 

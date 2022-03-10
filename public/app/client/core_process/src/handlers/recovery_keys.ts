@@ -313,27 +313,6 @@ clientAction<
   },
 });
 
-clientAction<
-  Api.Action.RequestActions["LoadRecoveryKey"],
-  Api.Net.ApiResultTypes["LoadRecoveryKey"]
->({
-  type: "apiRequestAction",
-  actionType: Api.ActionType.LOAD_RECOVERY_KEY,
-  authenticated: true,
-  skipProcessRootPubkeyReplacements: true,
-  skipReencryptPermitted: true,
-  loggableType: "fetchMetaAction",
-  loggableType2: "authAction",
-  successStateProducer: (draft, { payload }) => {
-    if (payload.type == "loadedRecoveryKey") {
-      draft.graph = payload.graph;
-      draft.graphUpdatedAt = payload.graphUpdatedAt;
-      draft.signedTrustedRoot = payload.signedTrustedRoot;
-      draft.loadedRecoveryKey = payload.recoveryKey;
-    }
-  },
-});
-
 clientAction<Client.Action.ClientActions["RedeemRecoveryKey"]>({
   type: "asyncClientAction",
   actionType: Client.ActionType.REDEEM_RECOVERY_KEY,
@@ -499,6 +478,7 @@ clientAction<
   skipReencryptPermitted: true,
   authenticated: true,
   loggableType: "fetchMetaAction",
+  loggableType2: "authAction",
   successAccountIdFn: (payload) =>
     payload.type == "loadedRecoveryKey"
       ? payload.recoveryKey.userId

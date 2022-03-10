@@ -41,22 +41,25 @@ export const startup = async (onInit: (authTokenRes: string) => void) => {
           "CLI or envkey-source not installed. Installation will be attempted in background now."
         );
 
-        downloadAndInstallCliTools({
-          cli:
-            cliLatestInstalledRes == true
-              ? undefined
-              : {
-                  nextVersion: cliLatestInstalledRes[0],
-                  currentVersion: cliLatestInstalledRes[1],
-                },
-          envkeysource:
-            envkeySourceLatestInstalledRes == true
-              ? undefined
-              : {
-                  nextVersion: envkeySourceLatestInstalledRes[0],
-                  currentVersion: envkeySourceLatestInstalledRes[1],
-                },
-        })
+        downloadAndInstallCliTools(
+          {
+            cli:
+              cliLatestInstalledRes == true
+                ? undefined
+                : {
+                    nextVersion: cliLatestInstalledRes[0],
+                    currentVersion: cliLatestInstalledRes[1],
+                  },
+            envkeysource:
+              envkeySourceLatestInstalledRes == true
+                ? undefined
+                : {
+                    nextVersion: envkeySourceLatestInstalledRes[0],
+                    currentVersion: envkeySourceLatestInstalledRes[1],
+                  },
+          },
+          "install"
+        )
           .then(() => {
             log("CLI tools were installed on startup");
             if (cliLatestInstalledRes !== true) {

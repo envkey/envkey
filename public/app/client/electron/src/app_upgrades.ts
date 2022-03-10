@@ -50,7 +50,9 @@ app.on("ready", () => {
   });
 });
 
-export const runCheckUpdatesLoop = () => {
+let checkUpgradesInterval: number | undefined;
+
+export const runCheckUpgradesLoop = () => {
   log("init updates loop");
 
   if (loopInitialized) {
@@ -59,16 +61,34 @@ export const runCheckUpdatesLoop = () => {
   }
 
   // not returned
-  checkUpdate().catch((err) => {
+  checkUpgrade().catch((err) => {
     log("checkUpdate failed", { err });
   });
 
-  setInterval(checkUpdate, CHECK_INTERVAL);
+  checkUpgradesInterval = setInterval(checkUpgrade, CHECK_INTERVAL);
   loopInitialized = true;
   log("app update loop initialized");
 };
 
-export const checkUpdate = async (fromContextMenu = false) => {
+export const stopCheckUpgradesLoop = () => {
+  if (checkUpgradesInterval) {
+    clearInterval(checkUpgradesInterval);
+    checkUpgradesInterval = undefined;
+  }
+};
+
+const resetUpgradesLoop = () => {
+  if (checkUpgradesInterval) {
+    clearInterval(checkUpgradesInterval);
+  }
+
+  checkUpgradesInterval = setInterval(checkUpgrade, CHECK_INTERVAL);
+};
+
+export const checkUpgrade = async (
+  fromContextMenu = false,
+  noDispatch = false
+) => {
   const currentDesktopVersion = app.getVersion();
 
   const [desktopRes, cliLatestInstalledRes, envkeysourceLatestInstalledRes] =
@@ -192,7 +212,9 @@ export const checkUpdate = async (fromContextMenu = false) => {
 
   log("client upgrade available", upgradeAvailable);
 
-  getWin()!.webContents.send("upgrade-available", upgradeAvailable);
+  if (!noDispatch) {
+    getWin()!.webContents.send("upgrade-available", upgradeAvailable);
+  }
 };
 
 export const downloadAndInstallUpgrade = async () => {
@@ -200,11 +222,25 @@ export const downloadAndInstallUpgrade = async () => {
     throw new Error("No client upgrade is available");
   }
 
+  stopCheckUpgradesLoop();
+
+  // first ensure we are installing the latest upgrade
+  // otherwise inform user that a newer upgrade is available
+  const upgradeAvailableBeforeCheck = R.clone(upgradeAvailable);
+  await checkUpgrade(false, true).catch((err) => {
+    log("checkUpdate failed", { err });
+  });
+  if (!R.equals(upgradeAvailableBeforeCheck, upgradeAvailable)) {
+    getWin()!.webContents.send("newer-upgrade-available", upgradeAvailable);
+    resetUpgradesLoop();
+    return;
+  }
+
   let error = false;
 
   await Promise.all([
     upgradeAvailable.cli || upgradeAvailable.envkeysource
-      ? downloadAndInstallCliTools(upgradeAvailable, (progress) =>
+      ? downloadAndInstallCliTools(upgradeAvailable, "upgrade", (progress) =>
           getWin()!.webContents.send("upgrade-progress", progress)
         )
           .then(() => {
@@ -238,11 +274,16 @@ export const downloadAndInstallUpgrade = async () => {
   if (error) {
     log("Sending upgrade-error to webContents");
     getWin()!.webContents.send("upgrade-error");
+    checkUpgrade().catch((err) => {
+      log("checkUpdate failed", { err });
+    });
+    resetUpgradesLoop();
   } else if (!upgradeAvailable.desktop) {
     log("Sending upgrade-complete to webContents");
     getWin()!.webContents.send("upgrade-complete");
     upgradeAvailable = undefined;
     cliToolsInstallComplete = false;
+    resetUpgradesLoop();
   } else if (
     upgradeAvailable.desktop &&
     desktopDownloadComplete &&

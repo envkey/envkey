@@ -9,6 +9,8 @@ import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 const CLEAR_CACHE_INTERVAL = 1000 * 60 * 1; // 1 minute
 const IDLE_ACCOUNT_CACHE_EXPIRATION = 1000 * 60 * 30; // 30 minutes
 
+let clearCacheTimeout: NodeJS.Timeout | undefined;
+
 export const clearCacheLoop = async (
   store: Client.ReduxStore,
   onClear: () => void
@@ -24,7 +26,16 @@ export const clearCacheLoop = async (
     log("Error clearing expired cached envs and changesets:", { err });
   }
 
-  setTimeout(() => clearCacheLoop(store, onClear), CLEAR_CACHE_INTERVAL);
+  clearCacheTimeout = setTimeout(
+    () => clearCacheLoop(store, onClear),
+    CLEAR_CACHE_INTERVAL
+  );
+};
+
+export const clearCacheLoopTimeout = () => {
+  if (clearCacheTimeout) {
+    clearTimeout(clearCacheTimeout);
+  }
 };
 
 const clearExpiredCacheObjects = async (

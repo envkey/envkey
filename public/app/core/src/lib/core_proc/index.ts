@@ -42,7 +42,7 @@ export const clientId = uuid(), // unique per client (ephemeral)
           .then((json) => ({ ...json, status: res.status })) as Promise<T>
     ),
   isAlive = () =>
-    coreMethod("alive", undefined, { timeout: 1000 })
+    coreMethod("alive", undefined, { timeout: 5000 })
       .then((res) => {
         if (!res.ok) {
           return false;
@@ -55,7 +55,7 @@ export const clientId = uuid(), // unique per client (ephemeral)
       }),
   stop = async () => {
     try {
-      const res = await coreMethod("stop", undefined, { timeout: 1000 });
+      const res = await coreMethod("stop", undefined, { timeout: 2000 });
 
       if (!res.ok) {
         return false;

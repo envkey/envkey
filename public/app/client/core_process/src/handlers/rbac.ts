@@ -243,22 +243,6 @@ clientAction<
 });
 
 clientAction<
-  Api.Action.RequestActions["RbacCreateEnvironmentRole"],
-  Api.Net.ApiResultTypes["RbacCreateEnvironmentRole"]
->({
-  type: "apiRequestAction",
-  actionType: Api.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
-  loggableType: "orgAction",
-  authenticated: true,
-  graphAction: true,
-  serialAction: true,
-  ...statusProducers(
-    "isCreatingRbacEnvironmentRole",
-    "createRbacEnvironmentRoleError"
-  ),
-});
-
-clientAction<
   Api.Action.RequestActions["DeleteIncludedAppRole"],
   Api.Net.ApiResultTypes["DeleteIncludedAppRole"]
 >({

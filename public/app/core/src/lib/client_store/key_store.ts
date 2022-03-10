@@ -1,5 +1,4 @@
 import type * as Keytar from "keytar";
-import * as fs from "fs";
 import { log } from "../utils/logger";
 import Conf from "conf";
 import {

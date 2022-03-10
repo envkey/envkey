@@ -35,7 +35,7 @@ export const startCoreFromElectron = async (
     return true;
   } finally {
     if (keepAlive) {
-      keepAliveLoop();
+      setTimeout(keepAliveLoop, 10000);
     }
   }
 };

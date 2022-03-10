@@ -269,6 +269,14 @@ const clientParams: Client.ClientParams<"app"> = {
         setAvailableClientUpgrade(availableUpgrade);
       });
 
+      window.electron.registerNewerUpgradeAvailableHandler(
+        (availableUpgrade) => {
+          console.log("Root - newer upgrade available", availableUpgrade);
+          alert("A newer upgrade is available.");
+          setAvailableClientUpgrade(availableUpgrade);
+        }
+      );
+
       // this is only called if there was no desktop upgrade
       // (just CLI or envkey-source), otherwise the app will
       // restart with the latest version
@@ -284,8 +292,9 @@ const clientParams: Client.ClientParams<"app"> = {
 
       window.electron.registerUpgradeErrorHandler(() => {
         console.log("Root - upgrade error");
-        alert("There was a problem downloading the upgrade.");
+        alert("There was a problem downloading the upgrade. Please try again.");
         setClientUpgradeProgress({});
+        setAvailableClientUpgrade({});
       });
     }, []);
 

@@ -8,9 +8,10 @@ import { stopCoreProcess } from "./core_proc";
 import { terminateWorkerPool } from "@core/worker/start";
 import path from "path";
 import {
-  runCheckUpdatesLoop,
-  checkUpdate,
+  runCheckUpgradesLoop,
+  checkUpgrade,
   downloadAndInstallUpgrade,
+  stopCheckUpgradesLoop,
 } from "./app_upgrades";
 import { startup } from "./startup";
 
@@ -52,7 +53,7 @@ app.on("ready", () => {
   startup((authTokenRes) => {
     appReady = true;
     authToken = authTokenRes;
-    loadUi().then(() => runCheckUpdatesLoop());
+    loadUi().then(() => runCheckUpgradesLoop());
   });
 });
 
@@ -76,14 +77,24 @@ app.on("before-quit", async (e) => {
     appWillAutoExit,
   });
   try {
+    log("Stopping check updates loop...");
+    stopCheckUpgradesLoop();
     // if it's running inline, core process must be stopped before the worker pool, since the core process itself relies on workers.
     log("stopping core process...");
     stopCoreProcess(async () => {
       log("stopped core process.");
-      log("terminating worker pool...");
-      await terminateWorkerPool().catch((err) => {
-        log("error terminating worker pool", { err });
-      });
+
+      // manually terminating worker pool seems to cause more harm than good now.
+      // at one point it had seemed necessary.
+      // log("terminating worker pool...");
+      // try {
+      //   await terminateWorkerPool().catch((err) => {
+      //     log(".catch error terminating worker pool", { err });
+      //   });
+      // } catch (err) {
+      //   log("try/catch error terminating worker pool", { err });
+      // }
+
       app.exit();
     });
   } catch (err) {
@@ -119,7 +130,12 @@ const createWindow = () => {
     center: true,
     backgroundColor: "#404040",
     title: "EnvKey " + app.getVersion(),
-    icon: path.join(app.getAppPath(), "../icon/64x64.png"),
+    icon: path.join.apply(this, [
+      ...(process.env.ICON_DIR_FROM_ELECTRON_RESOURCES
+        ? [process.resourcesPath, process.env.ICON_DIR_FROM_ELECTRON_RESOURCES]
+        : [process.env.ICON_DIR!]),
+      "64x64.png",
+    ]),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -175,7 +191,7 @@ const setupAppUpdateMenu = () => {
 
   const menuCheckAppUpdate = new MenuItem({
     label: "Check for Updates",
-    click: () => checkUpdate(true),
+    click: () => checkUpgrade(true),
   });
 
   // const switchAccount = new MenuItem({
@@ -191,3 +207,24 @@ const setupAppUpdateMenu = () => {
 
   Menu.setApplicationMenu(menu);
 };
+
+[
+  "SIGINT",
+  "SIGUSR1",
+  "SIGUSR2",
+  "uncaughtException",
+  "SIGTERM",
+  "SIGHUP",
+].forEach((eventType) => {
+  process.on(eventType, () => {
+    log(`EnvKey Electron exiting due to ${eventType}.`);
+    if (app) {
+      app.quit();
+    }
+  });
+});
+
+// TODO: need to remove all floating promises and then remove this handler so unhandledRejections are treated like exceptions
+process.on("unhandledRejection", (reason, promise) => {
+  log(`EnvKey Electron unhandledRejection.`, { reason });
+});

@@ -1,7 +1,7 @@
 module github.com/envkey/envkeygo/v2
 
 require (
-	github.com/envkey/envkey/public/sdks/envkey-source v0.0.0-20220307130054-42f61be8e63b
+	github.com/envkey/envkey/public/sdks/envkey-source v0.0.0-20220309013338-0fc3d2c4d497
 	github.com/stretchr/testify v1.7.0
 )
 
@@ -17,8 +17,8 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
-	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
+	golang.org/x/crypto v0.0.0-20220307211146-efcb8507fb70 // indirect
+	golang.org/x/sys v0.0.0-20220307203707-22a9840ba4d7 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

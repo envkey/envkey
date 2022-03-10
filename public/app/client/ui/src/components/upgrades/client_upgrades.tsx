@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import { ComponentBaseProps } from "@ui_types";
 import * as styles from "@styles";
 import {
@@ -57,6 +57,12 @@ export const ClientUpgrades: React.FC<
 
   const [showInitialLoader, setShowInitialLoader] = useState(true);
   const [showFinalLoader, setShowFinalLoader] = useState(false);
+
+  useEffect(() => {
+    if (startedUpgrade) {
+      setStartedUpgrade(false);
+    }
+  }, [JSON.stringify(props.availableClientUpgrade)]);
 
   useLayoutEffect(() => {
     const pct =

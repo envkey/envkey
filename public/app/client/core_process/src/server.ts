@@ -25,9 +25,13 @@ import {
 } from "@core/lib/client_store";
 import { log, logStderr, initFileLogger } from "@core/lib/utils/logger";
 import { resolveOrgSockets, closeAllOrgSockets } from "./org_sockets";
-import { checkUpgradesAvailableLoop } from "./upgrades";
-import { checkSuspendedLoop, refreshSessions } from "./refresh_sessions";
-import { clearCacheLoop } from "./clear_cache";
+import { checkUpgradesAvailableLoop, clearUpgradesLoop } from "./upgrades";
+import {
+  checkSuspendedLoop,
+  refreshSessions,
+  clearCheckSuspendedLoop,
+} from "./refresh_sessions";
+import { clearCacheLoop, clearCacheLoopTimeout } from "./clear_cache";
 import { getContext } from "./default_context";
 import open from "open";
 import * as R from "ramda";
@@ -275,7 +279,8 @@ export const start = async (port = 19047, wsport = 19048) => {
 
   let server: ReturnType<typeof app.listen>;
   const serverRunningMsg = `EnvKey local server is running. Server port: ${port}. Websocket port: ${wsport}.`;
-  await new Promise((resolve) => {
+
+  const startServer = (resolve: (res: boolean) => void, n = 0) => {
     server = app
       .listen(port, () => {
         log(serverRunningMsg);
@@ -283,41 +288,61 @@ export const start = async (port = 19047, wsport = 19048) => {
       })
       .on("error", (err) => {
         log("Error starting server:", { err });
-        if (err.message.includes(`address already in use :::${port}`)) {
-          log(
-            `Killing zombie express server on port ${port} and trying again...`
-          );
-          fkill(`:${port}`, { force: true, tree: true, silent: true }).then(
-            () => {
-              setTimeout(() => {
-                server = app.listen(port, () => {
-                  log(serverRunningMsg);
-                  resolve(true);
-                });
-              }, 1000);
-            }
-          );
+        if (
+          err.message.includes(`address already in use :::${port}`) ||
+          err.message.includes("EADDRINUSE")
+        ) {
+          handleAddrInUse(resolve, n);
         } else {
           throw err;
         }
       });
-  });
+  };
+
+  const handleAddrInUse = (resolve: (res: boolean) => void, n = 0) => {
+    if (n > 1) {
+      log(`Couldn't kill process blocking express port ${port}. Giving up.`);
+      return;
+    }
+
+    log(`Killing process blocking express port ${port} and trying again...`);
+    fkill(`:${port}`, {
+      force: true,
+      tree: true,
+      silent: true,
+    }).then(() => {
+      setTimeout(() => {
+        startServer(resolve, n + 1);
+      }, 500);
+    });
+  };
+
+  await new Promise((resolve) => startServer(resolve));
 
   const shutdownNetworking = () => {
     closeAllOrgSockets();
 
     if (wss) {
       wss.clients.forEach((client) => {
-        client.send(JSON.stringify({ type: "closing" }));
-        client.close();
+        try {
+          client.send(JSON.stringify({ type: "closing" }));
+        } catch (err) {
+          log("error sending 'closing' message to local socket", { err });
+        }
+
+        try {
+          client.close();
+        } catch (err) {}
       });
-      server.close();
       wss.close();
     }
+
+    server.close();
   };
 
   const gracefulShutdown = (onShutdown?: () => void) => {
     log(`Shutting down gracefully...`);
+    clearTimers();
     shutdownNetworking();
 
     if (reduxStore) {
@@ -347,6 +372,11 @@ export const start = async (port = 19047, wsport = 19048) => {
         gracefulShutdown();
       });
     });
+
+    // TODO: need to remove all floating promises and then remove this handler so unhandledRejections are treated like exceptions
+    process.on("unhandledRejection", (reason, promise) => {
+      log(`Core process unhandledRejection.`, { reason });
+    });
   }
 
   return { shutdownNetworking, gracefulShutdown };
@@ -354,6 +384,7 @@ export const start = async (port = 19047, wsport = 19048) => {
 
 let reduxStore: Client.ReduxStore | undefined,
   lockoutTimeout: ReturnType<typeof setTimeout> | undefined,
+  heartbeatTimeout: ReturnType<typeof setTimeout> | undefined,
   lastProcHeartbeatAt = Date.now(),
   wss: WebSocket.Server | undefined;
 
@@ -399,7 +430,7 @@ const initReduxStore = async (forceReset?: true) => {
       }
     }
     lastProcHeartbeatAt = now;
-    setTimeout(procHeartbeatLoop, 10000);
+    heartbeatTimeout = setTimeout(procHeartbeatLoop, 10000);
   },
   init = async (forceReset?: true) => {
     clientStoreEnableLogging();
@@ -414,6 +445,17 @@ const initReduxStore = async (forceReset?: true) => {
       );
     }
   },
+  clearTimers = () => {
+    if (heartbeatTimeout) {
+      clearTimeout(heartbeatTimeout);
+    }
+    if (lockoutTimeout) {
+      clearTimeout(lockoutTimeout);
+    }
+    clearCheckSuspendedLoop();
+    clearCacheLoopTimeout();
+    clearUpgradesLoop();
+  },
   initSocketsAndTimers = async () => {
     if (reduxStore) {
       await resolveOrgSockets(reduxStore, localSocketUpdate);
@@ -423,40 +465,59 @@ const initReduxStore = async (forceReset?: true) => {
   },
   startSocketServer = (port: number, wsport: number) => {
     log(`Starting local socket server on port ${wsport}...`);
-    wss = new WebSocket.Server({
-      port: wsport,
-      verifyClient: ({ origin, req }, cb) => {
-        authenticateUserAgent(req.headers["user-agent"]).then((authValid) => {
-          log(
-            authValid
-              ? "Websocket connection successful."
-              : "Websocket connection user-agent auth invalid.",
-            { ip: req.socket.remoteAddress }
-          );
-          cb(
-            authValid,
-            authValid ? undefined : 401,
-            authValid ? undefined : "Unauthorized."
-          );
-        });
-      },
-    });
 
-    wss.on("error", (err) => {
-      log("Error starting local socket server: " + err.message);
-      if (err.message.includes(`address already in use :::${wsport}`)) {
-        log(`Clearing port ${wsport} and trying again...`);
-        fkill(`:${wsport}`, { force: true, tree: true, silent: true }).then(
-          () => {
-            setTimeout(() => {
-              startSocketServer(port, wsport);
-            }, 1000);
-          }
-        );
-      } else {
-        throw err;
+    const startFn = (n = 0) => {
+      wss = new WebSocket.Server({
+        port: wsport,
+        verifyClient: ({ origin, req }, cb) => {
+          authenticateUserAgent(req.headers["user-agent"]).then((authValid) => {
+            log(
+              authValid
+                ? "Websocket connection successful."
+                : "Websocket connection user-agent auth invalid.",
+              { ip: req.socket.remoteAddress }
+            );
+            cb(
+              authValid,
+              authValid ? undefined : 401,
+              authValid ? undefined : "Unauthorized."
+            );
+          });
+        },
+      });
+
+      wss.on("error", (err) => {
+        log("Error starting local socket server: " + err.message);
+        if (
+          err.message.includes(`address already in use :::${wsport}`) ||
+          err.message.includes("EADDRINUSE")
+        ) {
+          handleAddrInUse(n);
+        } else {
+          throw err;
+        }
+      });
+    };
+
+    const handleAddrInUse = (n = 0) => {
+      if (n > 1) {
+        log(`Couldn't kill process blocking wss port ${wsport}. Giving up.`);
+        return;
       }
-    });
+
+      log(`Killing process blocking wss port ${wsport} and trying again...`);
+      fkill(`:${wsport}`, {
+        force: true,
+        tree: true,
+        silent: true,
+      }).then(() => {
+        setTimeout(() => {
+          startFn(n + 1);
+        }, 500);
+      });
+    };
+
+    startFn();
   },
   localSocketUpdate = (
     updateType: "full_update" | "diffs" = "full_update",

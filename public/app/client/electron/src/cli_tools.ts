@@ -1,3 +1,4 @@
+import { getWin } from "./main";
 import * as os from "os";
 import * as path from "path";
 import { exec } from "child_process";
@@ -48,6 +49,7 @@ export const downloadAndInstallCliTools = async (
       currentVersion: string | false;
     };
   },
+  installType: "install" | "upgrade",
   onProgress?: (p: UpgradeProgress) => void
 ) => {
   let cliFolder: string | undefined;
@@ -63,14 +65,14 @@ export const downloadAndInstallCliTools = async (
         : undefined,
     ]);
   } catch (err) {
-    log("Error downloading CLI tools update", { err });
+    log("Error downloading CLI tools upgrade", { err });
     throw err;
   }
 
   try {
-    await install(params, cliFolder, envkeysourceFolder);
+    await install(params, cliFolder, envkeysourceFolder, installType);
   } catch (err) {
-    log("Error installing CLI tools update", { err });
+    log("Error installing CLI tools upgrade", { err });
     throw err;
   }
 };
@@ -84,7 +86,7 @@ export const sudoNeededDialog = async () => {
   let button: number | undefined;
   try {
     button = (
-      await dialog.showMessageBox({
+      await dialog.showMessageBox(getWin()!, {
         title: "EnvKey CLI",
         message: `To install the latest EnvKey CLI tools, you will be prompted for administrator access.`,
         buttons: ["OK", "Skip"],
@@ -223,7 +225,7 @@ const download = async (
   const assetPrefix = projectType == "cli" ? "envkey-cli" : "envkey-source";
   const friendlyName = projectType == "cli" ? "EnvKey CLI" : "envkey-source";
 
-  log(`${projectType} update: init`);
+  log(`${projectType} upgrade: init`);
 
   const assetName = `${assetPrefix}_${nextVersion}_${platformIdentifier}_${arch}.tar.gz`;
   const releaseTag = `${projectType}-v${nextVersion}`;
@@ -256,13 +258,13 @@ const download = async (
       assetName: assetName + ".minisig",
     }),
   ]);
-  log(`${friendlyName} update: fetched latest archive`, {
+  log(`${friendlyName} upgrade: fetched latest archive`, {
     sizeBytes: Buffer.byteLength(fileBuf),
     assetName,
   });
 
   const folder = await unpackToFolder(fileBuf, sigBuf, execName);
-  log(`${friendlyName} update: unpacked to folder`, { folder });
+  log(`${friendlyName} upgrade: unpacked to folder`, { folder });
 
   return folder;
 };
@@ -280,7 +282,8 @@ const install = async (
     };
   },
   cliFolder: string | undefined,
-  envkeysourceFolder: string | undefined
+  envkeysourceFolder: string | undefined,
+  installType: "install" | "upgrade"
 ): Promise<void> => {
   // installs envkey-source as envkey-source-v2 if envkey-source v1 is already installed to avoid overwriting it and breaking things
   if (envkeysourceFolder && (await hasV1Envkeysource())) {
@@ -313,57 +316,78 @@ const install = async (
 
   await copyExecFiles(cliFolder, envkeysourceFolder, binDir);
 
-  // add `es` alias for envkey-source unless an `es` is already in PATH
-  const hasExistingEsCommand = await new Promise((resolve) => {
-    which("es", (err, path) => {
-      if (err) {
-        log("which('es') error:", { err });
-      }
-      resolve(Boolean(path));
-    });
-  });
+  if (installType == "install") {
+    // add `es` alias for envkey-source unless an `es` is already in PATH
+    let hasExistingEsCommand = false;
 
-  const symlinkExists = await fileExists(path.join(binDir, "es"));
-
-  if (!hasExistingEsCommand && !symlinkExists) {
-    // windows requires admin privileges to create a symlink
-    if (platform == "win32") {
-      await sudoNeededDialog();
-
-      await new Promise<void>((resolve, reject) => {
-        try {
-          sudoPrompt.exec(
-            `mklink ${path.join(binDir, "es")} ${path.join(
-              binDir,
-              "envkey-source.exe"
-            )}`,
-            {
-              name: `EnvKey CLI Tools Installer`,
-            },
-            (err: Error | undefined) => {
-              if (err) {
-                log(`Windows sudo-prompt create symlink error`, { err });
-                return reject(err);
-              }
-              log("Windows: created symlink with administrator privileges");
-              resolve();
-            }
-          );
-        } catch (err) {
-          log(`Windows sudo-prompt create symlink error`, { err });
-          reject(err);
-        }
-      });
-    } else {
-      await fsp
-        .symlink(path.join(binDir, "envkey-source"), path.join(binDir, "es"))
-        .catch(async (err) => {
-          log("create symlink err", { err });
+    try {
+      hasExistingEsCommand = await new Promise((resolve) => {
+        which("es", (err, path) => {
+          if (err) {
+            log("which('es') error:", { err });
+          }
+          resolve(Boolean(path));
         });
+      });
+    } catch (err) {
+      log("caught error determining `hasExistingEsCommand`", { err });
+    }
+
+    log("", { hasExistingEsCommand });
+
+    const symlinkExists = await fileExists(path.join(binDir, "es"));
+
+    log("", { symlinkExists });
+
+    if (!hasExistingEsCommand && !symlinkExists) {
+      // windows requires admin privileges to create a symlink
+      if (platform == "win32") {
+        log("attempting to create `es` symlink on Windows");
+
+        try {
+          await sudoNeededDialog();
+        } catch (err) {
+          log("error warning user of administrator privileges request", {
+            err,
+          });
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          try {
+            log("attempting symlink with sudo-prompt on Windows");
+            sudoPrompt.exec(
+              `mklink ${path.join(binDir, "es")} ${path.join(
+                binDir,
+                "envkey-source.exe"
+              )}`,
+              {
+                name: `EnvKey CLI Tools Installer`,
+              },
+              (err: Error | undefined) => {
+                if (err) {
+                  log(`Windows sudo-prompt create symlink error`, { err });
+                  return reject(err);
+                }
+                log("Windows: created symlink with administrator privileges");
+                resolve();
+              }
+            );
+          } catch (err) {
+            log(`Windows sudo-prompt create symlink error`, { err });
+            reject(err);
+          }
+        });
+      } else {
+        await fsp
+          .symlink(path.join(binDir, "envkey-source"), path.join(binDir, "es"))
+          .catch(async (err) => {
+            log("create symlink err", { err });
+          });
+      }
     }
   }
 
-  log(`CLI tools update: completed successfully`, {
+  log(`CLI tools upgrade: completed successfully`, {
     cli: params.cli?.nextVersion,
     envkeysource: params.envkeysource?.nextVersion,
   });

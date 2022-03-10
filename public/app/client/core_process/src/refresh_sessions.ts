@@ -15,6 +15,8 @@ const REFRESH_MAX_JITTER = 1000 * 3; // 3 seconds
 
 let lastSuspendedCheckAt: number | undefined;
 
+let checkSuspendedTimeout: NodeJS.Timeout | undefined;
+
 export const checkSuspendedLoop = async (
   store: Client.ReduxStore,
   localSocketUpdate: () => void
@@ -40,10 +42,16 @@ export const checkSuspendedLoop = async (
 
   lastSuspendedCheckAt = now;
 
-  setTimeout(
+  checkSuspendedTimeout = setTimeout(
     () => checkSuspendedLoop(store, localSocketUpdate),
     CHECK_SUSPENDED_INTERVAL
   );
+};
+
+export const clearCheckSuspendedLoop = () => {
+  if (checkSuspendedTimeout) {
+    clearTimeout(checkSuspendedTimeout);
+  }
 };
 
 export const refreshSessions = (

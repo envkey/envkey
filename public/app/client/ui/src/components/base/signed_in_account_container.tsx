@@ -15,6 +15,7 @@ import {
 import { style } from "typestyle";
 import * as styles from "@styles";
 import * as semver from "semver";
+import { wait } from "@core/lib/utils/wait";
 
 // controls rate off firing off ACCOUNT_ACTIVE events to prevent core proc from clearing cache when ui is active
 // refer to core proc IDLE_ACCOUNT_CACHE_EXPIRATION
@@ -50,15 +51,11 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
   // clear selected account on unmount
   useEffect(
     () => () => {
-      console.log(
-        "SignedInAccountContainer unmounting, clearing accountId and loadedAccountId"
-      );
       props.setUiState({
         accountId: undefined,
         loadedAccountId: undefined,
       });
     },
-
     []
   );
 
@@ -169,6 +166,13 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     }
   }, [props.core.throttleError]);
 
+  const [numFetchedSessionsForAccountId, setNumFetchedSessionsForAccountId] =
+    useState<[string, number]>([props.ui.loadedAccountId ?? "", 0]);
+
+  useEffect(() => {
+    setNumFetchedSessionsForAccountId([props.ui.loadedAccountId ?? "", 0]);
+  }, [props.ui.loadedAccountId]);
+
   const shouldFetchSession = Boolean(
     props.ui.loadedAccountId &&
       auth &&
@@ -177,16 +181,27 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       (!props.core.graphUpdatedAt ||
         !props.core.graph[props.ui.loadedAccountId]) &&
       !props.core.isFetchingSession &&
-      !props.core.fetchSessionError
+      !props.core.fetchSessionError &&
+      (!numFetchedSessionsForAccountId ||
+        numFetchedSessionsForAccountId[0] != props.ui.loadedAccountId ||
+        numFetchedSessionsForAccountId[1] < 3)
   );
 
   useLayoutEffect(() => {
-    if (shouldFetchSession) {
-      if (document.documentElement.classList.contains("loaded")) {
-        document.documentElement.classList.remove("loaded");
+    (async () => {
+      if (shouldFetchSession) {
+        if (document.documentElement.classList.contains("loaded")) {
+          document.documentElement.classList.remove("loaded");
+        }
+
+        const numFetches = numFetchedSessionsForAccountId[1];
+        if (numFetches > 0) {
+          await wait(numFetches * 1000);
+        }
+
+        props.dispatch({ type: Client.ActionType.GET_SESSION });
       }
-      props.dispatch({ type: Client.ActionType.GET_SESSION });
-    }
+    })();
   }, [props.ui.loadedAccountId, shouldFetchSession]);
 
   const shouldRequireRecoveryKey = useMemo(() => {
