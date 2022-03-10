@@ -1,8 +1,8 @@
-version: 2.0.28
+version: 2.0.29
 files:
-  - url: EnvKey_Windows_Installer-2.0.28.exe
-    sha512: raEijSZRJJ6bMFSySyxJqvVwC0PE1HYy52V6ut0E1l3B3hQ1DEa8LNHhwDhDREMMP9hGVmeLNrXJzeijWCJZmg==
-    size: 68693240
-path: EnvKey_Windows_Installer-2.0.28.exe
-sha512: raEijSZRJJ6bMFSySyxJqvVwC0PE1HYy52V6ut0E1l3B3hQ1DEa8LNHhwDhDREMMP9hGVmeLNrXJzeijWCJZmg==
-releaseDate: '2022-03-10T01:54:28.102Z'
+  - url: EnvKey_Windows_Installer-2.0.29.exe
+    sha512: h1vHzljsWkNZvN0DP3rL/TVT2RsAjdkOgxrF3QijYL52w6gXTMNM/HOVX+Ms6y2DzNtQQ8X2xZjKKzv3VaE/AA==
+    size: 68693184
+path: EnvKey_Windows_Installer-2.0.29.exe
+sha512: h1vHzljsWkNZvN0DP3rL/TVT2RsAjdkOgxrF3QijYL52w6gXTMNM/HOVX+Ms6y2DzNtQQ8X2xZjKKzv3VaE/AA==
+releaseDate: '2022-03-10T09:29:23.204Z'

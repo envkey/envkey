@@ -126,7 +126,6 @@ export const Upgrades =
       },
 
       ".progress": {
-        marginTop: "15px",
         backgroundColor: "rgba(0,0,0,0.05)",
         height: 50,
         display: "flex",
