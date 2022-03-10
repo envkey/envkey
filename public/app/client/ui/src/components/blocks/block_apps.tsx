@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import { getEnvParentPath } from "@ui_lib/paths";
 import * as styles from "@styles";
 import { SvgImage, SmallLoader } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const BlockApps: OrgComponent<{ blockId: string }> = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -43,12 +44,21 @@ export const BlockApps: OrgComponent<{ blockId: string }> = (props) => {
     }
     setRemovingId(app.id);
 
-    props.dispatch({
-      type: Api.ActionType.DISCONNECT_BLOCK,
-      payload: {
-        id: appBlock.id,
-      },
-    });
+    props
+      .dispatch({
+        type: Api.ActionType.DISCONNECT_BLOCK,
+        payload: {
+          id: appBlock.id,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            "There was a problem disconnecting blocks.",
+            res.resultAction
+          );
+        }
+      });
   };
 
   const renderRemove = (app: Model.App) => {

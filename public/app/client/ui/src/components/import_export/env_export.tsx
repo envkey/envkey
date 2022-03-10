@@ -7,6 +7,7 @@ import { getRawEnvWithAncestors, getRawEnv } from "@core/lib/client";
 import { ElectronWindow } from "@core/types/electron";
 import * as styles from "@styles";
 import { SvgImage } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 declare var window: ElectronWindow;
 
@@ -191,17 +192,26 @@ export const EnvExport: OrgComponent = (props) => {
               if (filePath) {
                 setExporting(true);
 
-                await props.dispatch({
-                  type: Client.ActionType.EXPORT_ENVIRONMENT,
-                  payload: {
-                    envParentId: envParent.id,
-                    environmentId: exportEnvironmentId,
-                    format,
-                    filePath,
-                    includeAncestors: includeAncestors || undefined,
-                    pending: includePending || undefined,
-                  },
-                });
+                await props
+                  .dispatch({
+                    type: Client.ActionType.EXPORT_ENVIRONMENT,
+                    payload: {
+                      envParentId: envParent.id,
+                      environmentId: exportEnvironmentId,
+                      format,
+                      filePath,
+                      includeAncestors: includeAncestors || undefined,
+                      pending: includePending || undefined,
+                    },
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem exporting the environment.`,
+                        res.resultAction
+                      );
+                    }
+                  });
 
                 close();
               }

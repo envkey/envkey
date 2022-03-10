@@ -6,10 +6,10 @@ import { capitalize } from "@core/lib/utils/string";
 import { RadioGroup, Radio } from "react-radio-group";
 import * as R from "ramda";
 import * as g from "@core/lib/graph";
-import { style } from "typestyle";
 import * as styles from "@styles";
 import { ElectronWindow } from "@core/types/electron";
 import { SmallLoader, SvgImage } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 declare var window: ElectronWindow;
 
@@ -169,14 +169,24 @@ export const getNewEnvParentComponent = (
               if (parsed && environment) {
                 environmentIds.push(environment.id);
                 importPromises.push(
-                  props.dispatch({
-                    type: Client.ActionType.IMPORT_ENVIRONMENT,
-                    payload: {
-                      envParentId: created.id,
-                      environmentId: environment.id,
-                      parsed,
-                    },
-                  })
+                  props
+                    .dispatch({
+                      type: Client.ActionType.IMPORT_ENVIRONMENT,
+                      payload: {
+                        envParentId: created.id,
+                        environmentId: environment.id,
+                        parsed,
+                      },
+                    })
+                    .then((res) => {
+                      if (!res.success) {
+                        logAndAlertError(
+                          `There was a problem importing the environments`,
+                          res.resultAction
+                        );
+                      }
+                      return res;
+                    })
                 );
               }
             }
@@ -187,13 +197,23 @@ export const getNewEnvParentComponent = (
               });
 
               await Promise.all(importPromises);
-              await props.dispatch({
-                type: Client.ActionType.COMMIT_ENVS,
-                payload: {
-                  pendingEnvironmentIds: environmentIds,
-                  message: "Initial import",
-                },
-              });
+              await props
+                .dispatch({
+                  type: Client.ActionType.COMMIT_ENVS,
+                  payload: {
+                    pendingEnvironmentIds: environmentIds,
+                    message: "Initial import",
+                  },
+                })
+                .then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem importing environments`,
+                      res.resultAction
+                    );
+                  }
+                  return res;
+                });
             }
           }
 

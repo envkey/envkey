@@ -8,6 +8,7 @@ import { SmallLoader } from "@images";
 import { ElectronWindow } from "@core/types/electron";
 import { CopyableDisplay } from "../settings/copyable_display";
 import { OrgArchiveImporter } from "./org_archive_importer";
+import { logAndAlertError } from "@ui_lib/errors";
 
 declare var window: ElectronWindow;
 
@@ -48,8 +49,10 @@ export const OrgArchiveV1: OrgComponent = (props) => {
 
         setExportEncryptionKey(encryptionKey);
       } else {
-        console.log(res.resultAction);
-        alert("There was a problem exporting your org archive");
+        logAndAlertError(
+          "There was a problem exporting the org archive.",
+          res.resultAction
+        );
       }
     }
   };

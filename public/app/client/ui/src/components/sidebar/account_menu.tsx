@@ -6,6 +6,7 @@ import * as g from "@core/lib/graph";
 import { LockLink } from "@ui";
 import { SvgImage } from "@images";
 import * as styles from "@styles";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const CLASS_NAME = "account-menu";
 
@@ -127,6 +128,13 @@ export const AccountMenu: OrgComponent = (props) => {
                 dispatch({
                   type: Client.ActionType.SIGN_OUT,
                   payload: { accountId: ui.loadedAccountId! },
+                }).then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem signing out.`,
+                      res.resultAction
+                    );
+                  }
                 })
               }
             >

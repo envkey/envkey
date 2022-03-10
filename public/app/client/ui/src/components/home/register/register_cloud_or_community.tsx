@@ -10,6 +10,7 @@ import * as styles from "@styles";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import { CopyableDisplay } from "src/components/settings/copyable_display";
+import { logAndAlertError } from "@ui_lib/errors";
 
 type RegisterRes = Client.DispatchResult<
   Client.Action.SuccessAction<
@@ -151,6 +152,10 @@ const getRegisterComponent = (hostType: "cloud" | "community") => {
 
     const onRegister = async (res: RegisterRes | undefined) => {
       if (!res || !res.success) {
+        logAndAlertError(
+          "There was a problem creating an organization.",
+          res?.resultAction
+        );
         return;
       }
       const payload = res.resultAction.payload;

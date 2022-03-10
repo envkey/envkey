@@ -16,6 +16,7 @@ import * as styles from "@styles";
 import { SvgImage, SmallLoader } from "@images";
 import { wait } from "@core/lib/utils/wait";
 import { MIN_ACTION_DELAY_MS } from "@constants";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const ReviewPending: OrgComponent<
   {},
@@ -141,12 +142,21 @@ export const ReviewPending: OrgComponent<
                     setIsResetting({ ...isResetting, [environmentId]: true });
 
                     await Promise.all([
-                      props.dispatch({
-                        type: Client.ActionType.RESET_ENVS,
-                        payload: {
-                          pendingEnvironmentIds: [environmentId],
-                        },
-                      }),
+                      props
+                        .dispatch({
+                          type: Client.ActionType.RESET_ENVS,
+                          payload: {
+                            pendingEnvironmentIds: [environmentId],
+                          },
+                        })
+                        .then((res) => {
+                          if (!res.success) {
+                            logAndAlertError(
+                              `There was a problem resetting the updates.`,
+                              res.resultAction
+                            );
+                          }
+                        }),
                       wait(MIN_ACTION_DELAY_MS),
                     ]);
 
@@ -160,12 +170,21 @@ export const ReviewPending: OrgComponent<
                   onClick={() => {
                     setIsCommitting({ ...isCommitting, [environmentId]: true });
 
-                    props.dispatch({
-                      type: Client.ActionType.COMMIT_ENVS,
-                      payload: {
-                        pendingEnvironmentIds: [environmentId],
-                      },
-                    });
+                    props
+                      .dispatch({
+                        type: Client.ActionType.COMMIT_ENVS,
+                        payload: {
+                          pendingEnvironmentIds: [environmentId],
+                        },
+                      })
+                      .then((res) => {
+                        if (!res.success) {
+                          logAndAlertError(
+                            `There was a problem committing the updates.`,
+                            res.resultAction
+                          );
+                        }
+                      });
                   }}
                 >
                   <SvgImage type="check" />
@@ -209,13 +228,22 @@ export const ReviewPending: OrgComponent<
                                   true,
                               });
 
-                              await props.dispatch({
-                                type: Client.ActionType.RESET_ENVS,
-                                payload: {
-                                  pendingEnvironmentIds: [environmentId],
-                                  entryKeys: [conflict.entryKey],
-                                },
-                              });
+                              await props
+                                .dispatch({
+                                  type: Client.ActionType.RESET_ENVS,
+                                  payload: {
+                                    pendingEnvironmentIds: [environmentId],
+                                    entryKeys: [conflict.entryKey],
+                                  },
+                                })
+                                .then((res) => {
+                                  if (!res.success) {
+                                    logAndAlertError(
+                                      `There was a problem resetting the updates.`,
+                                      res.resultAction
+                                    );
+                                  }
+                                });
 
                               setIsResetting(
                                 R.omit(
@@ -319,13 +347,22 @@ export const ReviewPending: OrgComponent<
                                 [[environmentId, key].join("|")]: true,
                               });
 
-                              await props.dispatch({
-                                type: Client.ActionType.RESET_ENVS,
-                                payload: {
-                                  pendingEnvironmentIds: [environmentId],
-                                  entryKeys: [key],
-                                },
-                              });
+                              await props
+                                .dispatch({
+                                  type: Client.ActionType.RESET_ENVS,
+                                  payload: {
+                                    pendingEnvironmentIds: [environmentId],
+                                    entryKeys: [key],
+                                  },
+                                })
+                                .then((res) => {
+                                  if (!res.success) {
+                                    logAndAlertError(
+                                      `There was a problem resetting the updates.`,
+                                      res.resultAction
+                                    );
+                                  }
+                                });
 
                               setIsResetting(
                                 R.omit(
@@ -386,12 +423,21 @@ export const ReviewPending: OrgComponent<
                     setIsResetting({ ...isResetting, [envParent.id]: true });
 
                     await Promise.all([
-                      props.dispatch({
-                        type: Client.ActionType.RESET_ENVS,
-                        payload: {
-                          pendingEnvironmentIds: updatedEnvironmentIds,
-                        },
-                      }),
+                      props
+                        .dispatch({
+                          type: Client.ActionType.RESET_ENVS,
+                          payload: {
+                            pendingEnvironmentIds: updatedEnvironmentIds,
+                          },
+                        })
+                        .then((res) => {
+                          if (!res.success) {
+                            logAndAlertError(
+                              `There was a problem resetting the updates.`,
+                              res.resultAction
+                            );
+                          }
+                        }),
                       wait(MIN_ACTION_DELAY_MS),
                     ]);
 
@@ -404,12 +450,21 @@ export const ReviewPending: OrgComponent<
                 <span
                   onClick={() => {
                     setIsCommitting({ ...isCommitting, [envParent.id]: true });
-                    props.dispatch({
-                      type: Client.ActionType.COMMIT_ENVS,
-                      payload: {
-                        pendingEnvironmentIds: updatedEnvironmentIds,
-                      },
-                    });
+                    props
+                      .dispatch({
+                        type: Client.ActionType.COMMIT_ENVS,
+                        payload: {
+                          pendingEnvironmentIds: updatedEnvironmentIds,
+                        },
+                      })
+                      .then((res) => {
+                        if (!res.success) {
+                          logAndAlertError(
+                            `There was a problem committing the updates.`,
+                            res.resultAction
+                          );
+                        }
+                      });
                   }}
                 >
                   <SvgImage type="check" />

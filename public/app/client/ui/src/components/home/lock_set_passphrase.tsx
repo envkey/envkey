@@ -5,6 +5,7 @@ import { Component } from "@ui_types";
 import { Client } from "@core/types";
 import { HomeContainer } from "./home_container";
 import * as styles from "@styles";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const LockSetPassphrase: Component = ({ core, history, dispatch }) => {
   const [passphrase, setPassphrase] = useState<string>();
@@ -16,13 +17,28 @@ export const LockSetPassphrase: Component = ({ core, history, dispatch }) => {
     if (passphrase) {
       setIsLocking(true);
 
-      await dispatch({
+      let res = await dispatch({
         type: Client.ActionType.SET_DEVICE_PASSPHRASE,
         payload: { passphrase },
       });
-      dispatch({
-        type: Client.ActionType.LOCK_DEVICE,
-      });
+
+      if (res.success) {
+        dispatch({
+          type: Client.ActionType.LOCK_DEVICE,
+        }).then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              "There was a problem locking the device.",
+              res.resultAction
+            );
+          }
+        });
+      } else {
+        logAndAlertError(
+          "There was a problem setting the device passphrase.",
+          res.resultAction
+        );
+      }
     }
   };
 
@@ -45,9 +61,11 @@ export const LockSetPassphrase: Component = ({ core, history, dispatch }) => {
                 ? []
                 : ([
                     ...R.flatten(
-                      (Object.values(
-                        core.orgUserAccounts
-                      ) as Client.ClientUserAuth[]).map(
+                      (
+                        Object.values(
+                          core.orgUserAccounts
+                        ) as Client.ClientUserAuth[]
+                      ).map(
                         R.props([
                           "orgName",
                           "firstName",

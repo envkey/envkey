@@ -4,6 +4,7 @@ import { Model, Api } from "@core/types";
 import * as styles from "@styles";
 import { SmallLoader } from "@images";
 import { CopyableDisplay } from "../copyable_display";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const SamlSPStep: OrgComponent<{ providerId: string }> = (props) => {
   const { graph, samlSettingsByProviderId } = props.core;
@@ -23,12 +24,21 @@ export const SamlSPStep: OrgComponent<{ providerId: string }> = (props) => {
 
   useEffect(() => {
     if (!provider || !samlSettings) {
-      props.dispatch({
-        type: Api.ActionType.GET_EXTERNAL_AUTH_PROVIDERS,
-        payload: {
-          provider: "saml",
-        },
-      });
+      props
+        .dispatch({
+          type: Api.ActionType.GET_EXTERNAL_AUTH_PROVIDERS,
+          payload: {
+            provider: "saml",
+          },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem fetching external auth providers.`,
+              res.resultAction
+            );
+          }
+        });
     }
   }, [provider && samlSettings]);
 

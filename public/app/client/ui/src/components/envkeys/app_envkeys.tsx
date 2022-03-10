@@ -8,6 +8,7 @@ import { capitalizeAll } from "humanize-plus";
 import humanize from "humanize-string";
 import * as ui from "@ui";
 import { SmallLoader, SvgImage } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const getAppEnvkeysComponent = (
   keyableParentType: Model.KeyableParent["type"]
@@ -139,17 +140,28 @@ const getAppEnvkeysComponent = (
 
     const create = async () => {
       setIsCreating(true);
-      await props.dispatch({
-        type:
-          keyableParentType == "localKey"
-            ? Client.ActionType.CREATE_LOCAL_KEY
-            : Client.ActionType.CREATE_SERVER,
-        payload: {
-          appId,
-          name: formName,
-          environmentId: formEnvironmentId,
-        },
-      });
+      await props
+        .dispatch({
+          type:
+            keyableParentType == "localKey"
+              ? Client.ActionType.CREATE_LOCAL_KEY
+              : Client.ActionType.CREATE_SERVER,
+          payload: {
+            appId,
+            name: formName,
+            environmentId: formEnvironmentId,
+          },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem generating the ${
+                { server: "server", localKey: "local key" }[keyableParentType]
+              }.`,
+              res.resultAction
+            );
+          }
+        });
       setShowForm(false);
       setIsCreating(false);
       setFormName("");

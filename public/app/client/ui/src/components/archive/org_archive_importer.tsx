@@ -8,6 +8,7 @@ import * as styles from "@styles";
 import { wait } from "@core/lib/utils/wait";
 import { SmallLoader } from "@images";
 import { style } from "typestyle";
+import { logAndAlertError } from "@ui_lib/errors";
 
 let refreshingState = false;
 
@@ -73,14 +74,23 @@ export const OrgArchiveImporter: OrgComponent<
     setImporting(true);
     clearGenerated();
 
-    props.dispatch({
-      type: Client.ActionType.IMPORT_ORG,
-      payload: {
-        filePath: props.filePath,
-        encryptionKey,
-        importOrgUsers,
-      },
-    });
+    props
+      .dispatch({
+        type: Client.ActionType.IMPORT_ORG,
+        payload: {
+          filePath: props.filePath,
+          encryptionKey,
+          importOrgUsers,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            "There was a problem starting the import.",
+            res.resultAction
+          );
+        }
+      });
   };
 
   const renderImportCompleteView = () => {

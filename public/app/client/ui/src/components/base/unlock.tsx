@@ -6,6 +6,7 @@ import { Client } from "@core/types";
 import { HomeContainer } from "../home/home_container";
 import * as styles from "@styles";
 import { SvgImage } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 type Props = Pick<ComponentProps, "dispatch" | "history">;
 
@@ -28,7 +29,9 @@ export const Unlock: React.FC<Props> = ({ dispatch, history }) => {
         if (res.status == 403) {
           setError("Invalid passphrase.");
         } else {
-          setError("There was a problem unlocking your device.");
+          const msg = "There was a problem unlocking your device.";
+          setError(msg);
+          console.log(msg, res.resultAction);
         }
         setIsLocking(false);
         setPassphrase("");
@@ -51,7 +54,10 @@ export const Unlock: React.FC<Props> = ({ dispatch, history }) => {
       if (res.success) {
         history.push("/home");
       } else {
-        alert("There was a problem resetting your device.");
+        logAndAlertError(
+          "There was a problem resetting your device.",
+          res.resultAction
+        );
       }
     }
   };

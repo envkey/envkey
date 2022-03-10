@@ -22,6 +22,7 @@ import { Link } from "react-router-dom";
 import { getUserPath } from "@ui_lib/paths";
 import { pick } from "@core/lib/utils/pick";
 import { TZ_ABBREV } from "@constants";
+import { logAndAlertError } from "@ui_lib/errors";
 
 type RouteProps = {
   appId?: string;
@@ -145,14 +146,23 @@ export const Versions: OrgComponent<RouteProps> = (props) => {
 
   useEffect(() => {
     if (willFetchChangesets) {
-      props.dispatch({
-        type: Client.ActionType.FETCH_ENVS,
-        payload: {
-          byEnvParentId: {
-            [envParentId]: { changesets: true },
+      props
+        .dispatch({
+          type: Client.ActionType.FETCH_ENVS,
+          payload: {
+            byEnvParentId: {
+              [envParentId]: { changesets: true },
+            },
           },
-        },
-      });
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem fetching versions.`,
+              res.resultAction
+            );
+          }
+        });
     }
   }, [willFetchChangesets]);
 
@@ -491,13 +501,22 @@ export const Versions: OrgComponent<RouteProps> = (props) => {
               <button
                 className="revert"
                 onClick={() => {
-                  props.dispatch({
-                    type: Client.ActionType.REVERT_ENVIRONMENT,
-                    payload: {
-                      ...listVersionParams,
-                      version: versionNum,
-                    },
-                  });
+                  props
+                    .dispatch({
+                      type: Client.ActionType.REVERT_ENVIRONMENT,
+                      payload: {
+                        ...listVersionParams,
+                        version: versionNum,
+                      },
+                    })
+                    .then((res) => {
+                      if (!res.success) {
+                        logAndAlertError(
+                          `There was a problem reverting.`,
+                          res.resultAction
+                        );
+                      }
+                    });
                 }}
               >
                 <SvgImage type="revert" />

@@ -8,6 +8,7 @@ import { capitalize } from "@core/lib/utils/string";
 import * as styles from "@styles";
 import { SvgImage, SmallLoader } from "@images";
 import { wait } from "@core/lib/utils/wait";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
   const { graph } = props.core;
@@ -56,10 +57,19 @@ export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
             onClick={() => {
               setRenaming(true);
 
-              props.dispatch({
-                type: Api.ActionType.RENAME_GROUP,
-                payload: { id: group.id, name },
-              });
+              props
+                .dispatch({
+                  type: Api.ActionType.RENAME_GROUP,
+                  payload: { id: group.id, name },
+                })
+                .then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem renaming the team.`,
+                      res.resultAction
+                    );
+                  }
+                });
             }}
           >
             {renaming ? <SmallLoader /> : "Rename"}
@@ -87,10 +97,19 @@ export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
             setIsDeleting(true);
             await wait(500); // add a little delay for a smoother transition
             props.setUiState({ justDeletedObjectId: group.id });
-            props.dispatch({
-              type: Api.ActionType.DELETE_GROUP,
-              payload: { id: group.id },
-            });
+            props
+              .dispatch({
+                type: Api.ActionType.DELETE_GROUP,
+                payload: { id: group.id },
+              })
+              .then((res) => {
+                if (!res.success) {
+                  logAndAlertError(
+                    `There was a problem deleting the team.`,
+                    res.resultAction
+                  );
+                }
+              });
           }}
         >
           {isDeleting ? <SmallLoader /> : `Delete ${label}`}

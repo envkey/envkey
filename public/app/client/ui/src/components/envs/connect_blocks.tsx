@@ -8,6 +8,7 @@ import * as styles from "@styles";
 import { style } from "typestyle";
 import { SvgImage } from "@images";
 import { Link } from "react-router-dom";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const ConnectBlocks: EnvManagerComponent = (props) => {
   const connectableBlocks = g.authz.getConnectableBlocksForApp(
@@ -52,14 +53,23 @@ export const ConnectBlocks: EnvManagerComponent = (props) => {
         onSubmit={async (ids) => {
           setSubmitting(true);
 
-          await props.dispatch({
-            type: Client.ActionType.CONNECT_BLOCKS,
-            payload: ids.map((blockId, i) => ({
-              blockId,
-              appId: props.envParentId,
-              orderIndex: i,
-            })),
-          });
+          await props
+            .dispatch({
+              type: Client.ActionType.CONNECT_BLOCKS,
+              payload: ids.map((blockId, i) => ({
+                blockId,
+                appId: props.envParentId,
+                orderIndex: i,
+              })),
+            })
+            .then((res) => {
+              if (!res.success) {
+                logAndAlertError(
+                  `There was a problem connecting blocks.`,
+                  res.resultAction
+                );
+              }
+            });
 
           props.setEnvManagerState({ showAddForm: false });
 

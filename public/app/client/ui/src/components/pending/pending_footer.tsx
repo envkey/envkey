@@ -10,6 +10,7 @@ import { ReviewPending } from "./review_pending";
 import * as styles from "@styles";
 import * as R from "ramda";
 import { SmallLoader } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 type Props = {
   pendingUpdateDetails: ReturnType<typeof getPendingUpdateDetails>;
@@ -105,12 +106,21 @@ export const PendingFooter: OrgComponent<{}, Props> = React.memo(
           className="primary"
           disabled={dispatchedCommit}
           onClick={() => {
-            props.dispatch({
-              type: Client.ActionType.COMMIT_ENVS,
-              payload: {
-                message: commitMsg,
-              },
-            });
+            props
+              .dispatch({
+                type: Client.ActionType.COMMIT_ENVS,
+                payload: {
+                  message: commitMsg,
+                },
+              })
+              .then((res) => {
+                if (!res.success) {
+                  logAndAlertError(
+                    `There was a problem committing the updates.`,
+                    res.resultAction
+                  );
+                }
+              });
             setDispatchedCommit(true);
           }}
         >
@@ -141,10 +151,19 @@ export const PendingFooter: OrgComponent<{}, Props> = React.memo(
             className="primary"
             disabled={dispatchedReset}
             onClick={() => {
-              props.dispatch({
-                type: Client.ActionType.RESET_ENVS,
-                payload: {},
-              });
+              props
+                .dispatch({
+                  type: Client.ActionType.RESET_ENVS,
+                  payload: {},
+                })
+                .then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem resetting the updates.`,
+                      res.resultAction
+                    );
+                  }
+                });
               props.setUiState({
                 envManager: {
                   ...props.ui.envManager,

@@ -5,6 +5,7 @@ import { EnvImportForm } from "./env_import_form";
 import * as g from "@core/lib/graph";
 import { style } from "typestyle";
 import * as styles from "@styles";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const EnvImport: OrgComponent = (props) => {
   const { graph } = props.core;
@@ -74,14 +75,23 @@ export const EnvImport: OrgComponent = (props) => {
                 return;
               }
 
-              props.dispatch({
-                type: Client.ActionType.IMPORT_ENVIRONMENT,
-                payload: {
-                  envParentId,
-                  environmentId: importEnvironmentId,
-                  parsed,
-                },
-              });
+              props
+                .dispatch({
+                  type: Client.ActionType.IMPORT_ENVIRONMENT,
+                  payload: {
+                    envParentId,
+                    environmentId: importEnvironmentId,
+                    parsed,
+                  },
+                })
+                .then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem importing the environment.`,
+                      res.resultAction
+                    );
+                  }
+                });
 
               close();
             }}

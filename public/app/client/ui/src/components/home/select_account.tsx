@@ -9,6 +9,7 @@ import { SvgImage, SmallLoader } from "@images";
 import * as styles from "@styles";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const SelectAccount: Component = (props) => {
   const { core, dispatch, setUiState } = props;
@@ -96,6 +97,13 @@ export const SelectAccount: Component = (props) => {
                 dispatch({
                   type: Client.ActionType.SIGN_OUT,
                   payload: { accountId: account.userId },
+                }).then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem signing out.`,
+                      res.resultAction
+                    );
+                  }
                 });
               }}
             >
@@ -112,6 +120,13 @@ export const SelectAccount: Component = (props) => {
                   dispatch({
                     type: Client.ActionType.FORGET_DEVICE,
                     payload: { accountId: userId },
+                  }).then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem removing the account.`,
+                        res.resultAction
+                      );
+                    }
                   });
                 }
               }}

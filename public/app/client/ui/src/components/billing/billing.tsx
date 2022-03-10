@@ -6,6 +6,7 @@ import moment from "moment";
 import * as g from "@core/lib/graph";
 import * as styles from "@styles";
 import { SvgImage } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const BillingUI: OrgComponent = (props) => {
   const { graph, graphUpdatedAt, orgStats } = props.core;
@@ -40,10 +41,19 @@ export const BillingUI: OrgComponent = (props) => {
       !orgStats &&
       !props.core.isFetchingOrgStats
     ) {
-      props.dispatch({
-        type: Api.ActionType.FETCH_ORG_STATS,
-        payload: {},
-      });
+      props
+        .dispatch({
+          type: Api.ActionType.FETCH_ORG_STATS,
+          payload: {},
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              "There was a problem fetching your org's resource usage.",
+              res.resultAction
+            );
+          }
+        });
     }
   }, [Boolean(license.hostType == "cloud" && orgStats)]);
 
@@ -54,10 +64,19 @@ export const BillingUI: OrgComponent = (props) => {
       <span
         className="refresh"
         onClick={() =>
-          props.dispatch({
-            type: Api.ActionType.FETCH_ORG_STATS,
-            payload: {},
-          })
+          props
+            .dispatch({
+              type: Api.ActionType.FETCH_ORG_STATS,
+              payload: {},
+            })
+            .then((res) => {
+              if (!res.success) {
+                logAndAlertError(
+                  "There was a problem fetching your org's resource usage.",
+                  res.resultAction
+                );
+              }
+            })
         }
       >
         <SvgImage type="restore" />

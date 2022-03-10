@@ -10,6 +10,7 @@ import * as styles from "@styles";
 import { SvgImage } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const NewCliUser: OrgComponent<{
   appId?: string;
@@ -98,14 +99,23 @@ export const NewCliUser: OrgComponent<{
 
     const appUserGrants = Object.values(appUserGrantsByAppId);
 
-    props.dispatch({
-      type: Client.ActionType.CREATE_CLI_USER,
-      payload: {
-        name,
-        orgRoleId,
-        appUserGrants,
-      },
-    });
+    props
+      .dispatch({
+        type: Client.ActionType.CREATE_CLI_USER,
+        payload: {
+          name,
+          orgRoleId,
+          appUserGrants,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            "There was a problem creating the CLI key.",
+            res.resultAction
+          );
+        }
+      });
   };
 
   const selectedOrgRole = orgRoleId

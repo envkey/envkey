@@ -8,6 +8,7 @@ import { capitalizeAll } from "humanize-plus";
 import humanize from "humanize-string";
 import { ExternalLink } from "../shared";
 import copy from "copy-text-to-clipboard";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const KeyableParent: OrgComponent<
   {},
@@ -88,29 +89,60 @@ export const KeyableParent: OrgComponent<
               if (confirmingType == "remove") {
                 onRemove!();
 
-                props.dispatch({
-                  type:
-                    keyableParent.type == "localKey"
-                      ? Api.ActionType.DELETE_LOCAL_KEY
-                      : Api.ActionType.DELETE_SERVER,
-                  payload: { id: keyableParent.id },
-                });
+                props
+                  .dispatch({
+                    type:
+                      keyableParent.type == "localKey"
+                        ? Api.ActionType.DELETE_LOCAL_KEY
+                        : Api.ActionType.DELETE_SERVER,
+                    payload: { id: keyableParent.id },
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem removing the ${
+                          { server: "server", localKey: "local key" }[
+                            keyableParent.type
+                          ]
+                        }.`,
+                        res.resultAction
+                      );
+                    }
+                  });
               } else if (confirmingType == "revoke") {
-                props.dispatch({
-                  type: Api.ActionType.REVOKE_KEY,
-                  payload: { id: generatedEnvkey!.id },
-                });
+                props
+                  .dispatch({
+                    type: Api.ActionType.REVOKE_KEY,
+                    payload: { id: generatedEnvkey!.id },
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem revoking the ENVKEY.`,
+                        res.resultAction
+                      );
+                    }
+                  });
               } else if (confirmingType == "regen") {
                 onRegenerate!();
 
-                props.dispatch({
-                  type: Client.ActionType.GENERATE_KEY,
-                  payload: {
-                    appId: keyableParent.appId,
-                    keyableParentId: keyableParent.id,
-                    keyableParentType: keyableParent.type,
-                  },
-                });
+                props
+                  .dispatch({
+                    type: Client.ActionType.GENERATE_KEY,
+                    payload: {
+                      appId: keyableParent.appId,
+                      keyableParentId: keyableParent.id,
+                      keyableParentType: keyableParent.type,
+                    },
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem generating the ENVKEY.`,
+                        res.resultAction
+                      );
+                    }
+                  });
               }
               onCancelConfirm!();
             }}
@@ -230,14 +262,23 @@ export const KeyableParent: OrgComponent<
       content.push(
         <button
           onClick={() => {
-            props.dispatch({
-              type: Client.ActionType.GENERATE_KEY,
-              payload: {
-                appId: keyableParent.appId,
-                keyableParentId: keyableParent.id,
-                keyableParentType: keyableParent.type,
-              },
-            });
+            props
+              .dispatch({
+                type: Client.ActionType.GENERATE_KEY,
+                payload: {
+                  appId: keyableParent.appId,
+                  keyableParentId: keyableParent.id,
+                  keyableParentType: keyableParent.type,
+                },
+              })
+              .then((res) => {
+                if (!res.success) {
+                  logAndAlertError(
+                    `There was a problem genearting the ENVKEY.`,
+                    res.resultAction
+                  );
+                }
+              });
           }}
         >
           Generate

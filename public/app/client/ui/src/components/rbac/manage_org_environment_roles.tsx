@@ -15,6 +15,7 @@ import { SmallLoader, SvgImage } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import * as styles from "@styles";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const ManageOrgEnvironmentRoles: OrgComponent = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -142,13 +143,22 @@ export const ManageOrgEnvironmentRoles: OrgComponent = (props) => {
       );
 
       const environmentRole = environmentRolesById[roleId];
-      props.dispatch({
-        type: Api.ActionType.RBAC_UPDATE_ENVIRONMENT_ROLE_SETTINGS,
-        payload: {
-          id: environmentRole.id,
-          settings: environmentRoleSettingsByIdState[roleId],
-        },
-      });
+      props
+        .dispatch({
+          type: Api.ActionType.RBAC_UPDATE_ENVIRONMENT_ROLE_SETTINGS,
+          payload: {
+            id: environmentRole.id,
+            settings: environmentRoleSettingsByIdState[roleId],
+          },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem updating environment role settings.`,
+              res.resultAction
+            );
+          }
+        });
     }
   };
 
@@ -203,10 +213,19 @@ export const ManageOrgEnvironmentRoles: OrgComponent = (props) => {
         string,
         number
       >;
-      props.dispatch({
-        type: Api.ActionType.RBAC_REORDER_ENVIRONMENT_ROLES,
-        payload: newOrder,
-      });
+      props
+        .dispatch({
+          type: Api.ActionType.RBAC_REORDER_ENVIRONMENT_ROLES,
+          payload: newOrder,
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem reoredering environment roles.`,
+              res.resultAction
+            );
+          }
+        });
     }
   };
 
@@ -268,10 +287,19 @@ export const ManageOrgEnvironmentRoles: OrgComponent = (props) => {
                             ...deletingEnvironmentRolesById,
                             [role.id]: true,
                           });
-                          props.dispatch({
-                            type: Api.ActionType.RBAC_DELETE_ENVIRONMENT_ROLE,
-                            payload: { id: role.id },
-                          });
+                          props
+                            .dispatch({
+                              type: Api.ActionType.RBAC_DELETE_ENVIRONMENT_ROLE,
+                              payload: { id: role.id },
+                            })
+                            .then((res) => {
+                              if (!res.success) {
+                                logAndAlertError(
+                                  `There was a problem deleting the environment role.`,
+                                  res.resultAction
+                                );
+                              }
+                            });
                         }
                       }}
                     >

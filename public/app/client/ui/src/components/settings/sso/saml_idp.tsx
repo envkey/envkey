@@ -5,6 +5,7 @@ import { SvgImage, SmallLoader } from "@images";
 import { samlIdpHasMinimumSettings } from "@core/lib/auth/saml";
 import * as styles from "@styles";
 import * as R from "ramda";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const SamlIDPStep: OrgComponent<{ providerId: string }> = (props) => {
   const { graph, samlSettingsByProviderId } = props.core;
@@ -32,12 +33,21 @@ export const SamlIDPStep: OrgComponent<{ providerId: string }> = (props) => {
 
   useEffect(() => {
     if (!samlSettings) {
-      props.dispatch({
-        type: Api.ActionType.GET_EXTERNAL_AUTH_PROVIDERS,
-        payload: {
-          provider: "saml",
-        },
-      });
+      props
+        .dispatch({
+          type: Api.ActionType.GET_EXTERNAL_AUTH_PROVIDERS,
+          payload: {
+            provider: "saml",
+          },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem fetching external auth providers.`,
+              res.resultAction
+            );
+          }
+        });
     }
   }, [samlSettings]);
 
@@ -138,10 +148,10 @@ export const SamlIDPStep: OrgComponent<{ providerId: string }> = (props) => {
                     )
                   );
                 } else {
-                  const msg =
-                    "There was a problem updating your SAML Identity Provider Settings.";
-                  alert(msg);
-                  console.log(msg, res.resultAction);
+                  logAndAlertError(
+                    "There was a problem updating your SAML Identity Provider Settings.",
+                    res.resultAction
+                  );
                 }
               }}
             >

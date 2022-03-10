@@ -5,6 +5,7 @@ import * as g from "@core/lib/graph";
 import * as styles from "@styles";
 import { SmallLoader } from "@images";
 import { Link } from "react-router-dom";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const NewTeam: OrgComponent = (props) => {
   const { dispatch, core, history, orgRoute } = props;
@@ -54,8 +55,10 @@ export const NewTeam: OrgComponent = (props) => {
       );
       setCreatedId(createdGroup!.id);
     } else {
-      console.log("Error creating team", res.resultAction);
-      alert("There was a problem creating the team.");
+      logAndAlertError(
+        "There was a problem creating the team.",
+        res.resultAction
+      );
     }
   };
 

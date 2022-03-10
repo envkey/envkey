@@ -5,6 +5,7 @@ import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import * as styles from "@styles";
 import * as z from "zod";
+import { logAndAlertError } from "@ui_lib/errors";
 
 type Props = {
   authType: Extract<Auth.AuthType, "sign_in" | "sign_up">;
@@ -105,6 +106,11 @@ export const VerifyEmail: Component<{}, Props> = ({
           dispatch({
             type: Client.ActionType.RESET_EMAIL_VERIFICATION,
           });
+        } else {
+          logAndAlertError(
+            "There was a problem verifying the email token.",
+            res.resultAction
+          );
         }
       });
     } else if (email) {
@@ -114,7 +120,14 @@ export const VerifyEmail: Component<{}, Props> = ({
           payload: { authType, email, communityAuth },
         },
         hostUrlOverride
-      );
+      ).then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem sending the email verification.`,
+            res.resultAction
+          );
+        }
+      });
     }
   };
 

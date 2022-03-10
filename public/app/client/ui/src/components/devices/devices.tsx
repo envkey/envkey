@@ -10,6 +10,7 @@ import { SvgImage } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import copy from "copy-text-to-clipboard";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const getDevicesComponent = (isTopLevel?: true) => {
   const Devices: OrgComponent<{ userId?: string }> = (props) => {
@@ -190,10 +191,19 @@ const getDevicesComponent = (isTopLevel?: true) => {
             setAwaitingMinDelay(true);
             wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
-            props.dispatch({
-              type: Api.ActionType.REVOKE_DEVICE,
-              payload: { id: device.id },
-            });
+            props
+              .dispatch({
+                type: Api.ActionType.REVOKE_DEVICE,
+                payload: { id: device.id },
+              })
+              .then((res) => {
+                if (!res.success) {
+                  logAndAlertError(
+                    "There was a problem revoking the device.",
+                    res.resultAction
+                  );
+                }
+              });
           }}
         >
           <SvgImage type="x" />
@@ -261,10 +271,19 @@ const getDevicesComponent = (isTopLevel?: true) => {
             setAwaitingMinDelay(true);
             wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
-            props.dispatch({
-              type: Api.ActionType.REVOKE_DEVICE_GRANT,
-              payload: { id: grant.id },
-            });
+            props
+              .dispatch({
+                type: Api.ActionType.REVOKE_DEVICE_GRANT,
+                payload: { id: grant.id },
+              })
+              .then((res) => {
+                if (!res.success) {
+                  logAndAlertError(
+                    "There was a problem revoking the device invitation.",
+                    res.resultAction
+                  );
+                }
+              });
           }}
         >
           <SvgImage type="x" />

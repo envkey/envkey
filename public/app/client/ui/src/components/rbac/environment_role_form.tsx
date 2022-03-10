@@ -9,6 +9,7 @@ import { SvgImage } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import * as styles from "@styles";
+import { logAndAlertError } from "@ui_lib/errors";
 
 type PermissionsByAppRoleId = Record<string, Rbac.EnvironmentPermission[]>;
 
@@ -525,17 +526,30 @@ export const EnvironmentRoleForm: OrgComponent<{
 
             const minDelayPromise = wait(MIN_ACTION_DELAY_MS);
 
-            const res = await props.dispatch(
-              editing
-                ? {
-                    type: Client.ActionType.RBAC_UPDATE_ENVIRONMENT_ROLE,
-                    payload: { ...basePayload, id: editing.id },
-                  }
-                : {
-                    type: Api.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
-                    payload: basePayload,
-                  }
-            );
+            const res = await props
+              .dispatch(
+                editing
+                  ? {
+                      type: Client.ActionType.RBAC_UPDATE_ENVIRONMENT_ROLE,
+                      payload: { ...basePayload, id: editing.id },
+                    }
+                  : {
+                      type: Api.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
+                      payload: basePayload,
+                    }
+              )
+              .then((res) => {
+                if (!res.success) {
+                  logAndAlertError(
+                    `There was a problem ${
+                      editing ? "updating" : "creating"
+                    } the environment role.`,
+                    res.resultAction
+                  );
+                }
+
+                return res;
+              });
 
             if (
               !editing &&
@@ -550,13 +564,22 @@ export const EnvironmentRoleForm: OrgComponent<{
                   ({ createdAt }) => createdAt === res.state.graphUpdatedAt
                 );
               if (created) {
-                await props.dispatch({
-                  type: Api.ActionType.CREATE_ENVIRONMENT,
-                  payload: {
-                    environmentRoleId: created.id,
-                    envParentId: envParent.id,
-                  },
-                });
+                await props
+                  .dispatch({
+                    type: Api.ActionType.CREATE_ENVIRONMENT,
+                    payload: {
+                      environmentRoleId: created.id,
+                      envParentId: envParent.id,
+                    },
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem creating the environment.`,
+                        res.resultAction
+                      );
+                    }
+                  });
               }
             }
 

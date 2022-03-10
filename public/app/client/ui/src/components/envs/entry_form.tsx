@@ -6,7 +6,9 @@ import * as ui from "@ui";
 import * as g from "@core/lib/graph";
 import { style } from "typestyle";
 import { getEnvsUiPermissions } from "@ui_lib/envs";
+import { getCurrentUserEntryKeys } from "@core/lib/client";
 import * as styles from "@styles";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const CLEARED_EDIT_STATE: EntryFormState = {
   entryKey: undefined,
@@ -33,6 +35,17 @@ export const EntryForm: EnvManagerComponent = (props) => {
     [currentUserId, props.visibleEnvironmentIds, props.core.graphUpdatedAt]
   );
 
+  const currentEntryKeysSet = useMemo(() => {
+    const keys = getCurrentUserEntryKeys(
+      props.core,
+      currentUserId,
+      props.visibleEnvironmentIds,
+      true
+    );
+
+    return new Set(keys);
+  }, [props.core, JSON.stringify(props.visibleEnvironmentIds)]);
+
   useEffect(() => {
     props.setEntryFormState({ ...CLEARED_EDIT_STATE, editingEntryKey: true });
   }, []);
@@ -43,20 +56,39 @@ export const EntryForm: EnvManagerComponent = (props) => {
     if (!entryFormState.entryKey?.trim()) {
       return;
     }
-    props.dispatch({
-      type: Client.ActionType.CREATE_ENTRY_ROW,
-      payload: {
-        envParentId: props.envParentId,
-        entryKey: entryFormState.entryKey,
-        vals: R.mergeAll(
-          props.visibleEnvironmentIds.map((environmentId) => ({
-            [environmentId]: entryFormState.vals[environmentId] ?? {
-              isUndefined: true,
-            },
-          }))
-        ),
-      },
-    });
+
+    if (currentEntryKeysSet.has(entryFormState.entryKey)) {
+      const res = confirm(
+        `'${entryFormState.entryKey}' is already defined. Do you want to overwrite it?`
+      );
+      if (!res) {
+        return;
+      }
+    }
+
+    props
+      .dispatch({
+        type: Client.ActionType.CREATE_ENTRY_ROW,
+        payload: {
+          envParentId: props.envParentId,
+          entryKey: entryFormState.entryKey,
+          vals: R.mergeAll(
+            props.visibleEnvironmentIds.map((environmentId) => ({
+              [environmentId]: entryFormState.vals[environmentId] ?? {
+                isUndefined: true,
+              },
+            }))
+          ),
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem adding the variable.`,
+            res.resultAction
+          );
+        }
+      });
 
     props.setEnvManagerState({
       ...props.ui.envManager,

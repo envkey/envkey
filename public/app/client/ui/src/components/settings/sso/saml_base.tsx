@@ -5,6 +5,7 @@ import { SvgImage, SmallLoader } from "@images";
 import * as styles from "@styles";
 import * as g from "@core/lib/graph";
 import * as R from "ramda";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const SamlCreateStep: OrgComponent = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -134,15 +135,24 @@ export const SamlCreateStep: OrgComponent = (props) => {
 
                   setCreatedTs(ts);
 
-                  props.dispatch({
-                    type: Api.ActionType.GET_EXTERNAL_AUTH_PROVIDERS,
-                    payload: { provider: "saml" },
-                  });
+                  props
+                    .dispatch({
+                      type: Api.ActionType.GET_EXTERNAL_AUTH_PROVIDERS,
+                      payload: { provider: "saml" },
+                    })
+                    .then((res) => {
+                      if (!res.success) {
+                        logAndAlertError(
+                          `There was a problem listing external auth providers.`,
+                          res.resultAction
+                        );
+                      }
+                    });
                 } else {
-                  const msg =
-                    "There was a problem creating the SAML connection.";
-                  alert(msg);
-                  console.log(msg, res.resultAction);
+                  logAndAlertError(
+                    "There was a problem creating the SAML connection.",
+                    res.resultAction
+                  );
                 }
               }}
             >

@@ -6,6 +6,7 @@ import * as styles from "@styles";
 import { SvgImage } from "@images";
 import * as ui from "@ui";
 import { Link } from "react-router-dom";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const TeamAddApps: OrgComponent<{ groupId: string }> = (props) => {
   const groupId = props.routeParams.groupId;
@@ -132,7 +133,7 @@ export const TeamAddApps: OrgComponent<{ groupId: string }> = (props) => {
           })}
           onSubmit={async (ids) => {
             setSubmitting(true);
-            await props.dispatch({
+            const res = await props.dispatch({
               type: Client.ActionType.GRANT_APPS_ACCESS,
               payload: ids.map((appId) => ({
                 appId,
@@ -140,9 +141,17 @@ export const TeamAddApps: OrgComponent<{ groupId: string }> = (props) => {
                 appRoleId: selectedAppRoleId,
               })),
             });
-            props.history.push(
-              props.location.pathname.replace(/\/apps-add$/, "/apps")
-            );
+
+            if (res.success) {
+              props.history.push(
+                props.location.pathname.replace(/\/apps-add$/, "/apps")
+              );
+            } else {
+              logAndAlertError(
+                `There was a granting app access.`,
+                res.resultAction
+              );
+            }
           }}
         />
       </div>

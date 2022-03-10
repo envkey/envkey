@@ -8,6 +8,7 @@ import { getUserPath } from "@ui_lib/paths";
 import { style } from "typestyle";
 import * as styles from "@styles";
 import { SvgImage, SmallLoader } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const TeamMembers: OrgComponent<{ groupId: string }> = (props) => {
   const groupId = props.routeParams.groupId;
@@ -74,12 +75,21 @@ export const TeamMembers: OrgComponent<{ groupId: string }> = (props) => {
     }
     setRemovingId(user.id);
 
-    props.dispatch({
-      type: Api.ActionType.DELETE_GROUP_MEMBERSHIP,
-      payload: {
-        id: membership.id,
-      },
-    });
+    props
+      .dispatch({
+        type: Api.ActionType.DELETE_GROUP_MEMBERSHIP,
+        payload: {
+          id: membership.id,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem removing the member.`,
+            res.resultAction
+          );
+        }
+      });
   };
 
   const renderRemove = (user: Model.OrgUser) => {

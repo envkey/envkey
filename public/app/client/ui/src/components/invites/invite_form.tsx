@@ -13,6 +13,7 @@ import * as ui from "@ui";
 import { graphTypes } from "@core/lib/graph";
 import { AddInviteAppForm } from "./add_invite_app_form";
 import { AddInviteTeams } from "./add_invite_teams";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const emailValidator = z.string().email();
 
@@ -239,7 +240,7 @@ export const InviteForm: OrgComponent<{
         }
       })
       .catch((err) => {
-        console.error("Failed LIST_INVITABLE_SCIM_USERS", err);
+        logAndAlertError(`There was a problem listing SCIM users.`, err);
       })
       .finally(() => setLoadingScimCandidates(false));
   }, [scimProviderId]);
@@ -313,35 +314,63 @@ export const InviteForm: OrgComponent<{
     !singleUserPending ||
     !R.equals(initialPending, singleUserPending);
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (!canSubmit) {
       return;
     }
 
     if (typeof editIndex == "number" && singleUserPending) {
-      props.dispatch({
+      const res = await props.dispatch({
         type: Client.ActionType.UPDATE_PENDING_INVITE,
         payload: { index: editIndex, pending: singleUserPending },
       });
 
-      props.history.push(inviteRoute(props, "/invite-users"));
+      if (res.success) {
+        props.history.push(inviteRoute(props, "/invite-users"));
+      } else {
+        logAndAlertError(
+          "There was a problem updating the pending invite.",
+          res.resultAction
+        );
+      }
     } else if (scimProviderId) {
       setSubmittedEmails(
         selectedScimCandidateIds.map((id) => scimCandidatesById[id].email)
       );
+      let failed = false;
       for (let id of selectedScimCandidateIds) {
-        props.dispatch({
+        const res = await props.dispatch({
           type: Client.ActionType.ADD_PENDING_INVITE,
           payload: getPending(id),
         });
+
+        if (!res.success) {
+          console.error(
+            "There was a problem adding the pending invite.",
+            res.resultAction
+          );
+        }
+      }
+
+      if (failed) {
+        logAndAlertError("There was a problem adding the pending invite.");
       }
     } else if (singleUserPending) {
       setSubmittedEmails([email]);
 
-      props.dispatch({
-        type: Client.ActionType.ADD_PENDING_INVITE,
-        payload: singleUserPending,
-      });
+      props
+        .dispatch({
+          type: Client.ActionType.ADD_PENDING_INVITE,
+          payload: singleUserPending,
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem adding the pending invite.`,
+              res.resultAction
+            );
+          }
+        });
     }
   };
 

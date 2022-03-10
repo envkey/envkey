@@ -4,6 +4,7 @@ import { Api, Model } from "@core/types";
 import * as g from "@core/lib/graph";
 import * as styles from "@styles";
 import { SmallLoader } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const NewBlockGroup: OrgComponent = (props) => {
   const { dispatch, core, history, orgRoute } = props;
@@ -48,8 +49,10 @@ export const NewBlockGroup: OrgComponent = (props) => {
       );
       setCreatedId(createdGroup!.id);
     } else {
-      console.log("Error creating block group", res.resultAction);
-      alert("There was a problem creating the block group.");
+      logAndAlertError(
+        `There was a problem creating the block group.`,
+        res.resultAction
+      );
     }
   };
 

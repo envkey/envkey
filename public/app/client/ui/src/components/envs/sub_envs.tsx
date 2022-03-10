@@ -8,6 +8,7 @@ import { style } from "typestyle";
 import * as styles from "@styles";
 import { SvgImage } from "@images";
 import { Link } from "react-router-dom";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const SubEnvs: EnvManagerComponent = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -124,16 +125,26 @@ export const SubEnvs: EnvManagerComponent = (props) => {
       return;
     }
     setIsSubmittingNew(true);
-    const res = await props.dispatch({
-      type: Api.ActionType.CREATE_ENVIRONMENT,
-      payload: {
-        envParentId: props.envParentId,
-        environmentRoleId: parentEnvironment.environmentRoleId,
-        isSub: true,
-        parentEnvironmentId,
-        subName: newSubName,
-      },
-    });
+    const res = await props
+      .dispatch({
+        type: Api.ActionType.CREATE_ENVIRONMENT,
+        payload: {
+          envParentId: props.envParentId,
+          environmentRoleId: parentEnvironment.environmentRoleId,
+          isSub: true,
+          parentEnvironmentId,
+          subName: newSubName,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem creating the environment.`,
+            res.resultAction
+          );
+        }
+        return res;
+      });
     if (res.success) {
       const created = g
         .graphTypes(res.state.graph)
@@ -165,10 +176,19 @@ export const SubEnvs: EnvManagerComponent = (props) => {
         )} > ${subEnvironment.subName}?`
       )
     ) {
-      props.dispatch({
-        type: Api.ActionType.DELETE_ENVIRONMENT,
-        payload: { id: subEnvironmentId! },
-      });
+      props
+        .dispatch({
+          type: Api.ActionType.DELETE_ENVIRONMENT,
+          payload: { id: subEnvironmentId! },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem deleting the environment.`,
+              res.resultAction
+            );
+          }
+        });
     }
   };
 

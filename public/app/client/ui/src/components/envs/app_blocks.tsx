@@ -9,6 +9,7 @@ import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import * as styles from "@styles";
 import { SvgImage, SmallLoader } from "@images";
 import { getCurrentUserEntryKeys } from "@core/lib/client";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const AppBlocks: EnvManagerComponent = (props) => {
   const {
@@ -149,13 +150,22 @@ export const AppBlocks: EnvManagerComponent = (props) => {
       string,
       number
     >;
-    props.dispatch({
-      type: Api.ActionType.REORDER_BLOCKS,
-      payload: {
-        appId: props.envParentId,
-        order: newOrder,
-      },
-    });
+    props
+      .dispatch({
+        type: Api.ActionType.REORDER_BLOCKS,
+        payload: {
+          appId: props.envParentId,
+          order: newOrder,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem reordering blocks.`,
+            res.resultAction
+          );
+        }
+      });
   };
 
   const renderBlock = (block: Model.Block, i: number) => {
@@ -331,12 +341,21 @@ const BlockItem: EnvManagerComponent<
                     return;
                   }
                   setRemovingId(block.id);
-                  props.dispatch({
-                    type: Api.ActionType.DISCONNECT_BLOCK,
-                    payload: {
-                      id: appBlock.id,
-                    },
-                  });
+                  props
+                    .dispatch({
+                      type: Api.ActionType.DISCONNECT_BLOCK,
+                      payload: {
+                        id: appBlock.id,
+                      },
+                    })
+                    .then((res) => {
+                      if (!res.success) {
+                        logAndAlertError(
+                          `There was a problem disconnecting the block.`,
+                          res.resultAction
+                        );
+                      }
+                    });
                 }}
               >
                 <SvgImage type="x" />

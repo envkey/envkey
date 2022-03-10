@@ -7,6 +7,7 @@ import { SvgImage } from "@images";
 import { ExternalLink } from "../../shared";
 import { twitterShortTs } from "@core/lib/utils/date";
 import { style } from "typestyle";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const InitSelfHosted: Component<{ subdomain: string }> = (props) => {
   const { core, dispatch, refreshCoreState, history, routeParams } = props;
@@ -74,7 +75,7 @@ export const InitSelfHosted: Component<{ subdomain: string }> = (props) => {
       });
 
       if (!loginRes.success) {
-        console.error(loginRes);
+        console.error("Init token was not confirmed.", loginRes);
         setErrorMessage(
           (loginRes as any).errorReason ||
             (loginRes.resultAction as any)?.errorReason ||

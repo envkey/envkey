@@ -6,6 +6,7 @@ import { OrgComponent } from "@ui_types";
 import * as ui from "@ui";
 import * as styles from "@styles";
 import { Link } from "react-router-dom";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const TeamAddMembers: OrgComponent<{ groupId: string }> = (props) => {
   const groupId = props.routeParams.groupId;
@@ -58,16 +59,24 @@ export const TeamAddMembers: OrgComponent<{ groupId: string }> = (props) => {
           })}
           onSubmit={async (ids) => {
             setSubmitting(true);
-            await props.dispatch({
+            const res = await props.dispatch({
               type: Client.ActionType.CREATE_GROUP_MEMBERSHIPS,
               payload: ids.map((objectId) => ({
                 groupId,
                 objectId,
               })),
             });
-            props.history.push(
-              props.location.pathname.replace(/\/members-add$/, "/members")
-            );
+
+            if (res.success) {
+              props.history.push(
+                props.location.pathname.replace(/\/members-add$/, "/members")
+              );
+            } else {
+              logAndAlertError(
+                "There was a problem adding the member.",
+                res.resultAction
+              );
+            }
           }}
         />
       </div>

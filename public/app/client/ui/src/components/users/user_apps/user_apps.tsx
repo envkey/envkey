@@ -9,6 +9,7 @@ import { getEnvParentPath } from "@ui_lib/paths";
 import * as styles from "@styles";
 import { AppUserAccessRow } from "../../shared/app_user_access_row";
 import { SvgImage, SmallLoader } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const UserApps: OrgComponent<{ userId: string }> = (props) => {
   const userId = props.routeParams.userId;
@@ -91,12 +92,21 @@ export const UserApps: OrgComponent<{ userId: string }> = (props) => {
       return;
     }
     setRemovingId(app.id);
-    props.dispatch({
-      type: Api.ActionType.REMOVE_APP_ACCESS,
-      payload: {
-        id: appUserGrant.id,
-      },
-    });
+    props
+      .dispatch({
+        type: Api.ActionType.REMOVE_APP_ACCESS,
+        payload: {
+          id: appUserGrant.id,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem removing app cess.`,
+            res.resultAction
+          );
+        }
+      });
   };
 
   const renderRemove = (app: Model.App) => {

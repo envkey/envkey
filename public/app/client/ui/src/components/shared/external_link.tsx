@@ -1,8 +1,8 @@
 import React from "react";
 import * as styles from "@styles";
 import { Client } from "@core/types";
-import { ElectronWindow } from "@core/types/electron";
 import { Component } from "@ui_types";
+import { logAndAlertError } from "@ui_lib/errors";
 
 type Props = {
   to: string;
@@ -22,6 +22,13 @@ export const ExternalLink: Component<{}, Props> = ({
         dispatch({
           type: Client.ActionType.OPEN_URL,
           payload: { url: to },
+        }).then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem opening the url '${to}'.`,
+              res.resultAction
+            );
+          }
         });
       }}
       className={styles.ExternalLink + (className ? " " + className : "")}

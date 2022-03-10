@@ -24,6 +24,7 @@ import { SvgImage, SmallLoader } from "@images";
 import { Link } from "react-router-dom";
 import { getEnvParentPath, getUserPath } from "@ui_lib/paths";
 import { TZ_ABBREV } from "@constants";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const PAGE_SIZE = 25;
 
@@ -405,10 +406,21 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
   const dispatchFetch = (pageNum: number) => {
     setLastPageFetched(pageNum);
 
-    return props.dispatch({
-      type: Api.ActionType.FETCH_LOGS,
-      payload: { ...dispatchPayload, pageNum },
-    });
+    return props
+      .dispatch({
+        type: Api.ActionType.FETCH_LOGS,
+        payload: { ...dispatchPayload, pageNum },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem fetching logs.`,
+            res.resultAction
+          );
+        }
+
+        return res;
+      });
   };
 
   const renderActionSummary = (

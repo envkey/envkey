@@ -13,6 +13,7 @@ import { SvgImage, SmallLoader } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import { inviteRoute } from "../invites/helpers";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const getComponent = (userType: "orgUser" | "cliUser") => {
   const Settings: OrgComponent<{ userId: string }> = (props) => {
@@ -121,13 +122,24 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
       setIsDeleting(true);
       await wait(500); // add a little delay for a smoother transition
       props.setUiState({ justDeletedObjectId: userId });
-      props.dispatch({
-        type:
-          userType == "orgUser"
-            ? Api.ActionType.REMOVE_FROM_ORG
-            : Api.ActionType.DELETE_CLI_USER,
-        payload: { id: userId },
-      });
+      props
+        .dispatch({
+          type:
+            userType == "orgUser"
+              ? Api.ActionType.REMOVE_FROM_ORG
+              : Api.ActionType.DELETE_CLI_USER,
+          payload: { id: userId },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem removing the ${
+                { orgUser: "user", cliUser: "CLI key" }[userId]
+              }.`,
+              res.resultAction
+            );
+          }
+        });
     };
 
     const renderAccessStatus = () => {
@@ -214,17 +226,28 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                   setAwaitingMinDelay(false)
                 );
 
-                props.dispatch(
-                  userType == "orgUser"
-                    ? {
-                        type: Api.ActionType.RENAME_USER,
-                        payload: { id: userId, firstName, lastName },
-                      }
-                    : {
-                        type: Api.ActionType.RENAME_CLI_USER,
-                        payload: { id: userId, name: cliUserName },
-                      }
-                );
+                props
+                  .dispatch(
+                    userType == "orgUser"
+                      ? {
+                          type: Api.ActionType.RENAME_USER,
+                          payload: { id: userId, firstName, lastName },
+                        }
+                      : {
+                          type: Api.ActionType.RENAME_CLI_USER,
+                          payload: { id: userId, name: cliUserName },
+                        }
+                  )
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem renaming the ${
+                          { orgUser: "user", cliUser: "CLI key" }[userId]
+                        }.`,
+                        res.resultAction
+                      );
+                    }
+                  });
               }}
             >
               {renaming ? "Renaming..." : "Rename"}
@@ -282,10 +305,21 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                     setAwaitingMinDelay(false)
                   );
 
-                  props.dispatch({
-                    type: Client.ActionType.UPDATE_USER_ROLES,
-                    payload: [{ id: userId, orgRoleId: selectedOrgRoleId }],
-                  });
+                  props
+                    .dispatch({
+                      type: Client.ActionType.UPDATE_USER_ROLES,
+                      payload: [{ id: userId, orgRoleId: selectedOrgRoleId }],
+                    })
+                    .then((res) => {
+                      if (!res.success) {
+                        logAndAlertError(
+                          `There was a problem updating the ${
+                            { orgUser: "user", cliUser: "CLI key" }[userId]
+                          } role.`,
+                          res.resultAction
+                        );
+                      }
+                    });
                 }}
               >
                 {updatingRole ? "Updating Role..." : "Update Role"}
@@ -389,48 +423,57 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
 
                 await wait(50);
 
-                props.dispatch({
-                  type: Client.ActionType.INVITE_USERS,
-                  payload: [
-                    {
-                      user: pick(
-                        [
-                          "email",
-                          "firstName",
-                          "lastName",
-                          "provider",
-                          "uid",
-                          "externalAuthProviderId",
-                          "orgRoleId",
-                        ],
-                        user
-                      ),
-                      appUserGrants: orgRole.autoAppRoleId
-                        ? undefined
-                        : (g
-                            .graphTypes(graph)
-                            .apps.map((app) => {
-                              const appRole = g.getAppRoleForUserOrInvitee(
-                                graph,
-                                app.id,
-                                user.id
-                              );
+                props
+                  .dispatch({
+                    type: Client.ActionType.INVITE_USERS,
+                    payload: [
+                      {
+                        user: pick(
+                          [
+                            "email",
+                            "firstName",
+                            "lastName",
+                            "provider",
+                            "uid",
+                            "externalAuthProviderId",
+                            "orgRoleId",
+                          ],
+                          user
+                        ),
+                        appUserGrants: orgRole.autoAppRoleId
+                          ? undefined
+                          : (g
+                              .graphTypes(graph)
+                              .apps.map((app) => {
+                                const appRole = g.getAppRoleForUserOrInvitee(
+                                  graph,
+                                  app.id,
+                                  user.id
+                                );
 
-                              if (appRole) {
-                                return {
-                                  appId: app.id,
-                                  appRoleId: appRole.id,
-                                };
-                              }
+                                if (appRole) {
+                                  return {
+                                    appId: app.id,
+                                    appRoleId: appRole.id,
+                                  };
+                                }
 
-                              return undefined;
-                            })
-                            .filter(
-                              Boolean
-                            ) as Client.PendingInvite["appUserGrants"]),
-                    },
-                  ],
-                });
+                                return undefined;
+                              })
+                              .filter(
+                                Boolean
+                              ) as Client.PendingInvite["appUserGrants"]),
+                      },
+                    ],
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem regenerating the invitation.`,
+                        res.resultAction
+                      );
+                    }
+                  });
               }}
             >
               {isRegenerating ? "Regenerating..." : "Regenerate Invitation"}

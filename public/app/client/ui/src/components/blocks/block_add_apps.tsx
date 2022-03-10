@@ -5,6 +5,7 @@ import { OrgComponent } from "@ui_types";
 import * as styles from "@styles";
 import * as ui from "@ui";
 import { Link } from "react-router-dom";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const BlockAddApps: OrgComponent<{ blockId: string }> = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -44,14 +45,23 @@ export const BlockAddApps: OrgComponent<{ blockId: string }> = (props) => {
             })}
             onSubmit={async (ids) => {
               setSubmitting(true);
-              await props.dispatch({
-                type: Client.ActionType.CONNECT_BLOCKS,
-                payload: ids.map((appId, i) => ({
-                  blockId,
-                  appId,
-                  orderIndex: i,
-                })),
-              });
+              await props
+                .dispatch({
+                  type: Client.ActionType.CONNECT_BLOCKS,
+                  payload: ids.map((appId, i) => ({
+                    blockId,
+                    appId,
+                    orderIndex: i,
+                  })),
+                })
+                .then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      "There was a problem connecting blocks.",
+                      res.resultAction
+                    );
+                  }
+                });
 
               props.history.push(
                 props.location.pathname.replace(/\/apps-add$/, "/apps")

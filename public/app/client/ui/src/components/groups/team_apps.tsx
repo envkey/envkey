@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { getEnvParentPath, getGroupPath } from "@ui_lib/paths";
 import * as styles from "@styles";
 import { SvgImage, SmallLoader } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const TeamApps: OrgComponent<{ groupId: string }> = (props) => {
   const groupId = props.routeParams.groupId;

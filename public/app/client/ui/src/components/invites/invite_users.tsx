@@ -8,6 +8,7 @@ import * as styles from "@styles";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import * as R from "ramda";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const InviteUsers: OrgComponent<{ appId?: string }> = (props) => {
   const graph = props.core.graph;
@@ -43,10 +44,21 @@ export const InviteUsers: OrgComponent<{ appId?: string }> = (props) => {
 
     wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
-    props.dispatch({
-      type: Client.ActionType.INVITE_USERS,
-      payload: pendingInvites,
-    });
+    props
+      .dispatch({
+        type: Client.ActionType.INVITE_USERS,
+        payload: pendingInvites,
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem generating the invitation${
+              pendingInvites.length > 0 ? "s" : ""
+            }.`,
+            res.resultAction
+          );
+        }
+      });
   };
 
   const renderPending = (pending: Client.PendingInvite, i: number) => (
@@ -92,10 +104,19 @@ export const InviteUsers: OrgComponent<{ appId?: string }> = (props) => {
             <span
               className="delete"
               onClick={() => {
-                props.dispatch({
-                  type: Client.ActionType.REMOVE_PENDING_INVITE,
-                  payload: i,
-                });
+                props
+                  .dispatch({
+                    type: Client.ActionType.REMOVE_PENDING_INVITE,
+                    payload: i,
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem removing the pending invite.`,
+                        res.resultAction
+                      );
+                    }
+                  });
               }}
             >
               <SvgImage type="x" />

@@ -5,6 +5,7 @@ import { Client, Model, Rbac } from "@core/types";
 import * as g from "@core/lib/graph";
 import { LockLink } from "@ui";
 import { style } from "typestyle";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const MainNav: OrgComponent = (props) => {
   const { ui, core, orgRoute, setUiState, dispatch } = props;
@@ -179,6 +180,13 @@ export const MainNav: OrgComponent = (props) => {
                 dispatch({
                   type: Client.ActionType.SIGN_OUT,
                   payload: { accountId: ui.loadedAccountId! },
+                }).then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem signing out.`,
+                      res.resultAction
+                    );
+                  }
                 })
               }
             >

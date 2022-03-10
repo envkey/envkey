@@ -7,6 +7,7 @@ import * as g from "@core/lib/graph";
 import * as R from "ramda";
 import { secureRandomAlphanumeric } from "@core/lib/crypto/utils";
 import { CopyableDisplay } from "../copyable_display";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const ScimForm: OrgComponent<{ providerId?: string }> = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -118,9 +119,10 @@ export const ScimForm: OrgComponent<{ providerId?: string }> = (props) => {
                 if (res.success) {
                   setSubmitting(false);
                 } else {
-                  const msg = `There was a problem updating '${provider.nickname!}'.`;
-                  alert(msg);
-                  console.log(msg, res.resultAction);
+                  logAndAlertError(
+                    `There was a problem updating '${provider.nickname!}'.`,
+                    res.resultAction
+                  );
                 }
               } else {
                 const authSecret =
@@ -147,10 +149,10 @@ export const ScimForm: OrgComponent<{ providerId?: string }> = (props) => {
 
                   setCreatedTs(ts);
                 } else {
-                  const msg =
-                    "There was a problem creating the SCIM connection.";
-                  alert(msg);
-                  console.log(msg, res.resultAction);
+                  logAndAlertError(
+                    "There was a problem creating the SCIM connection.",
+                    res.resultAction
+                  );
                 }
               }
             }}
@@ -332,9 +334,10 @@ export const ScimForm: OrgComponent<{ providerId?: string }> = (props) => {
                           }
                           setShowUpdateAuthSecret(false);
                         } else {
-                          const msg = `There was a problem updating '${provider.nickname!}'.`;
-                          alert(msg);
-                          console.log(msg, res.resultAction);
+                          logAndAlertError(
+                            `There was a problem updating '${provider.nickname!}'.`,
+                            res.resultAction
+                          );
                         }
                       }}
                     >

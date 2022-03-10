@@ -14,6 +14,7 @@ import * as g from "@core/lib/graph";
 import { style } from "typestyle";
 import { getEnvsUiPermissions } from "@ui_lib/envs";
 import * as styles from "@styles";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const HIGHLIGHT_DURATION = 4000;
 let justSubmittedTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -293,22 +294,40 @@ export const EnvGrid: EnvManagerComponent<
               setRemovingEntryKey(entryKey);
 
               if (props.isSub) {
-                props.dispatch({
-                  type: Client.ActionType.REMOVE_ENTRY,
-                  payload: {
-                    envParentId: props.envParentId,
-                    environmentId: props.allEnvironmentIds[0],
-                    entryKey,
-                  },
-                });
+                props
+                  .dispatch({
+                    type: Client.ActionType.REMOVE_ENTRY,
+                    payload: {
+                      envParentId: props.envParentId,
+                      environmentId: props.allEnvironmentIds[0],
+                      entryKey,
+                    },
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem removing the variable.`,
+                        res.resultAction
+                      );
+                    }
+                  });
               } else {
-                props.dispatch({
-                  type: Client.ActionType.REMOVE_ENTRY_ROW,
-                  payload: {
-                    envParentId: props.envParentId,
-                    entryKey,
-                  },
-                });
+                props
+                  .dispatch({
+                    type: Client.ActionType.REMOVE_ENTRY_ROW,
+                    payload: {
+                      envParentId: props.envParentId,
+                      entryKey,
+                    },
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        `There was a problem removing the variable.`,
+                        res.resultAction
+                      );
+                    }
+                  });
               }
 
               props.setEnvManagerState({

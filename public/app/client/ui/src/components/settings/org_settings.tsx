@@ -10,6 +10,7 @@ import { SmallLoader } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import { style } from "typestyle";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const OrgSettings: OrgComponent = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -144,10 +145,19 @@ export const OrgSettings: OrgComponent = (props) => {
     setAwaitingMinDelay(true);
     wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
-    await props.dispatch({
-      type: Api.ActionType.UPDATE_ORG_SETTINGS,
-      payload: settingsState,
-    });
+    await props
+      .dispatch({
+        type: Api.ActionType.UPDATE_ORG_SETTINGS,
+        payload: settingsState,
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem updating org settings.`,
+            res.resultAction
+          );
+        }
+      });
   };
 
   useEffect(() => {
@@ -182,10 +192,19 @@ export const OrgSettings: OrgComponent = (props) => {
               setAwaitingMinDelay(true);
               wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
-              props.dispatch({
-                type: Api.ActionType.RENAME_ORG,
-                payload: { name },
-              });
+              props
+                .dispatch({
+                  type: Api.ActionType.RENAME_ORG,
+                  payload: { name },
+                })
+                .then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem renaming the org.`,
+                      res.resultAction
+                    );
+                  }
+                });
             }}
           >
             {renaming ? "Renaming..." : "Rename"}
@@ -393,7 +412,10 @@ export const OrgSettings: OrgComponent = (props) => {
                 alert("The organization was successfully deleted.");
                 props.history.replace("/home");
               } else {
-                alert("There was a problem deleting the organization.");
+                logAndAlertError(
+                  "There was a problem deleting the organization.",
+                  res.resultAction
+                );
               }
             }}
           >

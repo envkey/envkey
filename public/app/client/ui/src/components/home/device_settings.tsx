@@ -6,6 +6,7 @@ import { HomeContainer } from "./home_container";
 import * as styles from "@styles";
 import { wait } from "@core/lib/utils/wait";
 import { MIN_ACTION_DELAY_MS } from "@constants";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const DeviceSettings: Component = (props) => {
   const { core, dispatch, history } = props;
@@ -48,26 +49,50 @@ export const DeviceSettings: Component = (props) => {
     const minDelayPromise = wait(MIN_ACTION_DELAY_MS);
 
     if (defaultDeviceName && defaultDeviceName != core.defaultDeviceName) {
-      await dispatch({
+      const res = await dispatch({
         type: Client.ActionType.SET_DEFAULT_DEVICE_NAME,
         payload: {
           name: defaultDeviceName,
         },
       });
-      updated = true;
+
+      if (res.success) {
+        updated = true;
+      } else {
+        logAndAlertError(
+          "There was a problem setting the default device name.",
+          res.resultAction
+        );
+      }
     }
 
     if (requiresPassphrase && passphrase) {
-      await dispatch({
+      const res = await dispatch({
         type: Client.ActionType.SET_DEVICE_PASSPHRASE,
         payload: { passphrase },
       });
 
-      updated = true;
+      if (res.success) {
+        updated = true;
+      } else {
+        logAndAlertError(
+          "There was a problem setting the device passphrase.",
+          res.resultAction
+        );
+      }
     } else if (core.requiresPassphrase && !requiresPassphrase) {
-      await dispatch({ type: Client.ActionType.CLEAR_DEVICE_PASSPHRASE });
+      const res = await dispatch({
+        type: Client.ActionType.CLEAR_DEVICE_PASSPHRASE,
+      });
 
-      updated = true;
+      if (res.success) {
+        updated = true;
+      } else {
+        logAndAlertError(
+          "There was a problem clearing the device passphrase.",
+          res.resultAction
+        );
+      }
     }
 
     if (
@@ -76,18 +101,34 @@ export const DeviceSettings: Component = (props) => {
       lockoutMs &&
       lockoutMs != core.lockoutMs
     ) {
-      await dispatch({
+      const res = await dispatch({
         type: Client.ActionType.SET_DEVICE_LOCKOUT,
         payload: { lockoutMs },
       });
-      updated = true;
+      if (res.success) {
+        updated = true;
+      } else {
+        logAndAlertError(
+          "There was a problem setting the device lockout.",
+          res.resultAction
+        );
+      }
     } else if (
       core.lockoutMs &&
       !requiresLockout &&
       !shouldClearPassphrase /* (clearing passphrase already clears the lockout) */
     ) {
-      await dispatch({ type: Client.ActionType.CLEAR_DEVICE_LOCKOUT });
-      updated = true;
+      const res = await dispatch({
+        type: Client.ActionType.CLEAR_DEVICE_LOCKOUT,
+      });
+      if (res.success) {
+        updated = true;
+      } else {
+        logAndAlertError(
+          "There was a problem clearing the device lockout.",
+          res.resultAction
+        );
+      }
     }
 
     await minDelayPromise;

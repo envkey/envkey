@@ -6,6 +6,7 @@ import { HomeContainer } from "./home_container";
 import * as styles from "@styles";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
+import { logAndAlertError } from "@ui_lib/errors";
 
 type CreateSessionRes = Client.DispatchResult<
   Client.Action.SuccessAction<
@@ -65,7 +66,11 @@ export const SignIn: Component<{ accountId: string }> = (props) => {
         },
       },
       hostUrl
-    ) as Promise<CreateSessionRes>;
+    ).then((res) => {
+      if (!res.success) {
+        logAndAlertError(`There was a problem signing in.`, res.resultAction);
+      }
+    });
   };
 
   return (

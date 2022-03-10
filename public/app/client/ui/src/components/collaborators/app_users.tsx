@@ -10,6 +10,7 @@ import * as styles from "@styles";
 import { style } from "typestyle";
 import { AppUserAccessRow } from "../shared/app_user_access_row";
 import { SvgImage, SmallLoader } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const getAppUsersComponent = (userType: "orgUser" | "cliUser") => {
   const AppUsers: OrgComponent<{ appId: string; userId?: string }> = (
@@ -197,12 +198,21 @@ const getAppUsersComponent = (userType: "orgUser" | "cliUser") => {
       }
       setRemovingId(userOrTeam.id);
 
-      props.dispatch({
-        type: Api.ActionType.REMOVE_APP_ACCESS,
-        payload: {
-          id: assoc.id,
-        },
-      });
+      props
+        .dispatch({
+          type: Api.ActionType.REMOVE_APP_ACCESS,
+          payload: {
+            id: assoc.id,
+          },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              "There was a problem removing app access.",
+              res.resultAction
+            );
+          }
+        });
     };
 
     const renderRemove = (

@@ -9,6 +9,7 @@ import * as R from "ramda";
 import { SamlBaseFields } from "./saml_base";
 import { SamlSPFields } from "./saml_sp";
 import { SamlIDPFields } from "./saml_idp";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const SamlForm: OrgComponent<{
   providerId: string;
@@ -53,12 +54,21 @@ export const SamlForm: OrgComponent<{
         identityProviderX509Certs: samlSettings.identityProviderX509Certs ?? [],
       });
     } else {
-      props.dispatch({
-        type: Api.ActionType.GET_EXTERNAL_AUTH_PROVIDERS,
-        payload: {
-          provider: "saml",
-        },
-      });
+      props
+        .dispatch({
+          type: Api.ActionType.GET_EXTERNAL_AUTH_PROVIDERS,
+          payload: {
+            provider: "saml",
+          },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem fetching external auth providers.`,
+              res.resultAction
+            );
+          }
+        });
     }
   }, [samlSettings]);
 
@@ -201,10 +211,10 @@ export const SamlForm: OrgComponent<{
                     },
                   });
                 } else {
-                  const msg =
-                    "There was a problem updating the SAML connection.";
-                  alert(msg);
-                  console.log(msg, res.resultAction);
+                  logAndAlertError(
+                    "There was a problem updating the SAML connection.",
+                    res.resultAction
+                  );
                 }
               }}
             >

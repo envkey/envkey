@@ -8,6 +8,7 @@ import { HomeContainer } from "./home_container";
 import * as styles from "@styles";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const INVITE_TOKEN_REGEX = /^(i|dg)_[a-zA-Z0-9]{22}_.+$/;
 const ENCRYPTION_TOKEN_REGEX = /^[a-fA-F0-9]{64}_[a-zA-Z0-9]{22}$/;
@@ -149,23 +150,33 @@ export const AcceptInvite: Component = (props) => {
       needsExternalAuthError
     );
 
-    props.dispatch({
-      type: Client.ActionType.CREATE_EXTERNAL_AUTH_SESSION_FOR_INVITE,
-      payload: {
-        authMethod: "saml",
-        provider: "saml",
-        authType:
-          loadActionType === Client.ActionType.LOAD_INVITE
-            ? "accept_invite"
-            : "accept_device_grant",
-        authObjectId: needsExternalAuthError.id!,
-        externalAuthProviderId: needsExternalAuthError.externalAuthProviderId!,
-        orgId: needsExternalAuthError.orgId!,
-        loadActionType: loadActionType!,
-        emailToken,
-        encryptionToken,
-      },
-    });
+    props
+      .dispatch({
+        type: Client.ActionType.CREATE_EXTERNAL_AUTH_SESSION_FOR_INVITE,
+        payload: {
+          authMethod: "saml",
+          provider: "saml",
+          authType:
+            loadActionType === Client.ActionType.LOAD_INVITE
+              ? "accept_invite"
+              : "accept_device_grant",
+          authObjectId: needsExternalAuthError.id!,
+          externalAuthProviderId:
+            needsExternalAuthError.externalAuthProviderId!,
+          orgId: needsExternalAuthError.orgId!,
+          loadActionType: loadActionType!,
+          emailToken,
+          encryptionToken,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem starting a SAML sign in session.`,
+            res.resultAction
+          );
+        }
+      });
   }, [needsExternalAuthError, props.core.completedInviteExternalAuth]);
 
   useEffect(() => {
@@ -309,10 +320,19 @@ export const AcceptInvite: Component = (props) => {
     wait(MIN_ACTION_DELAY_MS).then(() => setIsAwaitingMinDelay(false));
 
     props.dispatch({ type: Client.ActionType.RESET_EXTERNAL_AUTH }).then(() =>
-      props.dispatch({
-        type: loadActionType,
-        payload: { emailToken, encryptionToken },
-      })
+      props
+        .dispatch({
+          type: loadActionType,
+          payload: { emailToken, encryptionToken },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem loading the invite.`,
+              res.resultAction
+            );
+          }
+        })
     );
   };
 
@@ -330,10 +350,20 @@ export const AcceptInvite: Component = (props) => {
     setIsAwaitingMinDelay(true);
     wait(MIN_ACTION_DELAY_MS).then(() => setIsAwaitingMinDelay(false));
 
-    const res = await props.dispatch({
-      type: acceptActionType,
-      payload: { deviceName, emailToken, encryptionToken },
-    });
+    const res = await props
+      .dispatch({
+        type: acceptActionType,
+        payload: { deviceName, emailToken, encryptionToken },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem accepting the invite.`,
+            res.resultAction
+          );
+        }
+        return res;
+      });
 
     if (!res.success) {
       return;

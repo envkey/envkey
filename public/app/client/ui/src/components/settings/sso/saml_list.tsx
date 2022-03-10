@@ -5,6 +5,7 @@ import * as g from "@core/lib/graph";
 import { SmallLoader, SvgImage } from "@images";
 import { samlIdpHasMinimumSettings } from "@core/lib/auth/saml";
 import * as R from "ramda";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const SamlList: OrgComponent = (props) => {
   const { graph } = props.core;
@@ -116,8 +117,9 @@ Any users invited through it will be converted to email authentication.`
                           });
 
                           if (!res.success) {
-                            alert(
-                              `There was a problem deleting ${provider.nickname}.`
+                            logAndAlertError(
+                              `There was a problem deleting ${provider.nickname}.`,
+                              res.resultAction
                             );
                             setDeleting(R.omit([provider.id], deleting));
                           }

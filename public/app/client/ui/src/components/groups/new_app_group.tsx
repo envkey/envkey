@@ -4,6 +4,7 @@ import { Api, Model } from "@core/types";
 import * as g from "@core/lib/graph";
 import * as styles from "@styles";
 import { SmallLoader } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const NewAppGroup: OrgComponent = (props) => {
   const { dispatch, core, history, orgRoute } = props;
@@ -48,8 +49,10 @@ export const NewAppGroup: OrgComponent = (props) => {
       );
       setCreatedId(createdGroup!.id);
     } else {
-      console.log("Error creating app group", res.resultAction);
-      alert("There was a problem creating the app group.");
+      logAndAlertError(
+        "There was a problem creating the team.",
+        res.resultAction
+      );
     }
   };
 

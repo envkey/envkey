@@ -6,6 +6,7 @@ import * as g from "@core/lib/graph";
 import * as semver from "semver";
 import * as R from "ramda";
 import ReactMarkdown from "react-markdown";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const SelfHostedUpgrade: OrgComponent = (props) => {
   const org = g.getOrg(props.core.graph) as Model.Org;

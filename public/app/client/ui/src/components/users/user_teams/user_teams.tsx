@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { getGroupPath } from "@ui_lib/paths";
 import * as styles from "@styles";
 import { SvgImage, SmallLoader } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const UserTeams: OrgComponent<{ userId: string }> = (props) => {
   const userId = props.routeParams.userId;
@@ -70,12 +71,21 @@ export const UserTeams: OrgComponent<{ userId: string }> = (props) => {
     }
     setRemovingId(team.id);
 
-    props.dispatch({
-      type: Api.ActionType.DELETE_GROUP_MEMBERSHIP,
-      payload: {
-        id: membership.id,
-      },
-    });
+    props
+      .dispatch({
+        type: Api.ActionType.DELETE_GROUP_MEMBERSHIP,
+        payload: {
+          id: membership.id,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem removing the team member.`,
+            res.resultAction
+          );
+        }
+      });
   };
 
   const renderRemove = (team: Model.Group) => {

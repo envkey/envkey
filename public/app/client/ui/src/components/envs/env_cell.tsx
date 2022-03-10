@@ -22,6 +22,8 @@ import { SvgImage } from "@images";
 import * as EntryForm from "./entry_form";
 import { isMultiline } from "@core/lib/utils/string";
 import copy from "copy-text-to-clipboard";
+import { logAndAlertError } from "@ui_lib/errors";
+import { getCurrentUserEntryKeys } from "@core/lib/client";
 
 type Props = {
   entryKey: string;
@@ -219,29 +221,65 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
       }
     });
 
+    const currentEntryKeysSet = useMemo(() => {
+      const keys = getCurrentUserEntryKeys(
+        props.core,
+        currentUserId,
+        props.visibleEnvironmentIds,
+        true
+      );
+
+      return new Set(keys);
+    }, [props.core, JSON.stringify(props.visibleEnvironmentIds)]);
+
     const submitEntry = () => {
       if (!inputVal || inputVal === props.entryKey) {
         return;
       }
+
+      if (currentEntryKeysSet.has(inputVal)) {
+        alert(`'${inputVal}' is already defined.`);
+        setInputVal(props.entryKey);
+        return;
+      }
+
       if (props.routeParams.subEnvironmentId) {
-        props.dispatch({
-          type: Client.ActionType.UPDATE_ENTRY,
-          payload: {
-            envParentId: props.envParentId,
-            environmentId: props.routeParams.subEnvironmentId,
-            entryKey: props.entryKey,
-            newEntryKey: inputVal,
-          },
-        });
+        props
+          .dispatch({
+            type: Client.ActionType.UPDATE_ENTRY,
+            payload: {
+              envParentId: props.envParentId,
+              environmentId: props.routeParams.subEnvironmentId,
+              entryKey: props.entryKey,
+              newEntryKey: inputVal,
+            },
+          })
+          .then((res) => {
+            if (!res.success) {
+              logAndAlertError(
+                `There was a problem updating the variable.`,
+                res.resultAction
+              );
+            }
+          });
       } else {
-        props.dispatch({
-          type: Client.ActionType.UPDATE_ENTRY_ROW,
-          payload: {
-            envParentId: props.envParentId,
-            entryKey: props.entryKey,
-            newEntryKey: inputVal,
-          },
-        });
+        props
+          .dispatch({
+            type: Client.ActionType.UPDATE_ENTRY_ROW,
+            payload: {
+              envParentId: props.envParentId,
+              entryKey: props.entryKey,
+              newEntryKey: inputVal,
+            },
+          })
+          .then((res) => {
+            if (!res.success) {
+              logAndAlertError(
+                `There was a problem updating the variable.`,
+                res.resultAction
+              );
+            }
+          });
       }
 
       props.setEnvManagerState({
@@ -267,15 +305,24 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
         },
       });
 
-      props.dispatch({
-        type: Client.ActionType.UPDATE_ENTRY_VAL,
-        payload: {
-          envParentId: props.envParentId,
-          environmentId: props.environmentId,
-          entryKey: props.entryKey,
-          update,
-        },
-      });
+      props
+        .dispatch({
+          type: Client.ActionType.UPDATE_ENTRY_VAL,
+          payload: {
+            envParentId: props.envParentId,
+            environmentId: props.environmentId,
+            entryKey: props.entryKey,
+            update,
+          },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem updating the variable.`,
+              res.resultAction
+            );
+          }
+        });
     };
 
     const commitInput = () => {

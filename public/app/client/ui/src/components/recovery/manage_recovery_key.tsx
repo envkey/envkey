@@ -7,6 +7,7 @@ import * as styles from "@styles";
 import { SmallLoader } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const ManageRecoveryKey: OrgComponent<
   {},
@@ -66,7 +67,16 @@ export const ManageRecoveryKey: OrgComponent<
             setAwaitingMinDelay(true);
             wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
           }
-          props.dispatch({ type: Client.ActionType.CREATE_RECOVERY_KEY });
+          props
+            .dispatch({ type: Client.ActionType.CREATE_RECOVERY_KEY })
+            .then((res) => {
+              if (!res.success) {
+                logAndAlertError(
+                  `There was a problem generating the recovery key.`,
+                  res.resultAction
+                );
+              }
+            });
         }}
       >
         {generating ? "Regenerating..." : genLabel}

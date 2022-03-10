@@ -11,6 +11,7 @@ import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import { PHRASE_LENGTH } from "@core/lib/crypto/phrase";
 import * as styles from "@styles";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const RedeemRecoveryKey: Component = (props) => {
   const [recoveryKey, setRecoveryKey] = useState("");
@@ -162,14 +163,23 @@ export const RedeemRecoveryKey: Component = (props) => {
     setAwaitingMinDelay(true);
     wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
-    props.dispatch({
-      type: Client.ActionType.LOAD_RECOVERY_KEY,
-      payload: {
-        encryptionKey,
-        hostUrl,
-        emailToken: emailToken || undefined,
-      },
-    });
+    props
+      .dispatch({
+        type: Client.ActionType.LOAD_RECOVERY_KEY,
+        payload: {
+          encryptionKey,
+          hostUrl,
+          emailToken: emailToken || undefined,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem loading the recovery key.`,
+            res.resultAction
+          );
+        }
+      });
   };
 
   const onAccept = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -195,10 +205,20 @@ export const RedeemRecoveryKey: Component = (props) => {
     setAwaitingMinDelay(true);
     wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
-    const res = await props.dispatch({
-      type: Client.ActionType.REDEEM_RECOVERY_KEY,
-      payload: { deviceName, encryptionKey, hostUrl, emailToken: emailToken },
-    });
+    const res = await props
+      .dispatch({
+        type: Client.ActionType.REDEEM_RECOVERY_KEY,
+        payload: { deviceName, encryptionKey, hostUrl, emailToken: emailToken },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            `There was a problem redeeming the recovery key.`,
+            res.resultAction
+          );
+        }
+        return res;
+      });
 
     if (!res.success) {
       return;

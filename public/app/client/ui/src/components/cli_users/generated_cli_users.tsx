@@ -5,6 +5,7 @@ import { cliUserRoute } from "./helpers";
 import * as g from "@core/lib/graph";
 import * as styles from "@styles";
 import copy from "copy-text-to-clipboard";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const GeneratedCliUsers: OrgComponent<
   { appId?: string },

@@ -6,6 +6,7 @@ import { RadioGroup, Radio } from "react-radio-group";
 import * as ui from "@ui";
 import * as styles from "@styles";
 import { SvgImage } from "@images";
+import { logAndAlertError } from "@ui_lib/errors";
 
 const getAppAddUsersComponent = (userType: "orgUser" | "cliUser") => {
   const AppAddUsers: OrgComponent<{ appId: string }> = (props) => {
@@ -224,16 +225,25 @@ const getAppAddUsersComponent = (userType: "orgUser" | "cliUser") => {
             })}
             onSubmit={async (ids) => {
               setSubmitting(true);
-              await props.dispatch({
-                type: Client.ActionType.GRANT_APPS_ACCESS,
-                payload: ids.map((id) => ({
-                  appId,
-                  appRoleId: selectedAppRoleId,
-                  ...(assocType == "user"
-                    ? { userId: id }
-                    : { userGroupId: id }),
-                })),
-              });
+              await props
+                .dispatch({
+                  type: Client.ActionType.GRANT_APPS_ACCESS,
+                  payload: ids.map((id) => ({
+                    appId,
+                    appRoleId: selectedAppRoleId,
+                    ...(assocType == "user"
+                      ? { userId: id }
+                      : { userGroupId: id }),
+                  })),
+                })
+                .then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      "There was a problem granting app access.",
+                      res.resultAction
+                    );
+                  }
+                });
               props.history.push(
                 props.location.pathname.replace(/\/add.+$/, "/list")
               );

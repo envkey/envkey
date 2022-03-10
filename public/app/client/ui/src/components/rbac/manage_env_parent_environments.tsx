@@ -8,6 +8,7 @@ import { stripUndefinedRecursive } from "@core/lib/utils/object";
 import { SvgImage, SmallLoader } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const ManageEnvParentEnvironments: OrgComponent<
   { appId: string } | { blockId: string }
@@ -118,13 +119,22 @@ export const ManageEnvParentEnvironments: OrgComponent<
       );
 
       const environment = baseEnvironmentsByRoleId[roleId];
-      props.dispatch({
-        type: Api.ActionType.UPDATE_ENVIRONMENT_SETTINGS,
-        payload: {
-          id: environment.id,
-          settings: environmentSettingsByRoleIdState[roleId],
-        },
-      });
+      props
+        .dispatch({
+          type: Api.ActionType.UPDATE_ENVIRONMENT_SETTINGS,
+          payload: {
+            id: environment.id,
+            settings: environmentSettingsByRoleIdState[roleId],
+          },
+        })
+        .then((res) => {
+          if (!res.success) {
+            logAndAlertError(
+              `There was a problem updating environment settings.`,
+              res.resultAction
+            );
+          }
+        });
     }
   };
 
@@ -238,19 +248,37 @@ export const ManageEnvParentEnvironments: OrgComponent<
                 ...removingEnvironmentsByRoleId,
                 [role.id]: true,
               });
-              props.dispatch({
-                type: Api.ActionType.DELETE_ENVIRONMENT,
-                payload: { id: includedEnvironment.id },
-              });
+              props
+                .dispatch({
+                  type: Api.ActionType.DELETE_ENVIRONMENT,
+                  payload: { id: includedEnvironment.id },
+                })
+                .then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem deleting the environment.`,
+                      res.resultAction
+                    );
+                  }
+                });
             } else {
               setAddingEnvironmentsByRoleId({
                 ...addingEnvironmentsByRoleId,
                 [role.id]: true,
               });
-              props.dispatch({
-                type: Api.ActionType.CREATE_ENVIRONMENT,
-                payload: { envParentId, environmentRoleId: role.id },
-              });
+              props
+                .dispatch({
+                  type: Api.ActionType.CREATE_ENVIRONMENT,
+                  payload: { envParentId, environmentRoleId: role.id },
+                })
+                .then((res) => {
+                  if (!res.success) {
+                    logAndAlertError(
+                      `There was a problem adding the environment.`,
+                      res.resultAction
+                    );
+                  }
+                });
             }
           }}
         >

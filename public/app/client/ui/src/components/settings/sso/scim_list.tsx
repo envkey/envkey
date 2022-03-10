@@ -4,6 +4,7 @@ import { Api, Auth } from "@core/types";
 import * as g from "@core/lib/graph";
 import { SmallLoader, SvgImage } from "@images";
 import * as R from "ramda";
+import { logAndAlertError } from "@ui_lib/errors";
 
 export const ScimList: OrgComponent = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -57,8 +58,9 @@ export const ScimList: OrgComponent = (props) => {
                           });
 
                           if (!res.success) {
-                            alert(
-                              `There was a problem deleting ${provider.nickname}.`
+                            logAndAlertError(
+                              `There was a problem deleting ${provider.nickname}.`,
+                              res.resultAction
                             );
                             setDeleting(R.omit([provider.id], deleting));
                           }
