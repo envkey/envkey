@@ -39,6 +39,10 @@ $ echo $'\n\neval "$(es --hook bash)"\n' >> ~/.bash_profile
 
 Check out the [integration quickstart](https://docs-v2.envkey.com/integration-quickstart) for more details.
 
+The cross-platform [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) tool works with any language and offers the most integration options.
+
+That said, language-specific wrappers are also available for [Node.js](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/node), [Go](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/go), [Python](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/python), and [Ruby](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/ruby).
+
 ## Why EnvKey?
 
 - Open source, cross-platform, language-agnostic, end-to-end encrypted with NaCl.

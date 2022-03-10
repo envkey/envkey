@@ -1,6 +1,17 @@
-# envkey-go
+# envkeygo
 
 Integrate [EnvKey](https://www.envkey.com) with your Go projects to keep api keys, credentials, and other configuration securely and automatically in sync for developers and servers.
+
+This repo is mirrored in two locations:
+
+- [A subdirectory of EnvKey's v2 monorepo](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/go/envkeygo).
+- [envkeygo module repo](https://github.com/envkey/envkeygo)
+
+# v1
+
+For docs on the v1 version of this package, go to the [latest v1 tag of the module repo](https://github.com/envkey/envkeygo/tree/v1.2.5). Using v2 requires an EnvKey v2 organization (it won't work with ENVKEYs generated in a v1 org).
+
+[Here's a guide on migrating from v1 to v2.](https://docs-v2.envkey.com/docs/migrating-from-v1)
 
 ## envkey-source
 
