@@ -28,6 +28,8 @@ let upgradeAvailable: AvailableClientUpgrade | undefined;
 let desktopDownloadComplete = false;
 let cliToolsInstallComplete = false;
 
+let isUpdating = false;
+
 autoUpdater.logger = {
   debug: (...args) => log("autoUpdater:debug", { data: args }),
   info: (...args) => log("autoUpdater:info", { data: args }),
@@ -47,6 +49,16 @@ app.on("ready", () => {
     };
 
     getWin()!.webContents.send("upgrade-progress", progress);
+  });
+
+  autoUpdater.on("error", (err) => {
+    if (!isUpdating && upgradeAvailable?.desktop) {
+      upgradeAvailable = R.omit(["desktop"], upgradeAvailable);
+      getWin()!.webContents.send("upgrade-available", upgradeAvailable);
+      stopCheckUpgradesLoop();
+      checkUpgrade();
+      resetUpgradesLoop();
+    }
   });
 });
 
@@ -91,14 +103,22 @@ export const checkUpgrade = async (
 ) => {
   const currentDesktopVersion = app.getVersion();
 
+  let checkDesktopError = false;
+
   const [desktopRes, cliLatestInstalledRes, envkeysourceLatestInstalledRes] =
     await Promise.all([
       autoUpdater.checkForUpdates().catch((err) => {
         // error gets logged thanks to logger init at top
+        checkDesktopError = true;
       }),
       isLatestCliInstalled().catch((err) => <const>true),
       isLatestEnvkeysourceInstalled().catch((err) => <const>true),
     ]);
+
+  // the autoUpdater.on("error") handler will handle re-checking
+  if (checkDesktopError) {
+    return;
+  }
 
   const nextCliVersion =
     (cliLatestInstalledRes !== true && cliLatestInstalledRes[0]) || undefined;
@@ -270,6 +290,8 @@ export const downloadAndInstallUpgrade = async () => {
   ]);
 
   log("finished CLI tools install and/or autoUpdater download", { error });
+
+  isUpdating = false;
 
   if (error) {
     log("Sending upgrade-error to webContents");

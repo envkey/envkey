@@ -106,17 +106,15 @@ export const BillingUI: OrgComponent = (props) => {
           </span>
         </div>
         <div className="field">
-          <label>Devices</label>
+          <label>Devices/CLI Keys</label>
 
           <span>
             using {org.deviceLikeCount}/{license.maxDevices}{" "}
             {numPendingDevices > 0 ? (
               <small>
                 {" "}
-                {org.deviceLikeCount -
-                  (numPendingDevices + numActiveCliUsers)}{" "}
-                active, {numPendingDevices} pending, {numActiveCliUsers} CLI
-                keys
+                {org.deviceLikeCount - numPendingDevices} active,{" "}
+                {numPendingDevices} pending
               </small>
             ) : (
               ""
