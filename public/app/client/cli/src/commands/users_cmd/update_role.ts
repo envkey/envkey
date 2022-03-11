@@ -9,12 +9,12 @@ import {
   logAndExitIfActionFailed,
   sortByPredefinedOrder,
 } from "../../lib/args";
-import { authz } from "@core/lib/graph";
+import { authz, graphTypes } from "@core/lib/graph";
 import * as R from "ramda";
 import { autoModeOut, getPrompt } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
-export const command = ["update-org-role [person] [role]"];
+export const command = ["update-org-role [person] [org_role]"];
 export const desc = "Change a person's org role.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
@@ -22,18 +22,35 @@ export const builder = (yargs: Argv<BaseArgs>) =>
       type: "string",
       describe: "email address",
     })
-    .positional("role", {
+    .positional("org_role", {
       type: "string",
-      describe: "id of org role",
+      describe: "org role",
     });
 export const handler = async (
-  argv: BaseArgs & { person?: string; role?: string }
+  argv: BaseArgs & { person?: string; org_role?: string }
 ): Promise<void> => {
   const prompt = getPrompt();
   const { state, auth } = await initCore(argv, true);
   // override account from ENVKEY
   if (tryApplyDetectedAppOverride(auth.userId, argv)) {
     return handler(argv);
+  }
+
+  let orgRoleId: string | undefined;
+  const orgRoles = graphTypes(state.graph).orgRoles;
+  const orgRoleNameOrId = argv["org_role"];
+  const orgRolesById = R.indexBy(R.prop("id"), orgRoles);
+  if (orgRoleNameOrId && orgRolesById[orgRoleNameOrId]) {
+    orgRoleId = orgRolesById[orgRoleNameOrId].id;
+  } else if (orgRoleNameOrId) {
+    const orgRolesByName = R.indexBy(
+      R.pipe(R.prop("name"), R.toLower),
+      orgRoles
+    );
+    const orgRole = orgRolesByName[orgRoleNameOrId.toLowerCase()];
+    if (orgRole) {
+      orgRoleId = orgRole.id;
+    }
   }
 
   const userChoices = R.sortBy(
@@ -102,7 +119,7 @@ export const handler = async (
   }
 
   const newRoleId =
-    argv.role ??
+    orgRoleId ??
     (
       await prompt<{ newRoleId: string }>({
         type: "select",

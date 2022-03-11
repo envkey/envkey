@@ -3,7 +3,7 @@ import { Argv } from "yargs";
 import { initCore, dispatch } from "../../lib/core";
 import { BaseArgs } from "../../types";
 import { Client, Model, Rbac } from "@core/types";
-import { authz } from "@core/lib/graph";
+import { authz, graphTypes } from "@core/lib/graph";
 import chalk from "chalk";
 import {
   findApp,
@@ -16,21 +16,36 @@ import * as R from "ramda";
 import { autoModeOut, getPrompt } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
-export const command = ["update-access [app] [person] [app_role_id]"];
+export const command = ["update-access [app] [person] [app-role]"];
 export const desc = "Update app access level.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
     .positional("app", { type: "string", describe: "app name" })
     .positional("person", { type: "string", describe: "email address" })
-    .positional("app_role_id", { type: "string", describe: "app role id" });
+    .positional("app-role", { type: "string", describe: "app role" });
 export const handler = async (
-  argv: BaseArgs & { app?: string; person?: string; app_role_id?: string }
+  argv: BaseArgs & { app?: string; person?: string; "app-role"?: string }
 ): Promise<void> => {
   const prompt = getPrompt();
   const { state, auth } = await initCore(argv, true);
   let app: Model.App | undefined;
   let userEmail: string | undefined = argv["person"];
-  let appRoleId: string | undefined = argv["app_role_id"];
+  let appRoleId: string | undefined;
+  const appRoles = graphTypes(state.graph).appRoles;
+  const appRoleNameOrId = argv["app-role"];
+  const appRolesById = R.indexBy(R.prop("id"), appRoles);
+  if (appRoleNameOrId && appRolesById[appRoleNameOrId]) {
+    appRoleId = appRolesById[appRoleNameOrId].id;
+  } else if (appRoleNameOrId) {
+    const appRolesByName = R.indexBy(
+      R.pipe(R.prop("name"), R.toLower),
+      appRoles
+    );
+    const appRole = appRolesByName[appRoleNameOrId.toLowerCase()];
+    if (appRole) {
+      appRoleId = appRole.id;
+    }
+  }
 
   if (argv["app"]) {
     app = findApp(state.graph, argv["app"]);
@@ -132,9 +147,9 @@ export const handler = async (
 
   if (!appRoleId) {
     appRoleId = (
-      await prompt<{ app_role_id: string }>({
+      await prompt<{ appRoleId: string }>({
         type: "select",
-        name: "app_role_id",
+        name: "appRoleId",
         message: "App Role:",
         choices: getAppRoleInviteChoices(
           state.graph,
@@ -143,7 +158,7 @@ export const handler = async (
           user.id
         ),
       })
-    ).app_role_id as string;
+    ).appRoleId as string;
   }
   const appRole = state.graph[appRoleId] as Rbac.AppRole;
   if (!appRole) {

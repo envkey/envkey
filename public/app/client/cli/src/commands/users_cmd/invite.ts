@@ -26,33 +26,7 @@ const isEmailValidator = (value: string): boolean => {
   return true;
 };
 
-const JsonUserInviteSchema = z.array(
-  z.object({
-    firstName: z.string(),
-    lastName: z.string(),
-    email: z.string(),
-    role: z.string(),
-  })
-);
-
-const findOrgRoleId = (
-  graph: Graph.UserGraph,
-  userId: string,
-  name: string
-) => {
-  const orgRoles = authz.getInvitableOrgRoles(graph, userId);
-  const found = orgRoles.find(
-    (or) => or.defaultName === name || or.name === name || or.id === name
-  );
-  if (!found) {
-    throw new Error(
-      `Org role does not exist by name ${name}, or is not invitable`
-    );
-  }
-  return found.id;
-};
-
-export const command = ["invite [email] [first-name] [last-name] [role]"];
+export const command = ["invite [email] [first-name] [last-name] [org-role]"];
 export const desc = "Invite someone to the organization.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
@@ -65,7 +39,7 @@ export const builder = (yargs: Argv<BaseArgs>) =>
     .positional("last-name", {
       type: "string",
     })
-    .positional("role", {
+    .positional("org-role", {
       type: "string",
     })
     .option("saml", {
@@ -77,7 +51,7 @@ export const handler = async (
     email?: string;
     "first-name"?: string;
     "last-name"?: string;
-    role?: string;
+    "org-role"?: string;
     saml?: boolean;
   }
 ): Promise<void> => {
@@ -91,7 +65,8 @@ export const handler = async (
   let firstName: string | undefined = argv["first-name"];
   let lastName: string | undefined = argv["last-name"];
   let email: string | undefined = argv["email"];
-  let orgRoleId: string | undefined = argv["role"]
+
+  let orgRoleId: string | undefined = argv["org-role"]
     ? authz
         .getInvitableOrgRoles(state.graph, auth.userId)
         ?.find((or) =>
@@ -99,7 +74,7 @@ export const handler = async (
             or.id.toLowerCase(),
             or.defaultName?.toLowerCase(),
             or.name.toLowerCase(),
-          ].includes(argv["role"]!.toLowerCase())
+          ].includes(argv["org-role"]!.toLowerCase())
         )?.id
     : undefined;
   let candidateId: string | undefined;
