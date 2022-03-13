@@ -292,7 +292,9 @@ const clientParams: Client.ClientParams<"app"> = {
 
       window.electron.registerUpgradeErrorHandler(() => {
         console.log("Root - upgrade error");
-        alert("There was a problem downloading the upgrade. Please try again.");
+        alert(
+          "There was a problem downloading the upgrade. This might mean that a new upgrade is available. Please try again."
+        );
         setClientUpgradeProgress({});
         setAvailableClientUpgrade({});
       });

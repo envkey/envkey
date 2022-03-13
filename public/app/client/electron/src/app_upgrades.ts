@@ -50,16 +50,6 @@ app.on("ready", () => {
 
     getWin()!.webContents.send("upgrade-progress", progress);
   });
-
-  autoUpdater.on("error", (err) => {
-    if (!isUpdating && upgradeAvailable?.desktop) {
-      upgradeAvailable = R.omit(["desktop"], upgradeAvailable);
-      getWin()!.webContents.send("upgrade-available", upgradeAvailable);
-      stopCheckUpgradesLoop();
-      checkUpgrade();
-      resetUpgradesLoop();
-    }
-  });
 });
 
 let checkUpgradesInterval: number | undefined;
@@ -246,15 +236,17 @@ export const downloadAndInstallUpgrade = async () => {
 
   // first ensure we are installing the latest upgrade
   // otherwise inform user that a newer upgrade is available
-  const upgradeAvailableBeforeCheck = R.clone(upgradeAvailable);
-  await checkUpgrade(false, true).catch((err) => {
-    log("checkUpdate failed", { err });
-  });
-  if (!R.equals(upgradeAvailableBeforeCheck, upgradeAvailable)) {
-    getWin()!.webContents.send("newer-upgrade-available", upgradeAvailable);
-    resetUpgradesLoop();
-    return;
-  }
+  // --> this was a nice idea, but it seems to cause autoUpdater to hang
+  // --> better to just handle the error and re-check then
+  // const upgradeAvailableBeforeCheck = R.clone(upgradeAvailable);
+  // await checkUpgrade(false, true).catch((err) => {
+  //   log("checkUpdate failed", { err });
+  // });
+  // if (!R.equals(upgradeAvailableBeforeCheck, upgradeAvailable)) {
+  //   getWin()!.webContents.send("newer-upgrade-available", upgradeAvailable);
+  //   resetUpgradesLoop();
+  //   return;
+  // }
 
   let error = false;
 
