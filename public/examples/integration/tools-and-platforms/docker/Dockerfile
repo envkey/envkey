@@ -2,16 +2,26 @@ FROM node:16-alpine
 
 WORKDIR /usr/src/app
 
+# Install envkey-source
+RUN apk --no-cache add curl bash minisign
+
+# Verify and install latest version (replace VERSION=... below to pin a version)
+RUN VERSION=$(curl https://envkey-releases.s3.amazonaws.com/latest/envkeysource-version.txt) \
+  && ARTIFACT_URL=https://envkey-releases.s3.amazonaws.com/envkeysource/release_artifacts/$VERSION/install.sh \
+  && curl -O $ARTIFACT_URL -O $ARTIFACT_URL.minisig \
+  && { minisign -Vm install.sh -P "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK" || { echo "Error: install.sh signature invalid. Exiting with error." >&2 && exit 1; };  }\
+  && chmod +x install.sh \
+  && ./install.sh
+
+# Install app dependencies
 COPY package*.json ./
 RUN npm ci --only=production
 
-COPY . .
+# Copy files
+COPY server.js server.js
 
-RUN apk --no-cache add curl bash minisig
-
-# Verify and install envkey-source
-RUN VERSION=$(curl https://envkey-releases.s3.amazonaws.com/latest/envkeysource-version.txt) && ARTIFACT_URL=https://envkey-releases.s3.amazonaws.com/envkeysource/release_artifacts/$VERSION/install.sh && curl -O $ARTIFACT_URL -O $ARTIFACT_URL.minisig && { minisign -Vm install.sh -P "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK" || { rm install.sh && install.sh.minisig &&  echo "Error: install.sh signature invalid. Exiting with error." >&2; exit 1; }; } && chmod +x install.sh && ./install.sh
-
+# Expose port
 EXPOSE 8081
 
-CMD envkey-source -e 'node server.js'
+# Start app with latest environment 
+CMD envkey-source -- node server.js

@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from "react";
+import React, { useState, useLayoutEffect, useEffect } from "react";
 import { OrgComponent, ReactSelectOption } from "@ui_types";
 import * as g from "@core/lib/graph";
 import { Model, Api } from "@core/types";
@@ -38,6 +38,12 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
     setEnvironmentRoleIpsMergeStrategies,
   ] = useState(app.environmentRoleIpsMergeStrategies ?? {});
 
+  useEffect(() => {
+    if (updating && !props.core.isUpdatingFirewall[appId]) {
+      setUpdating(false);
+    }
+  }, [props.core.isUpdatingFirewall[appId]]);
+
   const hasUpdate = !(
     R.equals(
       environmentRoleIpsMergeStrategies,
@@ -45,6 +51,16 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
     ) &&
     R.equals(environmentRoleIpsAllowed, app.environmentRoleIpsAllowed ?? {})
   );
+
+  console.log({
+    hasUpdate,
+    updating,
+    environmentRoleIpsMergeStrategies,
+    "app.environmentRoleIpsMergeStrategies":
+      app.environmentRoleIpsMergeStrategies,
+    environmentRoleIpsAllowed,
+    "app.environmentRoleIpsAllowed": app.environmentRoleIpsAllowed,
+  });
 
   const onSubmit = async () => {
     if (!hasUpdate) {
@@ -77,7 +93,7 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
         App <strong>Firewall</strong>
       </h3>
 
-      {hasUpdate ? (
+      {hasUpdate && !updating ? (
         <span className="unsaved-changes">Unsaved changes</span>
       ) : (
         ""
@@ -122,10 +138,23 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
                         | "inherit"
                         | "extend"
                         | "override";
-                      setEnvironmentRoleIpsMergeStrategies({
-                        ...environmentRoleIpsMergeStrategies,
-                        [environmentRoleId]: val == "inherit" ? undefined : val,
-                      });
+                      setEnvironmentRoleIpsMergeStrategies(
+                        val == "inherit"
+                          ? R.omit(
+                              [environmentRoleId],
+                              environmentRoleIpsMergeStrategies
+                            )
+                          : {
+                              ...environmentRoleIpsMergeStrategies,
+                              [environmentRoleId]: val,
+                            }
+                      );
+
+                      if (val == "inherit") {
+                        setEnvironmentRolesIpsAllowed(
+                          R.omit([environmentRoleId], environmentRoleIpsAllowed)
+                        );
+                      }
                     }}
                   >
                     {R.toPairs(MERGE_STRATEGY_LABELS).map(
@@ -188,10 +217,17 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
                           R.sortBy(R.identity, ips)
                         )
                       ) {
-                        setEnvironmentRolesIpsAllowed({
-                          ...environmentRoleIpsAllowed,
-                          [environmentRoleId]: ips.length > 0 ? ips : undefined,
-                        });
+                        setEnvironmentRolesIpsAllowed(
+                          ips.length > 0
+                            ? {
+                                ...environmentRoleIpsAllowed,
+                                [environmentRoleId]: ips,
+                              }
+                            : R.omit(
+                                [environmentRoleId],
+                                environmentRoleIpsAllowed
+                              )
+                        );
                       }
                     }}
                     value={(

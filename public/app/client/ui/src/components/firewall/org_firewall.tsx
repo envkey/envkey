@@ -55,7 +55,7 @@ export const OrgFirewall: OrgComponent = (props) => {
         switch (error.message) {
           case "Current user IP not allowed by localIpsAllowed":
             alert(
-              "Error: Your UI/CLI trusted IPs must include your current IP address (otherwise you'd be locked out). Trusted IPs were not saved."
+              "Error: Your UI/CLI trusted IPs must include your current IP address (otherwise you'd be locked out)."
             );
             break;
 
@@ -82,7 +82,7 @@ export const OrgFirewall: OrgComponent = (props) => {
         Org <strong>Firewall</strong>
       </h3>
 
-      {hasUpdate ? (
+      {hasUpdate && !updating ? (
         <span className="unsaved-changes">Unsaved changes</span>
       ) : (
         ""
@@ -157,14 +157,21 @@ export const OrgFirewall: OrgComponent = (props) => {
 
                 if (
                   !R.equals(
-                    R.sortBy(R.identity, localIpsAllowed ?? []),
+                    R.sortBy(
+                      R.identity,
+                      environmentRoleIpsAllowed?.[environmentRoleId] ?? []
+                    ),
                     R.sortBy(R.identity, ips)
                   )
                 ) {
-                  setEnvironmentRolesIpsAllowed({
-                    ...environmentRoleIpsAllowed,
-                    [environmentRoleId]: ips.length > 0 ? ips : undefined,
-                  });
+                  setEnvironmentRolesIpsAllowed(
+                    ips.length > 0
+                      ? {
+                          ...environmentRoleIpsAllowed,
+                          [environmentRoleId]: ips,
+                        }
+                      : R.omit([environmentRoleId], environmentRoleIpsAllowed)
+                  );
                 }
               }}
               value={(environmentRoleIpsAllowed?.[environmentRoleId] ?? []).map(

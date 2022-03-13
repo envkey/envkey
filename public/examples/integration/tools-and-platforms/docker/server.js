@@ -9,6 +9,12 @@ app.get("/", (req, res)=> {
       <body>
         <h1>${process.env.TITLE}</h1>
         <p>This is the ${process.env.NODE_ENV} environment.</p>
+        <div>
+          <label>
+            <strong>Super Secret Password:</strong>
+          </label>
+          <span>${process.env.SUPER_SECRET_PASSWORD}</span>
+        <div>
       </body>
     </html>
   `)
