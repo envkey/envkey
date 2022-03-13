@@ -24,6 +24,8 @@ import { mustGetScimProvider } from "./models/provisioning";
 import { wait } from "@core/lib/utils/wait";
 import { PoolConnection } from "mysql2/promise";
 import { env } from "./env";
+import { ipMatchesAny } from "@core/lib/utils/ip";
+import { log } from "@core/lib/utils/logger";
 
 let getOrgStatsFn: (
   orgId: string,
@@ -45,7 +47,8 @@ export const authenticate = async <
     T extends Auth.AuthContext = Auth.AuthContext
   >(
     params: Auth.ApiAuthParams,
-    transactionConn: PoolConnection
+    transactionConn: PoolConnection,
+    ip: string
   ): Promise<T> => {
     const now = Date.now();
 
@@ -251,6 +254,11 @@ export const authenticate = async <
 
     if (!org || org.deletedAt) {
       throw new Api.ApiError("org not found", 404);
+    }
+    if (org.localIpsAllowed) {
+      if (!ipMatchesAny(ip, org.localIpsAllowed)) {
+        throw new Api.ApiError("ip not permitted", 401);
+      }
     }
 
     if (!user || user.deletedAt || user.deactivatedAt) {

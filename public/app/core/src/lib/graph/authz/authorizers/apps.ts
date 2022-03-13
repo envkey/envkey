@@ -26,6 +26,11 @@ export const canCreateApp = (graph: Graph.Graph, currentUserId: string) =>
     currentUserId: string,
     appId: string
   ) => hasAppPermission(graph, currentUserId, appId, "app_manage_settings"),
+  canManageAppFirewall = (
+    graph: Graph.Graph,
+    currentUserId: string,
+    appId: string
+  ) => hasAppPermission(graph, currentUserId, appId, "app_manage_firewall"),
   canDeleteApp = (graph: Graph.Graph, currentUserId: string, appId: string) =>
     hasOrgPermission(graph, currentUserId, "apps_delete") &&
     Boolean(presence(graph[appId], "app")),

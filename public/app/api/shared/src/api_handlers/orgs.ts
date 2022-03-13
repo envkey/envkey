@@ -11,6 +11,7 @@ import {
   getCurrentEncryptedKeys,
   getLocalKeysByUserId,
   deleteGraphObjects,
+  getAppAllowedIps,
   authz,
 } from "@core/lib/graph";
 import { getOrgGraph } from "../graph";
@@ -21,6 +22,8 @@ import {
 import { getDb } from "../db";
 import { scimCandidateDbKey } from "../models/provisioning";
 import { getOrg } from "../models/orgs";
+import produce, { Draft } from "immer";
+import { isValidIPOrCIDR, ipMatchesAny } from "@core/lib/utils/ip";
 import { log } from "@core/lib/utils/logger";
 
 apiAction<
@@ -269,6 +272,86 @@ apiAction<
         orgId: auth.org.id,
         generatedEnvkeyId,
       })),
+    };
+  },
+});
+
+apiAction<
+  Api.Action.RequestActions["SetOrgAllowedIps"],
+  Api.Net.ApiResultTypes["SetOrgAllowedIps"]
+>({
+  type: Api.ActionType.SET_ORG_ALLOWED_IPS,
+  graphAction: true,
+  authenticated: true,
+  graphAuthorizer: async (action, orgGraph, userGraph, auth) =>
+    authz.hasOrgPermission(orgGraph, auth.user.id, "org_manage_firewall"),
+  graphHandler: async (
+    { payload },
+    orgGraph,
+    auth,
+    now,
+    requestParams,
+    transactionConn
+  ) => {
+    if (!payload.environmentRoleIpsAllowed) {
+      throw new Api.ApiError("missing environmentRoleIpsAllowed", 422);
+    }
+
+    if (payload.localIpsAllowed) {
+      // verify that each is a valid ip
+      // also verify that current ip is allowed so current user
+      // can't be locked out
+      if (!R.all(isValidIPOrCIDR, payload.localIpsAllowed)) {
+        const msg = "Invalid IP or CIDR address";
+        throw new Api.ApiError(msg, 422);
+      }
+
+      if (!ipMatchesAny(requestParams.ip, payload.localIpsAllowed)) {
+        const msg = "Current user IP not allowed by localIpsAllowed";
+        throw new Api.ApiError(msg, 422);
+      }
+    }
+
+    // verify that each set in environmentRoleIpsAllowed is a valid ip
+    for (let environmentRoleId in payload.environmentRoleIpsAllowed) {
+      const ips = payload.environmentRoleIpsAllowed[environmentRoleId];
+      if (ips) {
+        if (!R.all(isValidIPOrCIDR, ips)) {
+          const msg = "Invalid IP or CIDR address";
+          throw new Api.ApiError(msg, 422);
+        }
+      }
+    }
+
+    const updatedGraph = produce(orgGraph, (graphDraft) => {
+      const orgDraft = graphDraft[auth.org.id] as Draft<Api.Db.Org>;
+
+      orgDraft.localIpsAllowed = payload.localIpsAllowed;
+      orgDraft.environmentRoleIpsAllowed = payload.environmentRoleIpsAllowed;
+      orgDraft.updatedAt = now;
+
+      for (let { id, environmentId, appId } of graphTypes(orgGraph)
+        .generatedEnvkeys) {
+        const environment = orgGraph[environmentId] as Api.Db.Environment;
+
+        const generatedEnvkeyDraft = graphDraft[
+          id
+        ] as Draft<Api.Db.GeneratedEnvkey>;
+
+        generatedEnvkeyDraft.allowedIps = getAppAllowedIps(
+          graphDraft,
+          appId,
+          environment.environmentRoleId
+        );
+
+        generatedEnvkeyDraft.updatedAt = now;
+      }
+    });
+
+    return {
+      type: "graphHandlerResult",
+      graph: updatedGraph,
+      logTargetIds: [],
     };
   },
 });

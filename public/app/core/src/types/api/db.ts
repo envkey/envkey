@@ -525,6 +525,7 @@ export namespace Db {
       trustedRootUpdatedAt: z.number(),
       userId: z.string().optional(),
       deviceId: z.string().optional(),
+      allowedIps: z.array(z.string()).optional(),
     })
     .merge(Model.GeneratedEnvkeySchema)
     .merge(DbObjectSchema);

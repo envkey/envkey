@@ -162,7 +162,7 @@ export const AppBlocks: EnvManagerComponent = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem reordering blocks.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
       });
@@ -352,7 +352,7 @@ const BlockItem: EnvManagerComponent<
                       if (!res.success) {
                         logAndAlertError(
                           `There was a problem disconnecting the block.`,
-                          res.resultAction
+                          (res.resultAction as any).payload
                         );
                       }
                     });

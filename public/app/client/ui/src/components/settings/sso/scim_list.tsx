@@ -60,7 +60,7 @@ export const ScimList: OrgComponent = (props) => {
                           if (!res.success) {
                             logAndAlertError(
                               `There was a problem deleting ${provider.nickname}.`,
-                              res.resultAction
+                              (res.resultAction as any).payload
                             );
                             setDeleting(R.omit([provider.id], deleting));
                           }

@@ -24,3 +24,4 @@ export * from "./billing";
 export * from "./archive";
 export * from "./upgrades";
 export * from "./groups";
+export * from "./firewall";

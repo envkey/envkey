@@ -69,7 +69,8 @@ export const clientParams: Client.ClientParams<"cli" | "app"> = {
     action: Client.Action.DispatchAction<ActionType>,
     accountIdOrCliKey: string | undefined,
     deviceStoreId?: string,
-    tempHostOverride?: string
+    tempHostOverride?: string,
+    ipOverride?: string
   ) => {
     const store = getDeviceStore(
       deviceStoreId ?? accountIdOrCliKey ?? getTestId()
@@ -83,6 +84,7 @@ export const clientParams: Client.ClientParams<"cli" | "app"> = {
       accountIdOrCliKey,
       clientId: testId,
       hostUrl: tempHostOverride ?? hostnameOverride,
+      ipTestOverride: ipOverride,
     }).catch((err: Error) => {
       throw err;
     });

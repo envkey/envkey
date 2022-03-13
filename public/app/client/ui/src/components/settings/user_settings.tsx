@@ -118,6 +118,13 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
       return <div />;
     }
 
+    const hasNameUpdate = !(
+      (user.type == "orgUser" &&
+        firstName == user.firstName &&
+        lastName == user.lastName) ||
+      (user.type == "cliUser" && cliUserName == user.name)
+    );
+
     const onDelete = async () => {
       setIsDeleting(true);
       await wait(500); // add a little delay for a smoother transition
@@ -136,7 +143,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
               `There was a problem removing the ${
                 { orgUser: "user", cliUser: "CLI key" }[userId]
               }.`,
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         });
@@ -213,11 +220,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                 !(
                   (firstName.trim() && lastName.trim()) ||
                   cliUserName.trim()
-                ) ||
-                (user.type == "orgUser" &&
-                  firstName == user.firstName &&
-                  lastName == user.lastName) ||
-                (user.type == "cliUser" && cliUserName == user.name)
+                ) || !hasNameUpdate
               }
               onClick={() => {
                 setRenaming(true);
@@ -244,7 +247,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                         `There was a problem renaming the ${
                           { orgUser: "user", cliUser: "CLI key" }[userId]
                         }.`,
-                        res.resultAction
+                        (res.resultAction as any).payload
                       );
                     }
                   });
@@ -316,7 +319,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                           `There was a problem updating the ${
                             { orgUser: "user", cliUser: "CLI key" }[userId]
                           } role.`,
-                          res.resultAction
+                          (res.resultAction as any).payload
                         );
                       }
                     });
@@ -470,7 +473,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem regenerating the invitation.`,
-                        res.resultAction
+                        (res.resultAction as any).payload
                       );
                     }
                   });
@@ -512,6 +515,12 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
           })
         }
       >
+        {hasNameUpdate ? (
+          <span className="unsaved-changes">Unsaved changes</span>
+        ) : (
+          ""
+        )}
+
         {renderNameOrRename()}
         {renderEmail()}
         {renderRoleOrUpdateUserRole()}

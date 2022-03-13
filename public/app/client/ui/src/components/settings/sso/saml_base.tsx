@@ -144,14 +144,14 @@ export const SamlCreateStep: OrgComponent = (props) => {
                       if (!res.success) {
                         logAndAlertError(
                           `There was a problem listing external auth providers.`,
-                          res.resultAction
+                          (res.resultAction as any).payload
                         );
                       }
                     });
                 } else {
                   logAndAlertError(
                     "There was a problem creating the SAML connection.",
-                    res.resultAction
+                    (res.resultAction as any).payload
                   );
                 }
               }}

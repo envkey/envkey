@@ -1345,6 +1345,16 @@ export namespace Net {
 
     [ActionType.SELF_HOSTED_RESYNC_FAILOVER]: z.object({}),
 
+    [ActionType.SET_ORG_ALLOWED_IPS]: Model.OrgSchema.pick({
+      localIpsAllowed: true,
+      environmentRoleIpsAllowed: true,
+    }),
+
+    [ActionType.SET_APP_ALLOWED_IPS]: Model.AppSchema.pick({
+      environmentRoleIpsMergeStrategies: true,
+      environmentRoleIpsAllowed: true,
+    }).merge(IdParamsSchema),
+
     // BULK_GRAPH_ACTION schema isn't used anywhere as bulk actions are validated individually,
     // but it makes this object exhaustive so the compiler's happy
     [ActionType.BULK_GRAPH_ACTION]: z.any(),
@@ -1653,6 +1663,14 @@ export namespace Net {
     SelfHostedResyncFailover: z.infer<
       typeof ApiParamSchemas[ActionType.SELF_HOSTED_RESYNC_FAILOVER]
     >;
+
+    SetOrgAllowedIps: z.infer<
+      typeof ApiParamSchemas[ActionType.SET_ORG_ALLOWED_IPS]
+    >;
+
+    SetAppAllowedIps: z.infer<
+      typeof ApiParamSchemas[ActionType.SET_APP_ALLOWED_IPS]
+    >;
   };
 
   export type ApiResultTypes = {
@@ -1869,6 +1887,8 @@ export namespace Net {
       orgStats: Model.OrgStats;
     };
     SelfHostedResyncFailover: OkResult;
+    SetOrgAllowedIps: GraphDiffsResult;
+    SetAppAllowedIps: GraphDiffsResult;
   };
 
   export type ApiParams = ApiParamTypes[keyof ApiParamTypes];

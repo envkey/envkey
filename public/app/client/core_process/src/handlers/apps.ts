@@ -10,6 +10,7 @@ import {
   renameObjectProducers,
   removeObjectProducers,
   updateSettingsProducers,
+  updateFirewallProducers,
 } from "../lib/status";
 import {
   getDeleteAppProducer,
@@ -114,6 +115,20 @@ clientAction<
   graphAction: true,
   serialAction: true,
   ...updateSettingsProducers,
+});
+
+clientAction<
+  Api.Action.RequestActions["SetAppAllowedIps"],
+  Api.Net.ApiResultTypes["SetAppAllowedIps"]
+>({
+  type: "apiRequestAction",
+  actionType: Api.ActionType.SET_APP_ALLOWED_IPS,
+  loggableType: "orgAction",
+  loggableType2: "updateFirewallAction",
+  authenticated: true,
+  graphAction: true,
+  serialAction: true,
+  ...updateFirewallProducers,
 });
 
 clientAction<

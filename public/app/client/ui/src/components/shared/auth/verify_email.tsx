@@ -109,7 +109,7 @@ export const VerifyEmail: Component<{}, Props> = ({
         } else {
           logAndAlertError(
             "There was a problem verifying the email token.",
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
       });
@@ -124,7 +124,7 @@ export const VerifyEmail: Component<{}, Props> = ({
         if (!res.success) {
           logAndAlertError(
             `There was a problem sending the email verification.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
       });

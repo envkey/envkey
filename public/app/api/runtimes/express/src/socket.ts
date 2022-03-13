@@ -269,13 +269,16 @@ const start: Api.SocketServer["start"] = () => {
     httpServer.on(
       "upgrade",
       (req: IncomingMessage, socket: RawSocket, head) => {
-        const fromAddr = req.socket.remoteAddress + ":" + req.socket.remotePort;
+        const ip =
+          (req.headers["x-forwarded-for"] as string) ??
+          req.socket.remoteAddress;
+
         log("Websocket connection attempt", {
-          fromAddr,
+          ip,
         });
 
         if (typeof req.headers["authorization"] != "string") {
-          log("Websocket authorization header missing", { fromAddr });
+          log("Websocket authorization header missing", { ip });
           socketAuthErr(socket);
           return;
         }
@@ -291,7 +294,8 @@ const start: Api.SocketServer["start"] = () => {
             try {
               context = await authenticate<Auth.TokenAuthContext>(
                 authParams,
-                transactionConn
+                transactionConn,
+                ip
               );
             } catch (err) {
               log("socket httpServer.authenticate error", { err });

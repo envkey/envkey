@@ -52,6 +52,9 @@ export const orgPermissions = {
     org_read_logs: {
       description: "read org logs",
     },
+    org_manage_firewall: {
+      description: "manage org permitted networks",
+    },
     org_generate_recovery_key: {
       description: "generate recovery key",
     },
@@ -123,6 +126,9 @@ export const orgPermissions = {
     app_read_logs: { description: "read app logs" },
     app_manage_included_roles: {
       description: "add or remove permitted app roles",
+    },
+    app_manage_firewall: {
+      description: "manage app permitted networks",
     },
   },
   environmentWritePermissions = {

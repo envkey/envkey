@@ -149,7 +149,10 @@ export const SelfHostedUpgrade: OrgComponent = (props) => {
                   "The upgrade has started. It should finish in 5-30 minutes. You'll get an email when it's complete. There won't be any downtime, and EnvKey will work normally the meantime."
                 );
               } else {
-                console.log("Upgrade self-hosted error", res.resultAction);
+                console.log(
+                  "Upgrade self-hosted error",
+                  (res.resultAction as any).payload
+                );
                 alert(
                   "There was a problem upgrading your EnvKey Self-Hosted Installation."
                 );

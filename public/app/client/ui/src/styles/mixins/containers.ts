@@ -12,6 +12,7 @@ import {
 } from "./buttons";
 import { deepMergeStyles, multi } from "../helpers";
 import { customSelect } from "./select";
+import { SIDEBAR_WIDTH } from "../layout";
 
 export const baseContainer = (params: {
   width: number;
@@ -612,6 +613,19 @@ export const baseContainer = (params: {
             color: "#fff",
           },
         },
+      },
+
+      ".unsaved-changes": {
+        color: "#fff",
+        fontWeight: 600,
+        fontFamily: fonts.CONDENSED,
+        fontSize: "14px",
+        textTransform: "uppercase",
+        padding: "6px 12px",
+        background: colors.LIGHT_BLUE,
+        position: "fixed",
+        left: SIDEBAR_WIDTH + params.width + 60,
+        marginTop: 8,
       },
     },
   };

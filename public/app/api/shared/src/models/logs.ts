@@ -1754,6 +1754,12 @@ const getSummary = (
     case Api.ActionType.SELF_HOSTED_RESYNC_FAILOVER:
       return `+resynchronize+ failover S3 buckets`;
 
+    case Api.ActionType.SET_ORG_ALLOWED_IPS:
+      return `+update+ org trusted IPs`;
+
+    case Api.ActionType.SET_APP_ALLOWED_IPS:
+      return `+update+ trusted IPs for app %${action.payload.id}%`;
+
     case Api.ActionType.UPDATE_ENVS:
       return null; // handled by LogEnvsUpdated component
 

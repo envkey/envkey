@@ -100,6 +100,8 @@ const getComponent = (envParentType: "app" | "block") => {
       );
     };
 
+    const nameUpdated = envParent.name != name;
+
     const dispatchSettingsUpdate = () => {
       if (updatingSettings || !settingsUpdated()) {
         return;
@@ -126,7 +128,7 @@ const getComponent = (envParentType: "app" | "block") => {
           if (!res.success) {
             logAndAlertError(
               `There was a problem updating ${envParentType} settings.`,
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         });
@@ -176,7 +178,7 @@ const getComponent = (envParentType: "app" | "block") => {
                       if (!res.success) {
                         logAndAlertError(
                           `There was a problem renaming the ${envParentType}.`,
-                          res.resultAction
+                          (res.resultAction as any).payload
                         );
                       }
                     });
@@ -313,7 +315,7 @@ const getComponent = (envParentType: "app" | "block") => {
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem deleting the ${envParentType}.`,
-                        res.resultAction
+                        (res.resultAction as any).payload
                       );
                     }
                   });
@@ -345,6 +347,13 @@ const getComponent = (envParentType: "app" | "block") => {
           {updatingSettings || renaming ? <SmallLoader /> : ""}
           {envParentTypeLabel} <strong>Settings</strong>
         </h3>
+
+        {nameUpdated ? (
+          <span className="unsaved-changes">Unsaved changes</span>
+        ) : (
+          ""
+        )}
+
         {renderRename()}
         {renderSettings()}
         {renderManageEnvironments()}

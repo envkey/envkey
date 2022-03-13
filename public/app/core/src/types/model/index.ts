@@ -53,6 +53,12 @@ export namespace Model {
       serverEnvkeyCount: z.number(),
       deviceLikeCount: z.number(),
       // Self-Hosted - client only
+
+      localIpsAllowed: z.array(z.string()).optional(),
+      environmentRoleIpsAllowed: z
+        .record(z.array(z.string()).optional())
+        .optional(),
+
       selfHostedVersions: z
         .object({
           api: z.string(),
@@ -345,6 +351,12 @@ export namespace Model {
     .object({
       type: z.literal("app"),
       settings: AppSettingsSchema,
+      environmentRoleIpsMergeStrategies: z
+        .record(z.enum(["extend", "override"]).optional())
+        .optional(),
+      environmentRoleIpsAllowed: z
+        .record(z.array(z.string()).optional())
+        .optional(),
     })
     .merge(EnvParentFieldsSchema);
 

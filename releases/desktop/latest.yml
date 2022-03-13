@@ -1,8 +1,8 @@
-version: 2.0.33
+version: 2.0.34
 files:
-  - url: EnvKey_Windows_Installer-2.0.33.exe
-    sha512: T/yRN/hj7Nc2mzPGZQKpyNaAJfPelaI9ylLRArCW5SPvh9olaStT9WIWsEtRLZoTI3LfLmQYBLOif5T6hiCArg==
-    size: 68694776
-path: EnvKey_Windows_Installer-2.0.33.exe
-sha512: T/yRN/hj7Nc2mzPGZQKpyNaAJfPelaI9ylLRArCW5SPvh9olaStT9WIWsEtRLZoTI3LfLmQYBLOif5T6hiCArg==
-releaseDate: '2022-03-13T18:51:03.702Z'
+  - url: EnvKey_Windows_Installer-2.0.34.exe
+    sha512: j3/bnS4EIb0XEOE0RZBbD4t2PGiypRu3IRzxOtEDwvyph1Se+Rb6jHpnH954REPSyVn3quvOUvdLEvFo7nF7RQ==
+    size: 68697768
+path: EnvKey_Windows_Installer-2.0.34.exe
+sha512: j3/bnS4EIb0XEOE0RZBbD4t2PGiypRu3IRzxOtEDwvyph1Se+Rb6jHpnH954REPSyVn3quvOUvdLEvFo7nF7RQ==
+releaseDate: '2022-03-13T20:30:54.356Z'

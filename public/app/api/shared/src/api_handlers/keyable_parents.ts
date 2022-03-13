@@ -7,6 +7,7 @@ import {
   deleteGraphObjects,
   authz,
   environmentCompositeId,
+  getAppAllowedIps,
 } from "@core/lib/graph";
 import { pick } from "@core/lib/utils/pick";
 import * as graphKey from "../graph_key";
@@ -396,6 +397,10 @@ const generateKey = (
     payload.keyableParentId
   ] as Api.Db.KeyableParent;
 
+  const environment = orgGraph[
+    keyableParent.environmentId
+  ] as Api.Db.Environment;
+
   const id = uuid(),
     generatedEnvkey: Api.Db.GeneratedEnvkey = {
       type: "generatedEnvkey",
@@ -434,6 +439,11 @@ const generateKey = (
         keyableParent.type == "localKey" ? keyableParent.userId : undefined,
       deviceId:
         keyableParent.type == "localKey" ? keyableParent.deviceId : undefined,
+      allowedIps: getAppAllowedIps(
+        orgGraph,
+        keyableParent.appId,
+        environment.environmentRoleId
+      ),
       createdAt: now,
       updatedAt: now,
     };

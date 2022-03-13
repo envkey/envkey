@@ -359,7 +359,7 @@ export const EnvironmentRoleForm: OrgComponent<{
                   });
                 }}
               >
-                <label>Can read sub-envs version history</label>
+                <label>Can read branch version history</label>
                 <input
                   type="checkbox"
                   checked={permissionsSet.has("read_branches_history")}
@@ -384,6 +384,12 @@ export const EnvironmentRoleForm: OrgComponent<{
         <h3>
           New <strong>Environment</strong>
         </h3>
+      )}
+
+      {editing && hasUpdate ? (
+        <span className="unsaved-changes">Unsaved changes</span>
+      ) : (
+        ""
       )}
 
       {editing?.isDefault ? (
@@ -544,7 +550,7 @@ export const EnvironmentRoleForm: OrgComponent<{
                     `There was a problem ${
                       editing ? "updating" : "creating"
                     } the environment role.`,
-                    res.resultAction
+                    (res.resultAction as any).payload
                   );
                 }
 
@@ -576,7 +582,7 @@ export const EnvironmentRoleForm: OrgComponent<{
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem creating the environment.`,
-                        res.resultAction
+                        (res.resultAction as any).payload
                       );
                     }
                   });

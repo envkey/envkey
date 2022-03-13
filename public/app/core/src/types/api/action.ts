@@ -1207,15 +1207,35 @@ export namespace Action {
         client?: undefined;
       };
     };
-    SelfHostedResyncFailover: {
-      type: ActionType.SELF_HOSTED_RESYNC_FAILOVER;
-      payload: Net.ApiParamTypes["SelfHostedResyncFailover"];
-      meta: {
+
+    SelfHostedResyncFailover: RequestActionType<
+      ActionType.SELF_HOSTED_RESYNC_FAILOVER,
+      {
         loggableType: "orgAction";
         auth: Auth.DefaultAuthParams;
-        client?: undefined;
-      };
-    };
+      },
+      Net.ApiParamTypes["SelfHostedResyncFailover"]
+    >;
+
+    SetOrgAllowedIps: RequestActionType<
+      ActionType.SET_ORG_ALLOWED_IPS,
+      {
+        loggableType: "orgAction";
+        loggableType2: "updateFirewallAction";
+        auth: Auth.DefaultAuthParams;
+      },
+      Net.ApiParamTypes["SetOrgAllowedIps"]
+    >;
+
+    SetAppAllowedIps: RequestActionType<
+      ActionType.SET_APP_ALLOWED_IPS,
+      {
+        loggableType: "orgAction";
+        loggableType2: "updateFirewallAction";
+        auth: Auth.DefaultAuthParams;
+      },
+      Net.ApiParamTypes["SetAppAllowedIps"]
+    >;
   };
 
   export type BulkGraphAction = {

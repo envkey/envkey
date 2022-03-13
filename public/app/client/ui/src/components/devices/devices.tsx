@@ -200,7 +200,7 @@ const getDevicesComponent = (isTopLevel?: true) => {
                 if (!res.success) {
                   logAndAlertError(
                     "There was a problem revoking the device.",
-                    res.resultAction
+                    (res.resultAction as any).payload
                   );
                 }
               });
@@ -280,7 +280,7 @@ const getDevicesComponent = (isTopLevel?: true) => {
                 if (!res.success) {
                   logAndAlertError(
                     "There was a problem revoking the device invitation.",
-                    res.resultAction
+                    (res.resultAction as any).payload
                   );
                 }
               });

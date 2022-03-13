@@ -53,6 +53,10 @@ export const getUserGraph = (
             "selfHostedUpgradeStatus",
             "serverEnvkeyCount",
             "deviceLikeCount",
+
+            // these may filtered out in permitted_graph.ts depending on permissions
+            "localIpsAllowed",
+            "environmentRoleIpsAllowed",
           ],
           obj
         );
@@ -182,6 +186,10 @@ export const getUserGraph = (
             "envsOrLocalsUpdatedAt",
             "localsReencryptionRequiredAt",
             "settings",
+
+            // these may filtered out in permitted_graph.ts depending on permissions
+            "environmentRoleIpsMergeStrategies",
+            "environmentRoleIpsAllowed",
           ],
           obj
         );

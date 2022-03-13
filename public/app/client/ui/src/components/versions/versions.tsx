@@ -159,7 +159,7 @@ export const Versions: OrgComponent<RouteProps> = (props) => {
           if (!res.success) {
             logAndAlertError(
               `There was a problem fetching versions.`,
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         });
@@ -513,7 +513,7 @@ export const Versions: OrgComponent<RouteProps> = (props) => {
                       if (!res.success) {
                         logAndAlertError(
                           `There was a problem reverting.`,
-                          res.resultAction
+                          (res.resultAction as any).payload
                         );
                       }
                     });

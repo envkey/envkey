@@ -330,7 +330,7 @@ export const InviteForm: OrgComponent<{
       } else {
         logAndAlertError(
           "There was a problem updating the pending invite.",
-          res.resultAction
+          (res.resultAction as any).payload
         );
       }
     } else if (scimProviderId) {
@@ -347,7 +347,7 @@ export const InviteForm: OrgComponent<{
         if (!res.success) {
           console.error(
             "There was a problem adding the pending invite.",
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
       }
@@ -367,7 +367,7 @@ export const InviteForm: OrgComponent<{
           if (!res.success) {
             logAndAlertError(
               `There was a problem adding the pending invite.`,
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         });

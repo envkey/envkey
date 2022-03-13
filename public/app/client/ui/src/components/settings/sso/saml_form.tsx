@@ -65,7 +65,7 @@ export const SamlForm: OrgComponent<{
           if (!res.success) {
             logAndAlertError(
               `There was a problem fetching external auth providers.`,
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         });
@@ -138,6 +138,12 @@ export const SamlForm: OrgComponent<{
       <h3>
         SAML Connection <strong>Settings</strong>
       </h3>
+
+      {hasChange ? (
+        <span className="unsaved-changes">Unsaved changes</span>
+      ) : (
+        ""
+      )}
 
       <SamlBaseFields
         {...props}
@@ -213,7 +219,7 @@ export const SamlForm: OrgComponent<{
                 } else {
                   logAndAlertError(
                     "There was a problem updating the SAML connection.",
-                    res.resultAction
+                    (res.resultAction as any).payload
                   );
                 }
               }}

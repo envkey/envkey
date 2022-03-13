@@ -47,7 +47,7 @@ export const handler = async (
     payload: {
       name,
       settings: {
-        autoCaps: true,
+        autoCaps: undefined,
       },
     },
   });

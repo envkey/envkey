@@ -68,7 +68,10 @@ export const SignIn: Component<{ accountId: string }> = (props) => {
       hostUrl
     ).then((res) => {
       if (!res.success) {
-        logAndAlertError(`There was a problem signing in.`, res.resultAction);
+        logAndAlertError(
+          `There was a problem signing in.`,
+          (res.resultAction as any).payload
+        );
       }
     });
   };

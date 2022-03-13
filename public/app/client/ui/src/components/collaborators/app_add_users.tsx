@@ -240,7 +240,7 @@ const getAppAddUsersComponent = (userType: "orgUser" | "cliUser") => {
                   if (!res.success) {
                     logAndAlertError(
                       "There was a problem granting app access.",
-                      res.resultAction
+                      (res.resultAction as any).payload
                     );
                   }
                 });

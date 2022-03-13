@@ -155,7 +155,7 @@ export const UserAddApps: OrgComponent<{ userId: string }> = (props) => {
             } else {
               logAndAlertError(
                 "There was a problem granting app access.",
-                res.resultAction
+                (res.resultAction as any).payload
               );
             }
           }}

@@ -20,7 +20,8 @@ export const postApiAction = async <
 >(
   action: ActionType,
   // hostname sans protocol
-  hostUrlArg?: string
+  hostUrlArg?: string,
+  ipOverride?: string // for testing firewall
 ) => {
   // const start = Date.now();
 
@@ -36,6 +37,13 @@ export const postApiAction = async <
       json: action,
       timeout: TIMEOUTS,
       throwHttpErrors: false,
+      ...(ipOverride
+        ? {
+            headers: {
+              "x-forwarded-for": ipOverride,
+            },
+          }
+        : {}),
     })
     .then((res) => {
       if (process.env.LOG_REQUESTS) {

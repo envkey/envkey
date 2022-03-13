@@ -155,7 +155,7 @@ export const ManageOrgEnvironmentRoles: OrgComponent = (props) => {
           if (!res.success) {
             logAndAlertError(
               `There was a problem updating environment role settings.`,
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         });
@@ -222,7 +222,7 @@ export const ManageOrgEnvironmentRoles: OrgComponent = (props) => {
           if (!res.success) {
             logAndAlertError(
               `There was a problem reoredering environment roles.`,
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         });
@@ -296,7 +296,7 @@ export const ManageOrgEnvironmentRoles: OrgComponent = (props) => {
                               if (!res.success) {
                                 logAndAlertError(
                                   `There was a problem deleting the environment role.`,
-                                  res.resultAction
+                                  (res.resultAction as any).payload
                                 );
                               }
                             });

@@ -173,7 +173,7 @@ export const AcceptInvite: Component = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem starting a SAML sign in session.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
       });
@@ -329,7 +329,7 @@ export const AcceptInvite: Component = (props) => {
           if (!res.success) {
             logAndAlertError(
               `There was a problem loading the invite.`,
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         })
@@ -359,7 +359,7 @@ export const AcceptInvite: Component = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem accepting the invite.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
         return res;

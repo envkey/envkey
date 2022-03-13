@@ -176,7 +176,7 @@ export const RedeemRecoveryKey: Component = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem loading the recovery key.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
       });
@@ -214,7 +214,7 @@ export const RedeemRecoveryKey: Component = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem redeeming the recovery key.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
         return res;

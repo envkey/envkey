@@ -55,7 +55,7 @@ export const InviteUsers: OrgComponent<{ appId?: string }> = (props) => {
             `There was a problem generating the invitation${
               pendingInvites.length > 0 ? "s" : ""
             }.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
       });
@@ -113,7 +113,7 @@ export const InviteUsers: OrgComponent<{ appId?: string }> = (props) => {
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem removing the pending invite.`,
-                        res.resultAction
+                        (res.resultAction as any).payload
                       );
                     }
                   });

@@ -31,7 +31,7 @@ export const Unlock: React.FC<Props> = ({ dispatch, history }) => {
         } else {
           const msg = "There was a problem unlocking your device.";
           setError(msg);
-          console.log(msg, res.resultAction);
+          console.log(msg, (res.resultAction as any).payload);
         }
         setIsLocking(false);
         setPassphrase("");
@@ -56,7 +56,7 @@ export const Unlock: React.FC<Props> = ({ dispatch, history }) => {
       } else {
         logAndAlertError(
           "There was a problem resetting your device.",
-          res.resultAction
+          (res.resultAction as any).payload
         );
       }
     }

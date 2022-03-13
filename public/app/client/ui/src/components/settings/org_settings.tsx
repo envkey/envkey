@@ -123,6 +123,8 @@ export const OrgSettings: OrgComponent = (props) => {
     };
   }, [JSON.stringify(org.settings), JSON.stringify(settingsState)]);
 
+  const nameUpdated = name.trim() != org.name;
+
   const dispatchSettingsUpdate = async () => {
     if (updatingSettings || !settingsUpdated) {
       return;
@@ -154,7 +156,7 @@ export const OrgSettings: OrgComponent = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem updating org settings.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
       });
@@ -186,7 +188,7 @@ export const OrgSettings: OrgComponent = (props) => {
           />
           <button
             className="primary"
-            disabled={!name.trim() || name == org.name || renaming}
+            disabled={!name.trim() || !nameUpdated || renaming}
             onClick={() => {
               setRenaming(true);
               setAwaitingMinDelay(true);
@@ -195,13 +197,13 @@ export const OrgSettings: OrgComponent = (props) => {
               props
                 .dispatch({
                   type: Api.ActionType.RENAME_ORG,
-                  payload: { name },
+                  payload: { name: name.trim() },
                 })
                 .then((res) => {
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem renaming the org.`,
-                      res.resultAction
+                      (res.resultAction as any).payload
                     );
                   }
                 });
@@ -414,7 +416,7 @@ export const OrgSettings: OrgComponent = (props) => {
               } else {
                 logAndAlertError(
                   "There was a problem deleting the organization.",
-                  res.resultAction
+                  (res.resultAction as any).payload
                 );
               }
             }}
@@ -443,6 +445,11 @@ export const OrgSettings: OrgComponent = (props) => {
         {updatingSettings || renaming ? <SmallLoader /> : ""}
         Org <strong>Settings</strong>
       </h3>
+      {authSettingsUpdated || nameUpdated ? (
+        <span className="unsaved-changes">Unsaved changes</span>
+      ) : (
+        ""
+      )}
       {renderRename()}
       {renderSettings()}
       {renderDangerZone()}

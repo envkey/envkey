@@ -237,6 +237,10 @@ export const BASE_LOG_TYPE_OPTIONS = [
     label: "Env Updates",
   },
   {
+    value: "firewall_updates" as const,
+    label: "Firewall Updates",
+  },
+  {
     value: "envkey_env_updates" as const,
     label: "ENVKEY Env Updates",
   },

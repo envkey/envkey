@@ -19,3 +19,16 @@ export const envkeyFetch = async (
   expect(vars).toBeObject();
   return vars;
 };
+
+export const envkeyFetchExpectError = (
+  envkeyIdPart: string,
+  encryptionKey: string
+) => {
+  const envkey = [envkeyIdPart, encryptionKey, hostUrl].join("-");
+
+  expect(() => {
+    execFileSync(path.join(process.cwd(), "envkey-source"), ["--json"], {
+      env: { ENVKEY: envkey },
+    });
+  }).toThrowError();
+};

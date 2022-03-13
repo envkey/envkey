@@ -100,6 +100,7 @@ export const apiAction = <
     log("Received action " + action.type, {
       requestBytes,
       transactionId,
+      requestParams,
     });
 
     const isFetchAction =
@@ -133,11 +134,13 @@ export const apiAction = <
           );
         }
 
-        auth = await authenticate(action.meta.auth, transactionConn).catch(
-          (err) => {
-            throw err;
-          }
-        );
+        auth = await authenticate(
+          action.meta.auth,
+          transactionConn,
+          requestParams.ip
+        ).catch((err) => {
+          throw err;
+        });
 
         actionStart = Date.now();
       }

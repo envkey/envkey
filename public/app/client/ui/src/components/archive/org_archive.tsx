@@ -51,7 +51,7 @@ export const OrgArchiveV1: OrgComponent = (props) => {
       } else {
         logAndAlertError(
           "There was a problem exporting the org archive.",
-          res.resultAction
+          (res.resultAction as any).payload
         );
       }
     }

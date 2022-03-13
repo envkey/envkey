@@ -141,4 +141,8 @@ export const statusProducers = (
     "isUpdatingSettings",
     "updateSettingsErrors"
   ),
+  updateFirewallProducers = objectStatusProducers(
+    "isUpdatingFirewall",
+    "updateFirewallErrors"
+  ),
   updateObjectProducers = objectStatusProducers("isUpdating", "updateErrors");

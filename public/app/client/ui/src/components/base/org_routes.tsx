@@ -114,6 +114,11 @@ const getRouterTree = (): RouterTree => [
         component: ui.ManageOrgEnvironmentRoles,
       },
 
+      {
+        routerPath: "/firewall",
+        component: ui.OrgFirewall,
+      },
+
       // SAML Routes
       {
         routerPath: "/sso/new-saml/create",
@@ -233,6 +238,13 @@ const getEnvParentTree = (envParentType: Model.EnvParent["type"]): RouterTree =>
       ? {
           routerPath: "/envkeys",
           component: ui.AppEnvkeysContainer,
+        }
+      : undefined,
+
+    envParentType == "app"
+      ? {
+          routerPath: "/firewall",
+          component: ui.AppFirewall,
         }
       : undefined,
 

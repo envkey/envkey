@@ -281,6 +281,9 @@ export type PartialClientState = {
   isUpdatingSettings: FlagById;
   updateSettingsErrors: ErrorsById;
 
+  isUpdatingFirewall: FlagById;
+  updateFirewallErrors: ErrorsById;
+
   isUpdatingUserRole: Record<string, string>;
   updateUserRoleErrors: Record<
     string,
@@ -546,6 +549,7 @@ export const defaultAccountState: PartialAccountState = {
     isRenaming: {},
 
     isUpdatingSettings: {},
+    isUpdatingFirewall: {},
     isReorderingAssociations: {},
     isUpdatingUserRole: {},
 
@@ -572,6 +576,7 @@ export const defaultAccountState: PartialAccountState = {
     updateErrors: {},
     renameErrors: {},
     updateSettingsErrors: {},
+    updateFirewallErrors: {},
 
     updateUserRoleErrors: {},
     reorderAssociationsErrors: {},

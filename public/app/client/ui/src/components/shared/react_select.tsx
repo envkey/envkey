@@ -20,6 +20,9 @@ type Props = (
     } & CreatableProps<ReactSelectOption>)
 ) & {
   hideIndicatorContainer?: boolean;
+  bgStyle?: "dark" | "light";
+  noBorder?: true;
+  noBg?: true;
 };
 
 const DropdownIndicator: React.FC = (props: any) => {
@@ -31,7 +34,9 @@ const DropdownIndicator: React.FC = (props: any) => {
 };
 
 const MultiValueRemove: React.FC = (props: any) => {
-  return (
+  return props.data.isFixed ? (
+    <span style={{ width: 5 }}> </span>
+  ) : (
     <components.MultiValueRemove {...props}>
       <SvgImage type="x" />
     </components.MultiValueRemove>
@@ -47,6 +52,13 @@ const ClearIndicator: React.FC = (props: any) => {
 };
 
 export const ReactSelect: React.FC<Props> = (props) => {
+  const bgStyle = props.bgStyle ?? "dark";
+  const noBg = props.noBg;
+  const noBorder = props.noBorder;
+
+  const highlightColor =
+    props.bgStyle == "dark" ? colors.LIGHTEST_BLUE : colors.LIGHT_ORANGE;
+
   const selectProps = {
     ...props,
     components: {
@@ -59,17 +71,29 @@ export const ReactSelect: React.FC<Props> = (props) => {
     styles: {
       control: (base, props) => ({
         ...base,
-        border: "none",
+        border:
+          noBorder || bgStyle == "dark" || props.isFocused
+            ? "1px solid transparent"
+            : "1px solid rgba(0,0,0,0.15)",
         borderRadius: 0,
         boxShadow: props.isFocused
-          ? `0px 0px 0px 2px ${colors.LIGHTEST_BLUE}`
+          ? `0px 0px 0px 2px ${highlightColor}`
           : "none",
         cursor: "text",
+        ...(noBg
+          ? {
+              background: "none",
+            }
+          : {}),
         ":hover": {
-          border: "none",
           boxShadow: props.isFocused
-            ? `0px 0px 0px 2px ${colors.LIGHTEST_BLUE}`
+            ? `0px 0px 0px 2px ${highlightColor}`
             : "none",
+          ...(props.isFocused
+            ? {
+                border: "1px solid transparent",
+              }
+            : {}),
         },
       }),
       input: (base, props) => ({
@@ -82,8 +106,8 @@ export const ReactSelect: React.FC<Props> = (props) => {
       }),
       placeholder: (base, props) => ({
         ...base,
-        fontSize: "13.5px",
-        color: colors.DARK_TEXT,
+        fontSize: "14px",
+        color: "rgba(0,0,0,0.5)",
       }),
       menu: (base, props) => ({
         ...base,
@@ -123,6 +147,13 @@ export const ReactSelect: React.FC<Props> = (props) => {
           fill: "rgba(0,0,0,0.4)",
         },
       }),
+
+      valueContainer: noBg
+        ? (base, props) => ({
+            ...base,
+            padding: 0,
+          })
+        : undefined,
     } as Props["styles"],
     className:
       "react-select " +

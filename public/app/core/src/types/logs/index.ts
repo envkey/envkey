@@ -26,6 +26,7 @@ export namespace Logs {
       "updateEnvsAction",
       "reencryptEnvsAction",
       "scimAction",
+      "updateFirewallAction",
     ]),
     allLoggableTypesSchema = z.union([
       hostLoggableTypesSchema,

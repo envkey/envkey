@@ -178,6 +178,41 @@ clientAction<
 });
 
 clientAction<
+  Api.Action.RequestActions["SetOrgAllowedIps"],
+  Api.Net.ApiResultTypes["SetOrgAllowedIps"]
+>({
+  type: "apiRequestAction",
+  actionType: Api.ActionType.SET_ORG_ALLOWED_IPS,
+  loggableType: "orgAction",
+  loggableType2: "updateFirewallAction",
+  authenticated: true,
+  graphAction: true,
+  serialAction: true,
+  stateProducer: (draft, { meta }) => {
+    const auth = getAuth(draft, meta.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+    draft.isUpdatingFirewall[auth.orgId] = true;
+    delete draft.updateFirewallErrors[auth.orgId];
+  },
+  failureStateProducer: (draft, { payload, meta }) => {
+    const auth = getAuth(draft, meta.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+    draft.updateFirewallErrors[auth.orgId] = payload;
+  },
+  endStateProducer: (draft, { meta }) => {
+    const auth = getAuth(draft, meta.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+    delete draft.isUpdatingFirewall[auth.orgId];
+  },
+});
+
+clientAction<
   Api.Action.RequestActions["RemoveFromOrg"],
   Api.Net.ApiResultTypes["RemoveFromOrg"]
 >({
@@ -557,7 +592,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       archive.baseEnvironments.length > 0 ||
       archive.subEnvironments.length > 0
     ) {
-      await updateStatus("Importing environment and sub-environment metadata");
+      await updateStatus("Importing environment and branch metadata");
 
       const defaultAppRoleEnvironmentRolesByEnvironmentRoleId = R.groupBy(
         R.prop("environmentRoleId"),

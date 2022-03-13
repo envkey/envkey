@@ -80,7 +80,8 @@ export const getState = () => state,
       "/snapshot/v2/private/ci_cd/cli-builder/build/workspace/worker.js";
 
     if (inline) {
-      (__non_webpack_require__ as any)(
+      // @ts-ignore
+      __non_webpack_require__(
         "/snapshot/v2/private/ci_cd/cli-builder/build/workspace/envkey-core.js"
       );
     } else {

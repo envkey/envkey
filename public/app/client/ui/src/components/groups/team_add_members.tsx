@@ -74,7 +74,7 @@ export const TeamAddMembers: OrgComponent<{ groupId: string }> = (props) => {
             } else {
               logAndAlertError(
                 "There was a problem adding the member.",
-                res.resultAction
+                (res.resultAction as any).payload
               );
             }
           }}

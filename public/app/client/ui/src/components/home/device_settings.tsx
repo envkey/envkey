@@ -61,7 +61,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem setting the default device name.",
-          res.resultAction
+          (res.resultAction as any).payload
         );
       }
     }
@@ -77,7 +77,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem setting the device passphrase.",
-          res.resultAction
+          (res.resultAction as any).payload
         );
       }
     } else if (core.requiresPassphrase && !requiresPassphrase) {
@@ -90,7 +90,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem clearing the device passphrase.",
-          res.resultAction
+          (res.resultAction as any).payload
         );
       }
     }
@@ -110,7 +110,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem setting the device lockout.",
-          res.resultAction
+          (res.resultAction as any).payload
         );
       }
     } else if (
@@ -126,7 +126,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem clearing the device lockout.",
-          res.resultAction
+          (res.resultAction as any).payload
         );
       }
     }

@@ -50,7 +50,7 @@ export const BillingUI: OrgComponent = (props) => {
           if (!res.success) {
             logAndAlertError(
               "There was a problem fetching your org's resource usage.",
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         });
@@ -73,7 +73,7 @@ export const BillingUI: OrgComponent = (props) => {
               if (!res.success) {
                 logAndAlertError(
                   "There was a problem fetching your org's resource usage.",
-                  res.resultAction
+                  (res.resultAction as any).payload
                 );
               }
             })
@@ -219,7 +219,10 @@ export const BillingUI: OrgComponent = (props) => {
                 alert(
                   "Your license is invalid, expired, or could not be updated. Please make sure you've copied it correctly and try again. Contact sales@envkey.com if the problem persists."
                 );
-                console.log("Update license failed", res.resultAction);
+                console.log(
+                  "Update license failed",
+                  (res.resultAction as any).payload
+                );
               }
             }}
           >

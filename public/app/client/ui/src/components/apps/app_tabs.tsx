@@ -20,6 +20,7 @@ export const useAppTabs = (
     canListCliKeys,
     canReadLogs,
     canManageSettings,
+    canManageFirewall,
   ] = useMemo(() => {
     return [
       g.authz.canReadAppVersions(graph, currentUserId, app.id),
@@ -40,6 +41,13 @@ export const useAppTabs = (
         currentUserId,
         app.id,
         "app_manage_settings"
+      ),
+
+      g.authz.hasAppPermission(
+        graph,
+        currentUserId,
+        app.id,
+        "app_manage_firewall"
       ),
     ];
   }, [graphUpdatedAt, currentUserId, app.id]);
@@ -79,6 +87,12 @@ export const useAppTabs = (
       path: "/cli-keys",
       permitted: () => canListCliKeys,
     },
+    {
+      label: "Firewall",
+      path: "/firewall",
+      permitted: () => canManageFirewall,
+    },
+
     {
       label: "Settings",
       path: "/settings",

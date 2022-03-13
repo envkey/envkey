@@ -512,7 +512,11 @@ export const clientAction = <
         ) as Api.Action.RequestAction;
 
         try {
-          res = await postApiAction(sanitizedRequestAction, hostUrl);
+          res = await postApiAction(
+            sanitizedRequestAction,
+            hostUrl,
+            context.ipTestOverride
+          );
           const handleSuccessRes = await handleSuccess(
             requestAction,
             res,

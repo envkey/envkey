@@ -137,7 +137,7 @@ export const getNewEnvParentComponent = (
         | Api.ActionType.CREATE_BLOCK;
       const payload = {
         name,
-        settings: { autoCaps: true },
+        settings: { autoCaps: undefined },
         ...(envParentType == "app" ? { path: filePath } : {}),
       };
 
@@ -182,7 +182,7 @@ export const getNewEnvParentComponent = (
                       if (!res.success) {
                         logAndAlertError(
                           `There was a problem importing the environments`,
-                          res.resultAction
+                          (res.resultAction as any).payload
                         );
                       }
                       return res;
@@ -209,7 +209,7 @@ export const getNewEnvParentComponent = (
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem importing environments`,
-                      res.resultAction
+                      (res.resultAction as any).payload
                     );
                   }
                   return res;
@@ -220,7 +220,10 @@ export const getNewEnvParentComponent = (
           setCreatedId(created.id);
         }
       } else {
-        console.log(`Error creating ${envParentType}`, res.resultAction);
+        console.log(
+          `Error creating ${envParentType}`,
+          (res.resultAction as any).payload
+        );
         alert(`There was a problem creating the ${envParentType}.`);
       }
     };

@@ -149,7 +149,7 @@ export const TeamAddApps: OrgComponent<{ groupId: string }> = (props) => {
             } else {
               logAndAlertError(
                 `There was a granting app access.`,
-                res.resultAction
+                (res.resultAction as any).payload
               );
             }
           }}

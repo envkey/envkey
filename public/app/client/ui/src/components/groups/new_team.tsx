@@ -57,7 +57,7 @@ export const NewTeam: OrgComponent = (props) => {
     } else {
       logAndAlertError(
         "There was a problem creating the team.",
-        res.resultAction
+        (res.resultAction as any).payload
       );
     }
   };

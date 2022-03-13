@@ -51,7 +51,7 @@ export const createApp = async (
     payload: {
       name,
       settings: {
-        autoCaps: true,
+        autoCaps: undefined,
       },
       path: path || undefined,
     },

@@ -184,7 +184,7 @@ export const MainNav: OrgComponent = (props) => {
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem signing out.`,
-                      res.resultAction
+                      (res.resultAction as any).payload
                     );
                   }
                 })

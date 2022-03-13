@@ -17,7 +17,7 @@ import { style } from "typestyle";
 import moment from "moment";
 import "moment-timezone";
 import { pick } from "@core/lib/utils/pick";
-import { isValidIP } from "@core/lib/utils/string";
+import { isValidIP } from "@core/lib/utils/ip";
 import { getPastTense } from "@core/lib/utils/grammar";
 import Datetime from "react-datetime";
 import { SvgImage, SmallLoader } from "@images";
@@ -34,7 +34,7 @@ const LOG_TYPE_OPTIONS_BY_VALUE = R.indexBy(
 );
 
 const LOG_TYPE_CONFLICTING_FILTERS: [FilterLogType, FilterLogType[]][] = [
-  ["org_updates", ["user_env_updates"]],
+  ["org_updates", ["user_env_updates", "firewall_updates"]],
   [
     "all_access",
     [
@@ -415,7 +415,7 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem fetching logs.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
 
@@ -618,7 +618,7 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
               label: "Updates",
               options: Object.values(
                 pick(
-                  ["org_updates", "user_env_updates"],
+                  ["org_updates", "user_env_updates", "firewall_updates"],
                   LOG_TYPE_OPTIONS_BY_VALUE
                 )
               ),
@@ -1420,6 +1420,10 @@ const getBaseLoggableTypes = (
 
     if (filterLogTypes.has("user_env_updates")) {
       loggableTypes.push("updateEnvsAction");
+    }
+
+    if (filterLogTypes.has("firewall_updates")) {
+      loggableTypes.push("updateFirewallAction");
     }
 
     if (filterLogTypes.has("all_access")) {

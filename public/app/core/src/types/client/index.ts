@@ -392,6 +392,7 @@ namespace Client {
     rootClientAction?: Action.ClientAction;
     skipProcessRevocationRequests?: true;
     skipWaitForSerialAction?: true;
+    ipTestOverride?: string;
   };
 
   type HandlerContext<

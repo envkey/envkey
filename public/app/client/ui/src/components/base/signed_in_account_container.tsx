@@ -124,6 +124,15 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
           props.history.replace("/home");
           break;
 
+        case "ip not permitted":
+          alert(
+            `The organization${
+              auth?.orgName ? ` '${auth.orgName}'` : ""
+            } cannot be accessed from your IP address.`
+          );
+          props.history.replace("/home");
+          break;
+
         case "token invalid":
         case "token expired":
           props.history.replace(`/sign-in/${props.ui.accountId!}`);

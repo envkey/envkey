@@ -19,6 +19,7 @@ import { log } from "@core/lib/utils/logger";
 import { env } from "../env";
 import { getOrg } from "../models/orgs";
 import { getOrgStats, getVerifyLicenseFn } from "../auth";
+import { ipMatchesAny } from "@core/lib/utils/ip";
 
 apiAction<
   Api.Action.RequestActions["FetchEnvkey"],
@@ -47,6 +48,18 @@ apiAction<
       generatedEnvkey.deletedAt ||
       sha256(envkeyIdPart) != generatedEnvkey.envkeyIdPartHash
     ) {
+      throw new Api.ApiError("not found", 404);
+    }
+
+    if (
+      generatedEnvkey.allowedIps &&
+      !ipMatchesAny(requestParams.ip, generatedEnvkey.allowedIps)
+    ) {
+      log("", {
+        "generatedEnvkey.allowedIps": generatedEnvkey.allowedIps,
+        ip: requestParams.ip,
+      });
+
       throw new Api.ApiError("not found", 404);
     }
 

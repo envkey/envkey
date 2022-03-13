@@ -19,4 +19,5 @@ export * from "./graph_blobs";
 export * from "./user_blocks";
 export * from "./groups";
 export * from "./scoped";
+export * from "./firewall";
 export * as authz from "./authz";

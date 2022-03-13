@@ -10,7 +10,7 @@ import { apiAction } from "../handler";
 import { Api } from "@core/types";
 import { v4 as uuid } from "uuid";
 import { pickDefined } from "@core/lib/utils/object";
-import produce from "immer";
+import produce, { Draft } from "immer";
 import * as R from "ramda";
 import * as graphKey from "../graph_key";
 import { log } from "@core/lib/utils/logger";
@@ -182,10 +182,25 @@ apiAction<
         getAppRoleEnvironmentRolesByEnvironmentRoleId(orgGraph)[payload.id] ||
         [];
 
+    // clear environment role from environmentRoleIpsAllowed (firewall config) on org or any app
+    const updatedGraph = produce(orgGraph, (graphDraft) => {
+      if (auth.org.environmentRoleIpsAllowed?.[environmentRole.id]) {
+        const orgDraft = graphDraft[auth.org.id] as Draft<Api.Db.Org>;
+        delete orgDraft.environmentRoleIpsAllowed![environmentRole.id];
+      }
+
+      for (let { id: appId, environmentRoleIpsAllowed } of byType.apps) {
+        if (environmentRoleIpsAllowed?.[environmentRole.id]) {
+          const appDraft = graphDraft[appId] as Draft<Api.Db.App>;
+          delete appDraft.environmentRoleIpsAllowed![environmentRole.id];
+        }
+      }
+    });
+
     return {
       type: "graphHandlerResult",
       graph: deleteGraphObjects(
-        orgGraph,
+        updatedGraph,
         [
           payload.id,
           ...environmentIds,

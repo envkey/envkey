@@ -51,7 +51,7 @@ export const NewBlockGroup: OrgComponent = (props) => {
     } else {
       logAndAlertError(
         `There was a problem creating the block group.`,
-        res.resultAction
+        (res.resultAction as any).payload
       );
     }
   };

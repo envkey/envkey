@@ -140,7 +140,7 @@ export const SubEnvs: EnvManagerComponent = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem creating the environment.`,
-            res.resultAction
+            (res.resultAction as any).payload
           );
         }
         return res;
@@ -185,7 +185,7 @@ export const SubEnvs: EnvManagerComponent = (props) => {
           if (!res.success) {
             logAndAlertError(
               `There was a problem deleting the environment.`,
-              res.resultAction
+              (res.resultAction as any).payload
             );
           }
         });

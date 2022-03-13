@@ -2,6 +2,7 @@ import { apiAction } from "../handler";
 import { Api, Rbac } from "@core/types";
 import * as graphKey from "../graph_key";
 import { pick } from "@core/lib/utils/pick";
+import { isValidIPOrCIDR } from "@core/lib/utils/ip";
 import {
   graphTypes,
   getAppUserGrantsByComposite,
@@ -13,10 +14,11 @@ import {
   getActiveGeneratedEnvkeysByAppId,
   getActiveGeneratedEnvkeysByKeyableParentId,
   getLocalKeysByLocalsComposite,
+  getAppAllowedIps,
 } from "@core/lib/graph";
 import { v4 as uuid } from "uuid";
 import * as R from "ramda";
-import produce from "immer";
+import produce, { Draft } from "immer";
 import { log } from "@core/lib/utils/logger";
 
 apiAction<
@@ -378,6 +380,84 @@ apiAction<
       encryptedKeysScope: scope,
       logTargetIds: [targetAppUserGrant.appId, targetAppUserGrant.userId],
       clearEnvkeySockets,
+    };
+  },
+});
+
+apiAction<
+  Api.Action.RequestActions["SetAppAllowedIps"],
+  Api.Net.ApiResultTypes["SetAppAllowedIps"]
+>({
+  type: Api.ActionType.SET_APP_ALLOWED_IPS,
+  graphAction: true,
+  authenticated: true,
+  graphAuthorizer: async ({ payload: { id } }, orgGraph, userGraph, auth) =>
+    authz.canManageAppFirewall(userGraph, auth.user.id, id),
+  graphHandler: async (
+    { payload },
+    orgGraph,
+    auth,
+    now,
+    requestParams,
+    transactionConn
+  ) => {
+    const app = orgGraph[payload.id] as Api.Db.App;
+
+    if (!payload.environmentRoleIpsAllowed) {
+      throw new Api.ApiError("missing environmentRoleIpsAllowed", 422);
+    }
+
+    if (!payload.environmentRoleIpsMergeStrategies) {
+      throw new Api.ApiError("missing environmentRoleIpsMergeStrategies", 422);
+    }
+
+    // verify that each is a valid ip
+    for (let environmentRoleId in payload.environmentRoleIpsAllowed) {
+      const ips = payload.environmentRoleIpsAllowed[environmentRoleId];
+      if (ips) {
+        if (!R.all(isValidIPOrCIDR, ips)) {
+          const msg = "Invalid IP or CIDR address";
+          throw new Api.ApiError(msg, 422);
+        }
+      }
+    }
+
+    const updatedGraph = produce(orgGraph, (graphDraft) => {
+      const appDraft = graphDraft[app.id] as Draft<Api.Db.App>;
+
+      appDraft.environmentRoleIpsMergeStrategies =
+        payload.environmentRoleIpsMergeStrategies;
+
+      appDraft.environmentRoleIpsAllowed = payload.environmentRoleIpsAllowed;
+
+      appDraft.updatedAt = now;
+
+      const generatedEnvkeys =
+        getActiveGeneratedEnvkeysByAppId(orgGraph)[app.id] ?? [];
+
+      for (let generatedEnvkey of generatedEnvkeys) {
+        const environment = orgGraph[
+          generatedEnvkey.environmentId
+        ] as Api.Db.Environment;
+
+        const generatedEnvkeyDraft = graphDraft[
+          generatedEnvkey.id
+        ] as Draft<Api.Db.GeneratedEnvkey>;
+
+        generatedEnvkeyDraft.allowedIps = getAppAllowedIps(
+          graphDraft,
+          app.id,
+          environment.environmentRoleId
+        );
+
+        generatedEnvkeyDraft.updatedAt = now;
+      }
+    });
+
+    return {
+      type: "graphHandlerResult",
+      graph: updatedGraph,
+      logTargetIds: [app.id],
     };
   },
 });

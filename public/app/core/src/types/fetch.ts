@@ -20,7 +20,7 @@ export namespace Fetch {
     type: "checkResult";
     orgId: string;
     appId: string;
-  }
+  };
 
   export type KeyableBlob = {
     env?: KeyableBlobFields;

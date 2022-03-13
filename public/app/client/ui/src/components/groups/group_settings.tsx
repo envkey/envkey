@@ -40,6 +40,8 @@ export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
     }
   }, [group.name]);
 
+  const nameUpdated = name != group.name;
+
   const renderRename = () => {
     return (
       <div>
@@ -53,7 +55,7 @@ export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
           />
           <button
             className="primary"
-            disabled={!name.trim() || name == group.name || renaming}
+            disabled={!name.trim() || !nameUpdated || renaming}
             onClick={() => {
               setRenaming(true);
 
@@ -66,7 +68,7 @@ export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem renaming the team.`,
-                      res.resultAction
+                      (res.resultAction as any).payload
                     );
                   }
                 });
@@ -106,7 +108,7 @@ export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
                 if (!res.success) {
                   logAndAlertError(
                     `There was a problem deleting the team.`,
-                    res.resultAction
+                    (res.resultAction as any).payload
                   );
                 }
               });
@@ -132,6 +134,12 @@ export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
       <h3>
         {label} <strong>Settings</strong>
       </h3>
+      {nameUpdated ? (
+        <span className="unsaved-changes">Unsaved changes</span>
+      ) : (
+        ""
+      )}
+
       {renderRename()}
       {renderDangerZone()}
     </div>
