@@ -41,8 +41,9 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
   const hasUpdate = !(
     R.equals(
       environmentRoleIpsMergeStrategies,
-      app.environmentRoleIpsMergeStrategies
-    ) && R.equals(environmentRoleIpsAllowed, app.environmentRoleIpsAllowed)
+      app.environmentRoleIpsMergeStrategies ?? {}
+    ) &&
+    R.equals(environmentRoleIpsAllowed, app.environmentRoleIpsAllowed ?? {})
   );
 
   const onSubmit = async () => {

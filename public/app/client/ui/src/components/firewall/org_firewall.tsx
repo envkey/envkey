@@ -28,7 +28,7 @@ export const OrgFirewall: OrgComponent = (props) => {
 
   const hasUpdate = !(
     R.equals(localIpsAllowed, org.localIpsAllowed) &&
-    R.equals(environmentRoleIpsAllowed, org.environmentRoleIpsAllowed)
+    R.equals(environmentRoleIpsAllowed, org.environmentRoleIpsAllowed ?? {})
   );
 
   const onSubmit = async () => {
