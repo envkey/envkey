@@ -19,6 +19,8 @@ import {
 } from "./cli_tools";
 
 const CHECK_INTERVAL = 10 * 60 * 1000;
+const CHECK_UPGRADE_TIMEOUT = 5000;
+const CHECK_UPGRADE_RETRIES = 3;
 // allow looping only once
 let loopInitialized = false;
 
@@ -27,8 +29,6 @@ let upgradeAvailable: AvailableClientUpgrade | undefined;
 
 let desktopDownloadComplete = false;
 let cliToolsInstallComplete = false;
-
-let isUpdating = false;
 
 autoUpdater.logger = {
   debug: (...args) => log("autoUpdater:debug", { data: args }),
@@ -87,27 +87,51 @@ const resetUpgradesLoop = () => {
   checkUpgradesInterval = setInterval(checkUpgrade, CHECK_INTERVAL);
 };
 
+let checkDesktopUpgradeTimeout: NodeJS.Timeout | undefined;
 export const checkUpgrade = async (
   fromContextMenu = false,
-  noDispatch = false
-) => {
+  noDispatch = false,
+  numRetry = 0
+): Promise<any> => {
   const currentDesktopVersion = app.getVersion();
 
   let checkDesktopError = false;
 
   const [desktopRes, cliLatestInstalledRes, envkeysourceLatestInstalledRes] =
     await Promise.all([
-      autoUpdater.checkForUpdates().catch((err) => {
-        // error gets logged thanks to logger init at top
-        checkDesktopError = true;
-      }),
+      autoUpdater.netSession
+        .closeAllConnections()
+        .then(() => {
+          checkDesktopUpgradeTimeout = setTimeout(() => {
+            autoUpdater.netSession.closeAllConnections();
+          }, CHECK_UPGRADE_TIMEOUT);
+
+          return autoUpdater.checkForUpdates().then((res) => {
+            if (checkDesktopUpgradeTimeout) {
+              clearTimeout(checkDesktopUpgradeTimeout);
+            }
+            return res;
+          });
+        })
+        .catch((err) => {
+          if (checkDesktopUpgradeTimeout) {
+            clearTimeout(checkDesktopUpgradeTimeout);
+          }
+
+          // error gets logged thanks to logger init at top
+          checkDesktopError = true;
+        }),
       isLatestCliInstalled().catch((err) => <const>true),
       isLatestEnvkeysourceInstalled().catch((err) => <const>true),
     ]);
 
   // the autoUpdater.on("error") handler will handle re-checking
   if (checkDesktopError) {
-    return;
+    if (numRetry < CHECK_UPGRADE_RETRIES) {
+      return checkUpgrade(fromContextMenu, noDispatch, numRetry + 1);
+    } else {
+      return;
+    }
   }
 
   const nextCliVersion =
@@ -236,17 +260,15 @@ export const downloadAndInstallUpgrade = async () => {
 
   // first ensure we are installing the latest upgrade
   // otherwise inform user that a newer upgrade is available
-  // --> this was a nice idea, but it seems to cause autoUpdater to hang
-  // --> better to just handle the error and re-check then
-  // const upgradeAvailableBeforeCheck = R.clone(upgradeAvailable);
-  // await checkUpgrade(false, true).catch((err) => {
-  //   log("checkUpdate failed", { err });
-  // });
-  // if (!R.equals(upgradeAvailableBeforeCheck, upgradeAvailable)) {
-  //   getWin()!.webContents.send("newer-upgrade-available", upgradeAvailable);
-  //   resetUpgradesLoop();
-  //   return;
-  // }
+  const upgradeAvailableBeforeCheck = R.clone(upgradeAvailable);
+  await checkUpgrade(false, true).catch((err) => {
+    log("checkUpdate failed", { err });
+  });
+  if (!R.equals(upgradeAvailableBeforeCheck, upgradeAvailable)) {
+    getWin()!.webContents.send("newer-upgrade-available", upgradeAvailable);
+    resetUpgradesLoop();
+    return;
+  }
 
   let error = false;
 
@@ -282,8 +304,6 @@ export const downloadAndInstallUpgrade = async () => {
   ]);
 
   log("finished CLI tools install and/or autoUpdater download", { error });
-
-  isUpdating = false;
 
   if (error) {
     log("Sending upgrade-error to webContents");
