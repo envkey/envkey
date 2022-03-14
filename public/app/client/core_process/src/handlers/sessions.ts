@@ -392,7 +392,7 @@ clientAction<Client.Action.ClientActions["SignInPendingSelfHosted"]>({
 
     return res.success
       ? dispatchSuccess(null, dispatchContext)
-      : dispatchFailure((res.resultAction as any).payload, dispatchContext);
+      : dispatchFailure((res.resultAction as any)?.payload, dispatchContext);
   },
 });
 

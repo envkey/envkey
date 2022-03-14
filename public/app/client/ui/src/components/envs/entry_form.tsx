@@ -85,7 +85,7 @@ export const EntryForm: EnvManagerComponent = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem adding the variable.`,
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
         }
       });

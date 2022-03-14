@@ -119,7 +119,7 @@ Any users invited through it will be converted to email authentication.`
                           if (!res.success) {
                             logAndAlertError(
                               `There was a problem deleting ${provider.nickname}.`,
-                              (res.resultAction as any).payload
+                              (res.resultAction as any)?.payload
                             );
                             setDeleting(R.omit([provider.id], deleting));
                           }

@@ -50,7 +50,7 @@ export const BillingUI: OrgComponent = (props) => {
           if (!res.success) {
             logAndAlertError(
               "There was a problem fetching your org's resource usage.",
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });
@@ -73,7 +73,7 @@ export const BillingUI: OrgComponent = (props) => {
               if (!res.success) {
                 logAndAlertError(
                   "There was a problem fetching your org's resource usage.",
-                  (res.resultAction as any).payload
+                  (res.resultAction as any)?.payload
                 );
               }
             })
@@ -221,7 +221,7 @@ export const BillingUI: OrgComponent = (props) => {
                 );
                 console.log(
                   "Update license failed",
-                  (res.resultAction as any).payload
+                  (res.resultAction as any)?.payload
                 );
               }
             }}

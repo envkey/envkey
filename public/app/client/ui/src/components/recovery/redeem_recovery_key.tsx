@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Component } from "@ui_types";
-import { dispatchDeviceSecurity } from "@ui_lib/device_security";
 import { Client, Model } from "@core/types";
 import { Link } from "react-router-dom";
 import * as ui from "@ui";
@@ -19,9 +18,6 @@ export const RedeemRecoveryKey: Component = (props) => {
 
   const [deviceName, setDeviceName] = useState(props.core.defaultDeviceName);
   const [deviceNameUpdated, setDeviceNameUpdated] = useState(false);
-
-  const [passphrase, setPassphrase] = useState<string>();
-  const [lockoutMs, setLockoutMs] = useState<number>();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isRedeeming, setIsRedeeming] = useState(false);
@@ -126,9 +122,6 @@ export const RedeemRecoveryKey: Component = (props) => {
     return <HomeContainer />;
   }
 
-  const shouldShowDeviceSecurity =
-    numAccounts == 0 && !props.core.requiresPassphrase;
-
   const loadedOrgId = props.core.loadedRecoveryKeyOrgId;
 
   const loadedOrg = loadedOrgId
@@ -163,23 +156,14 @@ export const RedeemRecoveryKey: Component = (props) => {
     setAwaitingMinDelay(true);
     wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
-    props
-      .dispatch({
-        type: Client.ActionType.LOAD_RECOVERY_KEY,
-        payload: {
-          encryptionKey,
-          hostUrl,
-          emailToken: emailToken || undefined,
-        },
-      })
-      .then((res) => {
-        if (!res.success) {
-          logAndAlertError(
-            `There was a problem loading the recovery key.`,
-            (res.resultAction as any).payload
-          );
-        }
-      });
+    props.dispatch({
+      type: Client.ActionType.LOAD_RECOVERY_KEY,
+      payload: {
+        encryptionKey,
+        hostUrl,
+        emailToken: emailToken || undefined,
+      },
+    });
   };
 
   const onAccept = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -205,27 +189,17 @@ export const RedeemRecoveryKey: Component = (props) => {
     setAwaitingMinDelay(true);
     wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
-    const res = await props
-      .dispatch({
-        type: Client.ActionType.REDEEM_RECOVERY_KEY,
-        payload: { deviceName, encryptionKey, hostUrl, emailToken: emailToken },
-      })
-      .then((res) => {
-        if (!res.success) {
-          logAndAlertError(
-            `There was a problem redeeming the recovery key.`,
-            (res.resultAction as any).payload
-          );
-        }
-        return res;
-      });
+    const res = await props.dispatch({
+      type: Client.ActionType.REDEEM_RECOVERY_KEY,
+      payload: { deviceName, encryptionKey, hostUrl, emailToken: emailToken },
+    });
 
     if (!res.success) {
+      logAndAlertError(
+        `There was a problem redeeming the recovery key.`,
+        (res.resultAction as any).payload
+      );
       return;
-    }
-
-    if (shouldShowDeviceSecurity && passphrase) {
-      await dispatchDeviceSecurity(props.dispatch, passphrase, lockoutMs);
     }
 
     props.setUiState({
@@ -274,13 +248,10 @@ export const RedeemRecoveryKey: Component = (props) => {
                   type: Client.ActionType.RESET_RECOVERY_KEY,
                 });
                 setIsResetting(true);
-
                 setRecoveryKey("");
                 setEmailToken("");
                 setDeviceName(props.core.defaultDeviceName);
                 setDeviceNameUpdated(false);
-                setPassphrase("");
-                setLockoutMs(undefined);
               } else {
                 props.history.length > 1
                   ? props.history.goBack()
@@ -323,26 +294,6 @@ export const RedeemRecoveryKey: Component = (props) => {
               <small>You already have a device with the same name</small>
             )}
           </div>,
-
-          shouldShowDeviceSecurity ? (
-            <ui.DeviceSettingsFields
-              {...props}
-              disabled={isRedeeming}
-              fields={["passphrase", "lockout"]}
-              passphraseStrengthInputs={[
-                loadedOrg?.name ?? "",
-                recoveringUser?.firstName ?? "",
-                recoveringUser?.lastName ?? "",
-                deviceName ?? "",
-              ].filter(Boolean)}
-              onChange={({ passphrase, lockoutMs }) => {
-                setPassphrase(passphrase);
-                setLockoutMs(lockoutMs);
-              }}
-            />
-          ) : (
-            ""
-          ),
         ]
       : [
           loadRecoveryKeyError &&

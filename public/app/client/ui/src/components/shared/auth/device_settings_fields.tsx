@@ -18,6 +18,7 @@ type Props = {
     passphrase?: string;
     requiresLockout?: boolean;
     lockoutMs: number;
+    isValid: boolean;
   }) => void;
 };
 
@@ -25,19 +26,74 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
   const { core, onChange } = props;
   const fields = props.fields ?? ["defaultDeviceName", "passphrase", "lockout"];
 
+  const allOrgNames: string[] = [];
+  const allUserNames: string[] = [];
+  const allEmails: string[] = [];
+  const allDeviceNames: string[] = [];
+
+  let anyOrgRequiresPassphrase = false;
+  let orgNamesRequiringPassphrase: string[] = [];
+  let anyOrgRequiresLockout = false;
+  let orgNamesRequiringLockout: string[] = [];
+  let minRequiredLockoutMs: number | undefined;
+  let orgNamesRequiringMinLockout: string[] = [];
+
+  for (let accountId in core.orgUserAccounts) {
+    const account = core.orgUserAccounts[accountId]!;
+
+    allOrgNames.push(account.orgName);
+    allUserNames.push(account.firstName);
+    allUserNames.push(account.lastName);
+    allEmails.push(account.email);
+    allDeviceNames.push(account.deviceName);
+
+    if (account.requiresPassphrase) {
+      anyOrgRequiresPassphrase = true;
+      orgNamesRequiringPassphrase.push(account.orgName);
+
+      if (account.requiresLockout) {
+        anyOrgRequiresLockout = true;
+        orgNamesRequiringLockout.push(account.orgName);
+
+        if (
+          account.lockoutMs &&
+          (!minRequiredLockoutMs || account.lockoutMs < minRequiredLockoutMs)
+        ) {
+          minRequiredLockoutMs = account.lockoutMs;
+        }
+      }
+    }
+  }
+
+  if (minRequiredLockoutMs) {
+    for (let accountId in core.orgUserAccounts) {
+      const account = core.orgUserAccounts[accountId]!;
+      if (
+        account.requiresLockout &&
+        account.lockoutMs == minRequiredLockoutMs
+      ) {
+        orgNamesRequiringMinLockout.push(account.orgName);
+      }
+    }
+  }
+
+  orgNamesRequiringPassphrase = R.uniq(orgNamesRequiringPassphrase);
+  orgNamesRequiringLockout = R.uniq(orgNamesRequiringLockout);
+  orgNamesRequiringMinLockout = R.uniq(orgNamesRequiringMinLockout);
+
   const [defaultDeviceName, setDefaultDeviceName] = useState<string | null>(
     core.defaultDeviceName ?? null
   );
 
   const [requiresLockout, setRequiresLockout] = useState(
-    typeof core.lockoutMs == "number"
+    typeof core.lockoutMs == "number" || anyOrgRequiresLockout
   );
   const [lockoutMs, setLockoutMs] = useState<number>(
-    core.lockoutMs ?? 120 * 1000 * 60
+    core.lockoutMs ?? minRequiredLockoutMs ?? 120 * 1000 * 60
   );
 
   const [requiresPassphrase, setRequiresPassphrase] = useState(
-    core.requiresPassphrase === true
+    core.requiresPassphrase === true || anyOrgRequiresPassphrase
   );
 
   const [passphrase, setPassphrase] = useState<string>();
@@ -48,6 +104,19 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
     }
   }, [props.reset, passphrase]);
 
+  const requiredPassphraseMissing =
+    anyOrgRequiresPassphrase && !requiresPassphrase;
+  const requiredLockoutMissing = anyOrgRequiresLockout && !requiresLockout;
+  const requiredLockoutTooHigh =
+    minRequiredLockoutMs &&
+    (!requiresLockout || !lockoutMs || lockoutMs > minRequiredLockoutMs);
+
+  const isValid =
+    !requiredPassphraseMissing &&
+    !requiredLockoutMissing &&
+    !requiredLockoutTooHigh &&
+    !(requiresPassphrase && !(passphrase || core.requiresPassphrase));
+
   const dispatchOnChange = () => {
     onChange({
       defaultDeviceName: defaultDeviceName || undefined,
@@ -55,6 +124,7 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
       passphrase,
       requiresLockout,
       lockoutMs,
+      isValid,
     });
   };
 
@@ -64,6 +134,7 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
     passphrase,
     requiresLockout,
     lockoutMs,
+    isValid,
   ]);
 
   const renderDeviceName = () => {
@@ -88,7 +159,7 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
   };
 
   const renderRequiresPassphrase = () => {
-    return (
+    return [
       <div
         className={
           "field checkbox" +
@@ -113,8 +184,23 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
           disabled={props.disabled}
           checked={requiresPassphrase}
         ></input>
-      </div>
-    );
+      </div>,
+
+      requiredPassphraseMissing ? (
+        <p className="error">
+          {orgNamesRequiringPassphrase.length == 1
+            ? `${orgNamesRequiringPassphrase[0]} requires`
+            : `${orgNamesRequiringPassphrase} orgs you belong to require`}
+          a passphrase to be set
+          {orgNamesRequiringPassphrase.length == 1
+            ? ""
+            : ": " + orgNamesRequiringPassphrase.join(", ")}
+          .
+        </p>
+      ) : (
+        ""
+      ),
+    ];
   };
 
   const renderSetPassphrase = () => {
@@ -135,19 +221,10 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
             }
             reset={props.reset}
             strengthInputs={[
-              ...R.flatten(
-                (
-                  Object.values(core.orgUserAccounts) as Client.ClientUserAuth[]
-                ).map(
-                  R.props([
-                    "orgName",
-                    "firstName",
-                    "lastName",
-                    "email",
-                    "deviceName",
-                  ])
-                )
-              ),
+              ...allOrgNames,
+              ...allUserNames,
+              ...allEmails,
+              ...allDeviceNames,
               ...(props.passphraseStrengthInputs ?? []),
               defaultDeviceName ?? "",
             ].filter(Boolean)}
@@ -172,7 +249,7 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
   };
 
   const renderRequiresLockout = () => {
-    return (
+    return [
       <div
         className={
           "field checkbox" +
@@ -193,27 +270,62 @@ export const DeviceSettingsFields: Component<{}, Props> = (props) => {
           disabled={props.disabled}
           checked={requiresLockout}
         ></input>
-      </div>
-    );
+      </div>,
+
+      requiredLockoutMissing ? (
+        <p className="error">
+          {orgNamesRequiringLockout.length == 1
+            ? `${orgNamesRequiringLockout[0]} requires`
+            : `${orgNamesRequiringLockout} orgs you belong to require`}
+          a lockout to be set
+          {orgNamesRequiringLockout.length == 1
+            ? ""
+            : ": " + orgNamesRequiringLockout.join(", ")}
+          .
+        </p>
+      ) : (
+        ""
+      ),
+    ];
   };
 
   const renderSetLockoutMinutes = () => {
     if (requiresLockout) {
-      return (
+      return [
         <div className="field">
           <label>Minutes before lockout</label>
           <input
             type="number"
             min="1"
-            value={typeof lockoutMs == "number" ? lockoutMs / 1000 / 60 : 120}
+            value={
+              typeof lockoutMs == "number"
+                ? Math.floor(lockoutMs / 1000 / 60)
+                : 120
+            }
             required={requiresLockout}
             disabled={props.disabled}
             onChange={(e) => {
               setLockoutMs(parseInt(e.target.value) * 60 * 1000);
             }}
           />
-        </div>
-      );
+        </div>,
+
+        minRequiredLockoutMs && requiredLockoutTooHigh ? (
+          <p className="error">
+            {orgNamesRequiringMinLockout.length == 1
+              ? `${orgNamesRequiringMinLockout[0]} requires`
+              : `${orgNamesRequiringMinLockout} orgs you belong to require`}
+            a lockout of {Math.floor(minRequiredLockoutMs / 1000 / 60)} minutes
+            or lower
+            {orgNamesRequiringMinLockout.length == 1
+              ? ""
+              : ": " + orgNamesRequiringMinLockout.join(", ")}
+            .
+          </p>
+        ) : (
+          ""
+        ),
+      ];
     }
   };
 

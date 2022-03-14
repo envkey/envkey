@@ -117,7 +117,7 @@ export const PendingFooter: OrgComponent<{}, Props> = React.memo(
                 if (!res.success) {
                   logAndAlertError(
                     `There was a problem committing the updates.`,
-                    (res.resultAction as any).payload
+                    (res.resultAction as any)?.payload
                   );
                 }
               });
@@ -160,7 +160,7 @@ export const PendingFooter: OrgComponent<{}, Props> = React.memo(
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem resetting the updates.`,
-                      (res.resultAction as any).payload
+                      (res.resultAction as any)?.payload
                     );
                   }
                 });

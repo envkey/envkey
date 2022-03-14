@@ -258,7 +258,7 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
             if (!res.success) {
               logAndAlertError(
                 `There was a problem updating the variable.`,
-                (res.resultAction as any).payload
+                (res.resultAction as any)?.payload
               );
             }
           });
@@ -276,7 +276,7 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
             if (!res.success) {
               logAndAlertError(
                 `There was a problem updating the variable.`,
-                (res.resultAction as any).payload
+                (res.resultAction as any)?.payload
               );
             }
           });
@@ -319,7 +319,7 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
           if (!res.success) {
             logAndAlertError(
               `There was a problem updating the variable.`,
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });

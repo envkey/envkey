@@ -179,7 +179,7 @@ export const OPTIONAL_PASSPHRASE_MSG = `Set a device passphrase (${chalk.bold(
         : undefined;
     };
   },
-  promptAcceptInviteOrDeviceGrantSecurityOptions = async (
+  enforceDeviceSecuritySettings = async (
     initialState: Client.State,
     loadedOrg: Model.Org
   ) => {
@@ -196,14 +196,19 @@ export const OPTIONAL_PASSPHRASE_MSG = `Set a device passphrase (${chalk.bold(
             orgMaxLockout &&
             initialState.lockoutMs! > orgMaxLockout)
       ),
-      isFirstAccount = Object.keys(initialState.orgUserAccounts).length == 0,
-      shouldPromptPassphrase =
-        passphraseRequired ||
-        (isFirstAccount && !initialState.requiresPassphrase),
-      shouldPromptLockout =
-        lockoutRequired || (isFirstAccount && !initialState.lockoutMs);
+      shouldPromptPassphrase = passphraseRequired,
+      shouldPromptLockout = lockoutRequired;
 
     if (shouldPromptPassphrase || shouldPromptLockout) {
+      let msg = "This org requires a passphrase";
+      if (shouldPromptLockout && orgMaxLockout) {
+        msg += ` and a lockout of ${Math.floor(
+          orgMaxLockout / 1000 / 60
+        )} minutes or less`;
+      }
+      msg += ".";
+      console.log(chalk.bold(msg));
+
       ({ passphrase, lockoutMs } = await promptDeviceSecurityOptions({
         shouldPromptPassphrase,
         passphraseRequired,
@@ -213,7 +218,19 @@ export const OPTIONAL_PASSPHRASE_MSG = `Set a device passphrase (${chalk.bold(
       }));
     }
 
-    return { passphrase, lockoutMs };
+    if (passphrase) {
+      await dispatch({
+        type: Client.ActionType.SET_DEVICE_PASSPHRASE,
+        payload: { passphrase },
+      });
+    }
+
+    if (lockoutMs) {
+      await dispatch({
+        type: Client.ActionType.SET_DEVICE_LOCKOUT,
+        payload: { lockoutMs },
+      });
+    }
   },
   unlock = async () => {
     const passphrase = await promptPassphrase(

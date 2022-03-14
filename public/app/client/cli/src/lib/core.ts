@@ -1,7 +1,7 @@
 import { BaseArgs } from "../types";
 import chalk from "chalk";
 import { spinnerWithText, stopSpinner } from "./spinner";
-import { Client } from "@core/types";
+import { Client, Model } from "@core/types";
 import { spawn } from "child_process";
 import { isAlive, stop, dispatchCore, fetchState } from "@core/lib/core_proc";
 import { getCoreProcAuthToken } from "@core/lib/client_store/key_store";
@@ -9,7 +9,7 @@ import * as g from "@core/lib/graph";
 import * as R from "ramda";
 import { authenticate } from "./auth";
 import { resolveUpgrades } from "./upgrades";
-import { unlock } from "./crypto";
+import { unlock, enforceDeviceSecuritySettings } from "./crypto";
 import { exit } from "./process";
 import { applyPatch } from "rfc6902";
 import * as semver from "semver";
@@ -169,6 +169,13 @@ export const getState = () => state,
 
       state = res.state;
       fetchedSession = true;
+    }
+
+    if (auth && state.graph && state.graph[auth.orgId]) {
+      await enforceDeviceSecuritySettings(
+        state,
+        state.graph[auth.orgId] as Model.Org
+      );
     }
 
     state = await resolveUpgrades(

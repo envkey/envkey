@@ -103,7 +103,7 @@ export const UserApps: OrgComponent<{ userId: string }> = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem removing app cess.`,
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
         }
       });

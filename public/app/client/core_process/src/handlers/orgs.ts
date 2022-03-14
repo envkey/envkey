@@ -461,7 +461,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           if (res.success) {
             state = res.state;
           } else {
-            return dispatchFailure((res.resultAction as any).payload, context);
+            return dispatchFailure((res.resultAction as any)?.payload, context);
           }
         }
       }
@@ -485,7 +485,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
 
@@ -500,7 +500,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }
@@ -525,7 +525,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
           idMap[archiveApp.id] = createdApp.id;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }
@@ -553,7 +553,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
           idMap[archiveBlock.id] = createdBlock.id;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }
@@ -582,7 +582,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }
@@ -653,7 +653,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
           idMap[role.id] = createdRole.id;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
 
@@ -720,13 +720,13 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
                 state = res.state;
               } else {
                 return dispatchFailure(
-                  (res.resultAction as any).payload,
+                  (res.resultAction as any)?.payload,
                   context
                 );
               }
             }
           } else {
-            return dispatchFailure((res.resultAction as any).payload, context);
+            return dispatchFailure((res.resultAction as any)?.payload, context);
           }
         }
       }
@@ -760,7 +760,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
           idMap[archiveEnvironment.id] = createdEnvironment.id;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }
@@ -812,7 +812,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
             idMap[archiveOrgUser.id] = created.id;
           }
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }
@@ -841,7 +841,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
           idMap[archiveCliUser.id] = created.id;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }
@@ -870,7 +870,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }
@@ -894,7 +894,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }
@@ -976,7 +976,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
         } else {
-          return dispatchFailure((res.resultAction as any).payload, context);
+          return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
     }

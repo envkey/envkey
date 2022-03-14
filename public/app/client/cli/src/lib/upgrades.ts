@@ -222,7 +222,7 @@ const resolveSelfHostedUpgrade = async (
       console.log(
         chalk.red("There was a problem starting the upgrade. Error:")
       );
-      console.log((res.resultAction as any).payload);
+      console.log((res.resultAction as any)?.payload);
     }
 
     console.log(

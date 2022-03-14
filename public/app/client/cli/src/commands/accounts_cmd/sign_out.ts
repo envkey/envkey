@@ -52,7 +52,7 @@ export const handler = async (argv: BaseArgs): Promise<void> => {
 
   if (!res.success) {
     console.log();
-    const err = (res.resultAction as any).payload?.error;
+    const err = (res.resultAction as any)?.payload?.error;
     return exit(1, chalk.red.bold(`Sign out failed.`) + err);
   }
 

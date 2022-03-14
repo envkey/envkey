@@ -105,7 +105,7 @@ export const KeyableParent: OrgComponent<
                             keyableParent.type
                           ]
                         }.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });
@@ -119,7 +119,7 @@ export const KeyableParent: OrgComponent<
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem revoking the ENVKEY.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });
@@ -139,7 +139,7 @@ export const KeyableParent: OrgComponent<
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem generating the ENVKEY.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });
@@ -275,7 +275,7 @@ export const KeyableParent: OrgComponent<
                 if (!res.success) {
                   logAndAlertError(
                     `There was a problem genearting the ENVKEY.`,
-                    (res.resultAction as any).payload
+                    (res.resultAction as any)?.payload
                   );
                 }
               });

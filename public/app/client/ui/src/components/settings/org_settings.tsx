@@ -156,7 +156,7 @@ export const OrgSettings: OrgComponent = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem updating org settings.`,
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
         }
       });
@@ -203,7 +203,7 @@ export const OrgSettings: OrgComponent = (props) => {
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem renaming the org.`,
-                      (res.resultAction as any).payload
+                      (res.resultAction as any)?.payload
                     );
                   }
                 });
@@ -416,7 +416,7 @@ export const OrgSettings: OrgComponent = (props) => {
               } else {
                 logAndAlertError(
                   "There was a problem deleting the organization.",
-                  (res.resultAction as any).payload
+                  (res.resultAction as any)?.payload
                 );
               }
             }}
@@ -442,7 +442,13 @@ export const OrgSettings: OrgComponent = (props) => {
   return (
     <div className={styles.OrgContainer}>
       <h3>
-        {updatingSettings || renaming ? <SmallLoader /> : ""}
+        {updatingSettings ||
+        renaming ||
+        settingsState.crypto.lockoutMs != org.settings.crypto.lockoutMs ? (
+          <SmallLoader />
+        ) : (
+          ""
+        )}
         Org <strong>Settings</strong>
       </h3>
       {authSettingsUpdated || nameUpdated ? (

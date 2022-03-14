@@ -73,7 +73,7 @@ export const ManageRecoveryKey: OrgComponent<
               if (!res.success) {
                 logAndAlertError(
                   `There was a problem generating the recovery key.`,
-                  (res.resultAction as any).payload
+                  (res.resultAction as any)?.payload
                 );
               }
             });

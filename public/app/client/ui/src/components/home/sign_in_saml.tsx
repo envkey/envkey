@@ -6,7 +6,6 @@ import * as styles from "@styles";
 import { wait } from "@core/lib/utils/wait";
 import { SmallLoader } from "@images";
 import { Link } from "react-router-dom";
-import { logAndAlertError } from "@ui_lib/errors";
 
 let runningLoop = false;
 

@@ -80,7 +80,7 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
         if (!res.success) {
           logAndAlertError(
             "There was a problem updating app firewall settings",
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
         }
       });

@@ -307,7 +307,7 @@ export const EnvGrid: EnvManagerComponent<
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem removing the variable.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });
@@ -324,7 +324,7 @@ export const EnvGrid: EnvManagerComponent<
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem removing the variable.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });

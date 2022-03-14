@@ -55,7 +55,7 @@ export const BlockApps: OrgComponent<{ blockId: string }> = (props) => {
         if (!res.success) {
           logAndAlertError(
             "There was a problem disconnecting blocks.",
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
         }
       });

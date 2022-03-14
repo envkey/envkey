@@ -56,10 +56,10 @@ clientAction<Client.Action.ClientActions["ReceivedOrgSocketMessage"]>({
         } else {
           log(
             "Socket-triggered GET_SESSION *failed*: " + account.email,
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
 
-          resolve(dispatchFailure((res.resultAction as any).payload, context));
+          resolve(dispatchFailure((res.resultAction as any)?.payload, context));
         }
       }, FETCH_MIN_DELAY + jitter);
     });

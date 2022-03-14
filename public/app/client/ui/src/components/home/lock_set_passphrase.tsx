@@ -29,14 +29,14 @@ export const LockSetPassphrase: Component = ({ core, history, dispatch }) => {
           if (!res.success) {
             logAndAlertError(
               "There was a problem locking the device.",
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });
       } else {
         logAndAlertError(
           "There was a problem setting the device passphrase.",
-          (res.resultAction as any).payload
+          (res.resultAction as any)?.payload
         );
       }
     }

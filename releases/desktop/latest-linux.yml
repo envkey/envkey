@@ -1,9 +1,9 @@
-version: 2.0.36
+version: 2.0.37
 files:
-  - url: EnvKey-2.0.36.AppImage
-    sha512: rLw0BQjw2e/kYnOSWfbzWabCKROuOD+1CMqqouI3eWaS0K/rtvAQKWLDEuq/sf9SvonteehtJE+w3fXLYuQy8w==
-    size: 83912733
-    blockMapSize: 88113
-path: EnvKey-2.0.36.AppImage
-sha512: rLw0BQjw2e/kYnOSWfbzWabCKROuOD+1CMqqouI3eWaS0K/rtvAQKWLDEuq/sf9SvonteehtJE+w3fXLYuQy8w==
-releaseDate: '2022-03-13T23:24:28.413Z'
+  - url: EnvKey-2.0.37.AppImage
+    sha512: 6lZ+yW0dEpXgijdwTffu9xlPwtubczdOZQGyZ/886Bdw2NIwG3Zva4VdcqUS4Run022F4G9thJD20inKkEfpqQ==
+    size: 83912632
+    blockMapSize: 88012
+path: EnvKey-2.0.37.AppImage
+sha512: 6lZ+yW0dEpXgijdwTffu9xlPwtubczdOZQGyZ/886Bdw2NIwG3Zva4VdcqUS4Run022F4G9thJD20inKkEfpqQ==
+releaseDate: '2022-03-14T21:24:12.048Z'

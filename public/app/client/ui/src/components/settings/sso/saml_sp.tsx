@@ -35,7 +35,7 @@ export const SamlSPStep: OrgComponent<{ providerId: string }> = (props) => {
           if (!res.success) {
             logAndAlertError(
               `There was a problem fetching external auth providers.`,
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });

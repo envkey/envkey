@@ -101,7 +101,7 @@ export const SelectAccount: Component = (props) => {
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem signing out.`,
-                      (res.resultAction as any).payload
+                      (res.resultAction as any)?.payload
                     );
                   }
                 });
@@ -124,7 +124,7 @@ export const SelectAccount: Component = (props) => {
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem removing the account.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });

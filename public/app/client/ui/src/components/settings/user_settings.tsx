@@ -143,7 +143,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
               `There was a problem removing the ${
                 { orgUser: "user", cliUser: "CLI key" }[userId]
               }.`,
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });
@@ -247,7 +247,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                         `There was a problem renaming the ${
                           { orgUser: "user", cliUser: "CLI key" }[userId]
                         }.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });
@@ -319,7 +319,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                           `There was a problem updating the ${
                             { orgUser: "user", cliUser: "CLI key" }[userId]
                           } role.`,
-                          (res.resultAction as any).payload
+                          (res.resultAction as any)?.payload
                         );
                       }
                     });
@@ -473,7 +473,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem regenerating the invitation.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });

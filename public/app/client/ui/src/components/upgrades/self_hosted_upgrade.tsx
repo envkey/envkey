@@ -151,7 +151,7 @@ export const SelfHostedUpgrade: OrgComponent = (props) => {
               } else {
                 console.log(
                   "Upgrade self-hosted error",
-                  (res.resultAction as any).payload
+                  (res.resultAction as any)?.payload
                 );
                 alert(
                   "There was a problem upgrading your EnvKey Self-Hosted Installation."

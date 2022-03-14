@@ -28,6 +28,8 @@ const createAndOpenLogFile = (logName: string) => {
 
   const logFileLoc = path.resolve(logdir, `${logName}-${today}.log`);
 
+  console.error("will write to log file at ", logFileLoc);
+
   try {
     const fd = fs.createWriteStream(logFileLoc, { flags: "a" });
     return fd;
@@ -111,6 +113,7 @@ export const logDevOnly: Logger = (msg: string, data?: object) =>
 export const initFileLogger = (name: string) => {
   if (!outstream) {
     outstream = createAndOpenLogFile(name);
+    log(`logger initialized with name ${name}`);
     return;
   }
   console.error(

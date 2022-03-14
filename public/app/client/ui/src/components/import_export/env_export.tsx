@@ -208,7 +208,7 @@ export const EnvExport: OrgComponent = (props) => {
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem exporting the environment.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });

@@ -415,7 +415,7 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem fetching logs.`,
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
         }
 

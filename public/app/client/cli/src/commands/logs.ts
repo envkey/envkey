@@ -26,6 +26,11 @@ import {
   getPrompt,
   alwaysWriteError,
 } from "../lib/console_io";
+import moment from "moment";
+import "moment-timezone";
+
+const TZ_NAME = moment.tz.guess();
+const TZ_ABBREV = moment.tz(TZ_NAME).zoneAbbr();
 
 addCommand((yargs: Argv<BaseArgs>) =>
   yargs.command(
@@ -184,7 +189,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
 
       const payload = {
         pageNum: argv["page"] ? argv["page"] - 1 : 0,
-        pageSize: isAutoMode() ? 100 : Math.floor(process.stdout.rows / 2) - 1,
+        pageSize: isAutoMode() ? 100 : Math.floor(process.stdout.rows / 2 / 2),
         scope: "org",
         startsAt: argv.from,
         endsAt: argv.until ?? Date.now(),
@@ -487,13 +492,13 @@ const writeLogTable = (
           performedBy = actor.email;
         }
       }
-      if (l.deviceId) {
-        const device = (graph[l.deviceId] ||
-          deletedGraph[l.deviceId]) as Model.OrgUserDevice;
-        if (device) {
-          performedBy += ` - ${device.name}`;
-        }
-      }
+      // if (l.deviceId) {
+      //   const device = (graph[l.deviceId] ||
+      //     deletedGraph[l.deviceId]) as Model.OrgUserDevice;
+      //   if (device) {
+      //     performedBy += ` - ${device.name}`;
+      //   }
+      // }
       if ("generatedEnvkeyId" in l && l.generatedEnvkeyId) {
         const key = (graph[l.generatedEnvkeyId] ||
           deletedGraph[l.generatedEnvkeyId]) as Model.GeneratedEnvkey;
@@ -504,11 +509,12 @@ const writeLogTable = (
       }
 
       const errorOrOkMessage = l.error
-        ? `Error: ${l.errorStatus} ${l.errorReason}`
+        ? // ? `Error: ${l.errorStatus} ${l.errorReason}`
+          `Error: ${l.errorStatus}`
         : "OK";
       return [
         performedBy,
-        new Date(l.createdAt).toISOString(),
+        moment(l.createdAt).format(`YYYY-MM-DD HH:mm:ss.SSS`) + ` ${TZ_ABBREV}`,
         l.ip,
         l.actionType.split("/")[l.actionType.split("/").length - 1],
         errorOrOkMessage,

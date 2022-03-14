@@ -14,7 +14,6 @@ import { SmallLoader, SvgImage } from "@images";
 import { wait } from "@core/lib/utils/wait";
 import { ExternalLink, ReactSelect } from "../../shared";
 import * as R from "ramda";
-import { logAndAlertError } from "@ui_lib/errors";
 
 const DEFAULT_REGION: Region = "us-east-1";
 

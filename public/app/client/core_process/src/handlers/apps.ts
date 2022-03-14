@@ -75,7 +75,7 @@ clientAction<Client.Action.ClientActions["CreateApp"]>({
 
       return dispatchSuccess(null, context);
     } else {
-      return dispatchFailure((res.resultAction as any).payload, context);
+      return dispatchFailure((res.resultAction as any)?.payload, context);
     }
   },
 });

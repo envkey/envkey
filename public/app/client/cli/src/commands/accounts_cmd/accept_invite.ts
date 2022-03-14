@@ -2,15 +2,15 @@ import { exit } from "../../lib/process";
 import { Argv } from "yargs";
 import { dispatch, initCore, refreshState } from "../../lib/core";
 import { BaseArgs } from "../../types";
-import { promptAcceptInviteOrDeviceGrantSecurityOptions } from "../../lib/crypto";
+import { enforceDeviceSecuritySettings } from "../../lib/crypto";
 import { Api, Auth, Client, Model } from "@core/types";
 import { logAndExitIfActionFailed } from "../../lib/args";
 import { printAccount } from "../../lib/auth";
 import chalk from "chalk";
-import { getActiveOrgUserDevicesByUserId } from "@core/lib/graph";
+import { getActiveOrgUserDevicesByUserId, authz } from "@core/lib/graph";
 import { wait } from "@core/lib/utils/wait";
 import * as util from "util";
-import { autoModeOut, getPrompt } from "../../lib/console_io";
+import { autoModeOut, isAutoMode, getPrompt } from "../../lib/console_io";
 
 export const command = "accept-invite";
 export const desc = "Join an organization or authorize a device.";
@@ -220,9 +220,7 @@ export const handler = async (
         })
       ).deviceName) as string,
     orgId = (state.loadedInviteOrgId ?? state.loadedDeviceGrantOrgId)!,
-    org = state.graph[orgId] as Model.Org,
-    { passphrase, lockoutMs } =
-      await promptAcceptInviteOrDeviceGrantSecurityOptions(initialState, org);
+    org = state.graph[orgId] as Model.Org;
 
   const acceptRes = await dispatch(
     {
@@ -234,30 +232,52 @@ export const handler = async (
 
   await logAndExitIfActionFailed(acceptRes, "Failed to accept the invite.");
 
-  if (passphrase) {
-    await dispatch({
-      type: Client.ActionType.SET_DEVICE_PASSPHRASE,
-      payload: { passphrase },
-    });
+  state = acceptRes.state;
+
+  let recoveryKey: string | undefined;
+  if (
+    authz.hasOrgPermission(
+      acceptRes.state.graph,
+      accountId,
+      "org_generate_recovery_key"
+    )
+  ) {
+    const genRecoveryRes = await dispatch(
+      {
+        type: Client.ActionType.CREATE_RECOVERY_KEY,
+      },
+      accountId
+    );
+
+    if (genRecoveryRes.success) {
+      state = genRecoveryRes.state;
+
+      if (state.generatedRecoveryKey) {
+        recoveryKey = state.generatedRecoveryKey.encryptionKey;
+      }
+    }
   }
 
-  if (lockoutMs) {
-    await dispatch({
-      type: Client.ActionType.SET_DEVICE_LOCKOUT,
-      payload: { lockoutMs },
-    });
+  if (!isAutoMode()) {
+    await enforceDeviceSecuritySettings(state, org);
   }
 
-  const isDefault = acceptRes.state.defaultAccountId == accountId;
+  const isDefault = state.defaultAccountId == accountId;
 
   printAccount(
     accountId,
-    acceptRes.state.orgUserAccounts[accountId]!,
+    state.orgUserAccounts[accountId]!,
     isDefault,
     state.graph
   );
 
-  autoModeOut({ id: accountId, isDefault });
+  if (recoveryKey) {
+    console.log(chalk.bold("\nRecovery Key:\n"));
+    console.log(recoveryKey);
+    console.log("");
+  }
+
+  autoModeOut({ id: accountId, isDefault, recoveryKey });
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

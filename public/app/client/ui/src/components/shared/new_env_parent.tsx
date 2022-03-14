@@ -182,7 +182,7 @@ export const getNewEnvParentComponent = (
                       if (!res.success) {
                         logAndAlertError(
                           `There was a problem importing the environments`,
-                          (res.resultAction as any).payload
+                          (res.resultAction as any)?.payload
                         );
                       }
                       return res;
@@ -209,7 +209,7 @@ export const getNewEnvParentComponent = (
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem importing environments`,
-                      (res.resultAction as any).payload
+                      (res.resultAction as any)?.payload
                     );
                   }
                   return res;
@@ -222,7 +222,7 @@ export const getNewEnvParentComponent = (
       } else {
         console.log(
           `Error creating ${envParentType}`,
-          (res.resultAction as any).payload
+          (res.resultAction as any)?.payload
         );
         alert(`There was a problem creating the ${envParentType}.`);
       }

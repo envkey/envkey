@@ -309,11 +309,11 @@ export const clientAction = <
               if (res.success) {
                 const successPayload = actionParams.apiSuccessPayloadCreator
                   ? await actionParams.apiSuccessPayloadCreator(res)
-                  : (res.resultAction as any).payload;
+                  : (res.resultAction as any)?.payload;
                 return dispatchSuccess(successPayload, context);
               } else {
                 return dispatchFailure(
-                  (res.resultAction as any).payload,
+                  (res.resultAction as any)?.payload,
                   context
                 );
               }

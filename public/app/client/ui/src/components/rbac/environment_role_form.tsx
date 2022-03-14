@@ -550,7 +550,7 @@ export const EnvironmentRoleForm: OrgComponent<{
                     `There was a problem ${
                       editing ? "updating" : "creating"
                     } the environment role.`,
-                    (res.resultAction as any).payload
+                    (res.resultAction as any)?.payload
                   );
                 }
 
@@ -582,7 +582,7 @@ export const EnvironmentRoleForm: OrgComponent<{
                     if (!res.success) {
                       logAndAlertError(
                         `There was a problem creating the environment.`,
-                        (res.resultAction as any).payload
+                        (res.resultAction as any)?.payload
                       );
                     }
                   });

@@ -70,7 +70,7 @@ export const SignIn: Component<{ accountId: string }> = (props) => {
       if (!res.success) {
         logAndAlertError(
           `There was a problem signing in.`,
-          (res.resultAction as any).payload
+          (res.resultAction as any)?.payload
         );
       }
     });

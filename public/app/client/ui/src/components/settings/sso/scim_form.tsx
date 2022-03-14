@@ -121,7 +121,7 @@ export const ScimForm: OrgComponent<{ providerId?: string }> = (props) => {
                 } else {
                   logAndAlertError(
                     `There was a problem updating '${provider.nickname!}'.`,
-                    (res.resultAction as any).payload
+                    (res.resultAction as any)?.payload
                   );
                 }
               } else {
@@ -151,7 +151,7 @@ export const ScimForm: OrgComponent<{ providerId?: string }> = (props) => {
                 } else {
                   logAndAlertError(
                     "There was a problem creating the SCIM connection.",
-                    (res.resultAction as any).payload
+                    (res.resultAction as any)?.payload
                   );
                 }
               }
@@ -336,7 +336,7 @@ export const ScimForm: OrgComponent<{ providerId?: string }> = (props) => {
                         } else {
                           logAndAlertError(
                             `There was a problem updating '${provider.nickname!}'.`,
-                            (res.resultAction as any).payload
+                            (res.resultAction as any)?.payload
                           );
                         }
                       }}

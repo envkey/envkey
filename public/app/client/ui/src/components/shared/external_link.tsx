@@ -26,7 +26,7 @@ export const ExternalLink: Component<{}, Props> = ({
           if (!res.success) {
             logAndAlertError(
               `There was a problem opening the url '${to}'.`,
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });

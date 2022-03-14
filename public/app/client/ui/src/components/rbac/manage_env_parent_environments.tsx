@@ -131,7 +131,7 @@ export const ManageEnvParentEnvironments: OrgComponent<
           if (!res.success) {
             logAndAlertError(
               `There was a problem updating environment settings.`,
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });
@@ -257,7 +257,7 @@ export const ManageEnvParentEnvironments: OrgComponent<
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem deleting the environment.`,
-                      (res.resultAction as any).payload
+                      (res.resultAction as any)?.payload
                     );
                   }
                 });
@@ -275,7 +275,7 @@ export const ManageEnvParentEnvironments: OrgComponent<
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem adding the environment.`,
-                      (res.resultAction as any).payload
+                      (res.resultAction as any)?.payload
                     );
                   }
                 });

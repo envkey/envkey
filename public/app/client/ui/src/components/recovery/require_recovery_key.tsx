@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { OrgComponent } from "@ui_types";
-import * as g from "@core/lib/graph";
 import { ManageRecoveryKey } from "./manage_recovery_key";
 import { Client } from "@core/types";
 import * as styles from "@styles";
@@ -17,7 +16,7 @@ export const RequireRecoveryKey: OrgComponent<{}, { onClear?: () => any }> = (
         if (!res.success) {
           logAndAlertError(
             `There was a problem generating the recovery key.`,
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
         }
       });

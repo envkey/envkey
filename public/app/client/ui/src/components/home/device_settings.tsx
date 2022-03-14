@@ -28,6 +28,8 @@ export const DeviceSettings: Component = (props) => {
   );
   const [passphrase, setPassphrase] = useState<string>();
 
+  const [deviceSecurityValid, setDeviceSecurityValid] = useState<boolean>();
+
   const shouldClearPassphrase = core.requiresPassphrase && !requiresPassphrase;
 
   const hasUpdate = Boolean(
@@ -61,7 +63,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem setting the default device name.",
-          (res.resultAction as any).payload
+          (res.resultAction as any)?.payload
         );
       }
     }
@@ -77,7 +79,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem setting the device passphrase.",
-          (res.resultAction as any).payload
+          (res.resultAction as any)?.payload
         );
       }
     } else if (core.requiresPassphrase && !requiresPassphrase) {
@@ -90,7 +92,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem clearing the device passphrase.",
-          (res.resultAction as any).payload
+          (res.resultAction as any)?.payload
         );
       }
     }
@@ -110,7 +112,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem setting the device lockout.",
-          (res.resultAction as any).payload
+          (res.resultAction as any)?.payload
         );
       }
     } else if (
@@ -126,7 +128,7 @@ export const DeviceSettings: Component = (props) => {
       } else {
         logAndAlertError(
           "There was a problem clearing the device lockout.",
-          (res.resultAction as any).payload
+          (res.resultAction as any)?.payload
         );
       }
     }
@@ -147,7 +149,7 @@ export const DeviceSettings: Component = (props) => {
       <div>
         <div className="buttons">
           <input
-            disabled={!hasUpdate || isUpdating}
+            disabled={!hasUpdate || isUpdating || deviceSecurityValid === false}
             className="primary"
             type="submit"
             value={isUpdating ? "Saving..." : "Save"}
@@ -184,6 +186,7 @@ export const DeviceSettings: Component = (props) => {
             passphrase,
             requiresLockout,
             lockoutMs,
+            isValid,
           }) => {
             setDefaultDeviceName(defaultDeviceName ?? null);
             setRequiresPassphrase(requiresPassphrase ?? false);
@@ -191,6 +194,7 @@ export const DeviceSettings: Component = (props) => {
             setRequiresLockout(requiresLockout ?? false);
             setLockoutMs(lockoutMs);
             setReset(false);
+            setDeviceSecurityValid(isValid);
           }}
           focus
           reset={reset || undefined}

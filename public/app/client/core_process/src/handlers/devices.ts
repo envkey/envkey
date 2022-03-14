@@ -116,7 +116,7 @@ clientAction<
           context
         );
       } else {
-        return dispatchFailure((res.resultAction as any).payload, context);
+        return dispatchFailure((res.resultAction as any)?.payload, context);
       }
     } catch (err) {
       return dispatchFailure(

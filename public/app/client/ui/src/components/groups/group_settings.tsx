@@ -68,7 +68,7 @@ export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
                   if (!res.success) {
                     logAndAlertError(
                       `There was a problem renaming the team.`,
-                      (res.resultAction as any).payload
+                      (res.resultAction as any)?.payload
                     );
                   }
                 });
@@ -108,7 +108,7 @@ export const GroupSettings: OrgComponent<{ groupId: string }> = (props) => {
                 if (!res.success) {
                   logAndAlertError(
                     `There was a problem deleting the team.`,
-                    (res.resultAction as any).payload
+                    (res.resultAction as any)?.payload
                   );
                 }
               });

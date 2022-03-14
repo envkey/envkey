@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { VerifyEmail, DeviceSettingsFields, ExternalLink } from "@ui";
+import { VerifyEmail, ExternalLink } from "@ui";
 import { Component } from "@ui_types";
 import { Client, Api } from "@core/types";
 import { getDefaultOrgSettings } from "@core/lib/client/defaults";
-import { dispatchDeviceSecurity } from "@ui_lib/device_security";
 import { secureRandomAlphanumeric, sha256 } from "@core/lib/crypto/utils";
 import { HomeContainer } from "../home_container";
 import * as styles from "@styles";
@@ -37,13 +36,6 @@ const getRegisterComponent = (hostType: "cloud" | "community") => {
     const [deviceName, setDeviceName] = useState<string | null>(
       core.defaultDeviceName ?? null
     );
-
-    const [showingDeviceSecurity, setShowDeviceSecurity] = useState(false);
-
-    const [requiresPassphrase, setRequiresPassphrase] = useState(false);
-    const [passphrase, setPassphrase] = useState<string>();
-    const [requiresLockout, setRequiresLockout] = useState(false);
-    const [lockoutMs, setLockoutMs] = useState<number>();
 
     const [registeredUserId, setRegisteredUserId] = useState<string>();
 
@@ -82,9 +74,6 @@ const getRegisterComponent = (hostType: "cloud" | "community") => {
       () => (hostType == "community" ? sha256(communityAuth) : ""),
       [communityAuth]
     );
-
-    const shouldShowDeviceSecurity =
-      !core.requiresPassphrase && Object.keys(core.orgUserAccounts).length == 0;
 
     const dispatchRegistration = async () => {
       if (
@@ -170,24 +159,7 @@ const getRegisterComponent = (hostType: "cloud" | "community") => {
 
     const onSubmitRegistration = (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-
-      if (shouldShowDeviceSecurity) {
-        setShowDeviceSecurity(true);
-      } else {
-        dispatchRegistration().then(onRegister);
-      }
-    };
-
-    const onSubmitDeviceSecurity = async (
-      e: React.FormEvent<HTMLFormElement>
-    ) => {
-      e.preventDefault();
-      setIsRegistering(true);
-      const res = await dispatchRegistration();
-      if (passphrase) {
-        await dispatchDeviceSecurity(dispatch, passphrase, lockoutMs);
-      }
-      onRegister(res);
+      dispatchRegistration().then(onRegister);
     };
 
     if (hostType == "community" && !communityInfraReady) {
@@ -318,8 +290,6 @@ const getRegisterComponent = (hostType: "cloud" | "community") => {
       let label: string;
       if (isRegistering) {
         label = "Creating Organization...";
-      } else if (shouldShowDeviceSecurity && !showingDeviceSecurity) {
-        label = "Next";
       } else {
         label = "Create Organization";
       }
@@ -332,10 +302,7 @@ const getRegisterComponent = (hostType: "cloud" | "community") => {
               disabled={
                 isRegistering ||
                 !(orgName && firstName && lastName && deviceName) ||
-                (hostType == "community" && !(domain && subdomain)) ||
-                (showingDeviceSecurity &&
-                  ((requiresPassphrase && !passphrase) ||
-                    (requiresLockout && typeof lockoutMs != "number")))
+                (hostType == "community" && !(domain && subdomain))
               }
               type="submit"
               value={label}
@@ -347,9 +314,7 @@ const getRegisterComponent = (hostType: "cloud" | "community") => {
               onClick={async (e) => {
                 e.preventDefault();
 
-                if (showingDeviceSecurity) {
-                  setShowDeviceSecurity(false);
-                } else if (core.verifyingEmail) {
+                if (core.verifyingEmail) {
                   await dispatch({
                     type: Client.ActionType.RESET_EMAIL_VERIFICATION,
                   });
@@ -368,46 +333,6 @@ const getRegisterComponent = (hostType: "cloud" | "community") => {
         </div>
       );
     };
-
-    if (
-      showingDeviceSecurity &&
-      orgName &&
-      firstName &&
-      lastName &&
-      deviceName
-    ) {
-      return (
-        <HomeContainer>
-          <form className={styles.Register} onSubmit={onSubmitDeviceSecurity}>
-            <DeviceSettingsFields
-              {...props}
-              fields={["passphrase", "lockout"]}
-              passphraseStrengthInputs={[
-                orgName,
-                firstName,
-                lastName,
-                deviceName,
-              ]}
-              disabled={isRegistering}
-              onChange={({
-                requiresPassphrase,
-                passphrase,
-                requiresLockout,
-                lockoutMs,
-              }) => {
-                setRequiresPassphrase(requiresPassphrase ?? false);
-                setPassphrase(passphrase);
-                setRequiresLockout(requiresLockout ?? false);
-                setLockoutMs(lockoutMs);
-              }}
-              focus
-            />
-
-            {renderRegisterButtons()}
-          </form>
-        </HomeContainer>
-      );
-    }
 
     return (
       <HomeContainer>

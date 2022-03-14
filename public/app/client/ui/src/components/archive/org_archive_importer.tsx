@@ -87,7 +87,7 @@ export const OrgArchiveImporter: OrgComponent<
         if (!res.success) {
           logAndAlertError(
             "There was a problem starting the import.",
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
         }
       });

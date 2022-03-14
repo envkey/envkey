@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Component } from "@ui_types";
-import { dispatchDeviceSecurity } from "@ui_lib/device_security";
 import { Api, Client, Model } from "@core/types";
-import * as ui from "@ui";
 import * as g from "@core/lib/graph";
 import { HomeContainer } from "./home_container";
 import * as styles from "@styles";
@@ -19,9 +17,6 @@ export const AcceptInvite: Component = (props) => {
   const [emailToken, setEmailToken] = useState("");
   const [encryptionToken, setEncryptionToken] = useState("");
   const [deviceName, setDeviceName] = useState(props.core.defaultDeviceName);
-
-  const [passphrase, setPassphrase] = useState<string>();
-  const [lockoutMs, setLockoutMs] = useState<number>();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
@@ -270,9 +265,6 @@ export const AcceptInvite: Component = (props) => {
     return <HomeContainer />;
   }
 
-  const shouldShowDeviceSecurity =
-    numAccounts == 0 && !props.core.requiresPassphrase;
-
   const loadedOrgId =
     props.core.loadedInviteOrgId ?? props.core.loadedDeviceGrantOrgId;
 
@@ -320,19 +312,10 @@ export const AcceptInvite: Component = (props) => {
     wait(MIN_ACTION_DELAY_MS).then(() => setIsAwaitingMinDelay(false));
 
     props.dispatch({ type: Client.ActionType.RESET_EXTERNAL_AUTH }).then(() =>
-      props
-        .dispatch({
-          type: loadActionType,
-          payload: { emailToken, encryptionToken },
-        })
-        .then((res) => {
-          if (!res.success) {
-            logAndAlertError(
-              `There was a problem loading the invite.`,
-              (res.resultAction as any).payload
-            );
-          }
-        })
+      props.dispatch({
+        type: loadActionType,
+        payload: { emailToken, encryptionToken },
+      })
     );
   };
 
@@ -359,7 +342,7 @@ export const AcceptInvite: Component = (props) => {
         if (!res.success) {
           logAndAlertError(
             `There was a problem accepting the invite.`,
-            (res.resultAction as any).payload
+            (res.resultAction as any)?.payload
           );
         }
         return res;
@@ -367,10 +350,6 @@ export const AcceptInvite: Component = (props) => {
 
     if (!res.success) {
       return;
-    }
-
-    if (shouldShowDeviceSecurity && passphrase) {
-      await dispatchDeviceSecurity(props.dispatch, passphrase, lockoutMs);
     }
 
     props.setUiState({
@@ -419,8 +398,6 @@ export const AcceptInvite: Component = (props) => {
                 setEmailToken("");
                 setEncryptionToken("");
                 setDeviceName(props.core.defaultDeviceName);
-                setPassphrase("");
-                setLockoutMs(undefined);
               }
 
               props.dispatch({ type: Client.ActionType.RESET_EXTERNAL_AUTH });
@@ -476,25 +453,6 @@ export const AcceptInvite: Component = (props) => {
         )}
       </div>
     );
-    const deviceSecurityComponent = shouldShowDeviceSecurity ? (
-      <ui.DeviceSettingsFields
-        {...props}
-        disabled={isAccepting}
-        fields={["passphrase", "lockout"]}
-        passphraseStrengthInputs={[
-          loadedOrg?.name ?? "",
-          inviteeOrGrantee?.firstName ?? "",
-          inviteeOrGrantee?.lastName ?? "",
-          deviceName ?? "",
-        ].filter(Boolean)}
-        onChange={({ passphrase, lockoutMs }) => {
-          setPassphrase(passphrase);
-          setLockoutMs(lockoutMs);
-        }}
-      />
-    ) : (
-      ""
-    );
 
     return (
       <HomeContainer>
@@ -519,8 +477,6 @@ export const AcceptInvite: Component = (props) => {
             </p>
 
             {deviceNameInput}
-
-            {deviceSecurityComponent}
           </div>
           {renderButtons()}
         </form>

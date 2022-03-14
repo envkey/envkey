@@ -502,7 +502,7 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForLogin"]>({
         context
       );
     }
-    const authResPayload = (res.resultAction as any).payload as
+    const authResPayload = (res.resultAction as any)?.payload as
       | Api.Net.ApiResultTypes["CreateExternalAuthSession"]
       | Api.Net.RequiresEmailAuthResult;
     if (authResPayload.type !== "pendingExternalAuthSession") {
@@ -616,7 +616,7 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForInvite"]>(
           reqContext
         );
       }
-      const authResPayload = (res.resultAction as any).payload as
+      const authResPayload = (res.resultAction as any)?.payload as
         | Api.Net.ApiResultTypes["CreateExternalAuthSession"]
         | Api.Net.RequiresEmailAuthResult;
       if (authResPayload.type !== "pendingExternalAuthSession") {

@@ -65,7 +65,7 @@ export const SamlForm: OrgComponent<{
           if (!res.success) {
             logAndAlertError(
               `There was a problem fetching external auth providers.`,
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });
@@ -219,7 +219,7 @@ export const SamlForm: OrgComponent<{
                 } else {
                   logAndAlertError(
                     "There was a problem updating the SAML connection.",
-                    (res.resultAction as any).payload
+                    (res.resultAction as any)?.payload
                   );
                 }
               }}

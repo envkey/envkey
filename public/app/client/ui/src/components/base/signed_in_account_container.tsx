@@ -31,6 +31,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
 ) => {
   let auth: Client.ClientUserAuth | undefined;
   const orgId = props.routeParams.orgId;
+  const org = props.core.graph[orgId] as Model.Org | undefined;
   const searchParams = new URLSearchParams(props.location.search);
   const showRoleInfoId = searchParams.get("showRoleInfoId");
 
@@ -255,6 +256,53 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     shouldRequireRecoveryKey
   );
 
+  const shouldRequireDeviceSecurity = useMemo(() => {
+    if (
+      !props.ui.loadedAccountId ||
+      !auth ||
+      auth.orgId != orgId ||
+      !props.core.graphUpdatedAt
+    ) {
+      return false;
+    }
+
+    const currentUser = props.core.graph[
+      props.ui.loadedAccountId
+    ] as Model.OrgUser;
+
+    if (!currentUser) {
+      return false;
+    }
+
+    if (!orgId) {
+      return false;
+    }
+    const org = props.core.graph[orgId] as Model.Org | undefined;
+    if (!org) {
+      return false;
+    }
+
+    return (
+      // org requires passphrase and one isn't set
+      (org.settings.crypto.requiresPassphrase &&
+        !props.core.requiresPassphrase) ||
+      // org requires lockout and one isn't set
+      (org.settings.crypto.requiresLockout && !props.core.lockoutMs) ||
+      // org requires a minimum lockout and current one is too high
+      (org.settings.crypto.lockoutMs &&
+        props.core.lockoutMs &&
+        props.core.lockoutMs > org.settings.crypto.lockoutMs)
+    );
+  }, [
+    Boolean(auth),
+    props.core.graphUpdatedAt,
+    orgId,
+    org && JSON.stringify(org.settings.crypto),
+    props.ui.loadedAccountId,
+    props.core.requiresPassphrase,
+    props.core.lockoutMs,
+  ]);
+
   const onUserInteraction = () => {
     const now = Date.now();
     const elapsed = now - lastUserInteraction;
@@ -303,10 +351,13 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       props.location.pathname.endsWith(orgId)
     ) {
       const { apps } = g.graphTypes(props.core.graph);
+      console.log("number of apps:", apps.length);
 
       if (apps.length > 0) {
+        console.log("redirecting to first app");
         return getEnvParentPath(apps[0]);
       } else {
+        console.log("no apps, redirecting to /welcome");
         return "/welcome";
       }
     }
@@ -496,6 +547,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
   if (
     !props.ui.loadedAccountId ||
     !currentUser ||
+    !org ||
     !auth ||
     auth.orgId != orgId ||
     shouldRedirectPath ||
@@ -518,9 +570,17 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         }}
       />
     );
+  } else if (shouldRequireDeviceSecurity) {
+    return (
+      <ui.RequireDeviceSecurity
+        {...props}
+        uiTree={uiTree}
+        orgRoute={orgRoute}
+        hasPendingEnvUpdates={hasPendingEnvUpdates}
+      />
+    );
   }
 
-  const org = props.core.graph[orgId] as Model.Org;
   const currentApiVersion = org.selfHostedVersions?.api;
   const currentInfraVersion = org.selfHostedVersions?.infra;
   const apiUpgradeAvailable = Boolean(

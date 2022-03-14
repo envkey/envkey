@@ -16,7 +16,7 @@ export const LockLink: Component = ({ core, dispatch, children }) => (
           if (!res.success) {
             logAndAlertError(
               `There was a problem locking the device.`,
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });

@@ -158,7 +158,7 @@ const getAppEnvkeysComponent = (
               `There was a problem generating the ${
                 { server: "server", localKey: "local key" }[keyableParentType]
               }.`,
-              (res.resultAction as any).payload
+              (res.resultAction as any)?.payload
             );
           }
         });

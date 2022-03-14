@@ -66,7 +66,7 @@ export const ConnectBlocks: EnvManagerComponent = (props) => {
               if (!res.success) {
                 logAndAlertError(
                   `There was a problem connecting blocks.`,
-                  (res.resultAction as any).payload
+                  (res.resultAction as any)?.payload
                 );
               }
             });

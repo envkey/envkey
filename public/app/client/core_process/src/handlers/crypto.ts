@@ -437,9 +437,9 @@ clientAction<Client.Action.ClientActions["ReencryptPermittedLoop"]>({
           return res;
         }
       } else {
-        log("REENCRYPT_ENVS failed", (res.resultAction as any).payload);
+        log("REENCRYPT_ENVS failed", (res.resultAction as any)?.payload);
 
-        return dispatchFailure((res.resultAction as any).payload, context);
+        return dispatchFailure((res.resultAction as any)?.payload, context);
       }
     }
   },
