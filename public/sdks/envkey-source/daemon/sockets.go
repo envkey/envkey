@@ -187,9 +187,6 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 
 				if code == 401 || code == 404 || code == 429 || socket.IsClosing() {
 					return
-				} else if code == 101 {
-					closeWebsocket(envkey)
-					return
 				}
 			}
 		}
