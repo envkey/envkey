@@ -80,7 +80,10 @@ export const handler = async (
   if (!environment) {
     const branchChoices = [
       developmentEnvironment,
-      ...envParentEnvironments.filter((env) => env.isSub),
+      ...envParentEnvironments.filter(
+        (env) =>
+          env.isSub && env.parentEnvironmentId == developmentEnvironment.id
+      ),
     ].map((env) => ({
       name: env.id,
       message: getEnvironmentName(state.graph, env.id),
