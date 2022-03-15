@@ -75,10 +75,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	envkey, appConfig = env.GetEnvkey(verboseOutput, envFileOverride, execCmdArg == "", localDevHost)
 
 	if envkey == "" {
-		if execCmdArg != "" {
-			cmd.Help()
-			os.Exit(0)
-		} else if ignoreMissing {
+		if ignoreMissing {
 			os.Exit(0)
 		} else {
 			utils.Fatal("ENVKEY missing\n", execCmdArg == "")

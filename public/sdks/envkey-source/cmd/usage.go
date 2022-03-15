@@ -68,11 +68,11 @@ eval "$(es --hook bash)"
 zsh (~/.zshrc):
 eval "$(es --hook zsh)"
 
-Use the --cache flag to maintain an encrypted file-system cache for offline work:
+Use the --cache/-c flag to maintain an encrypted file-system cache for offline work:
 
-es --cache -- any-shell-command
+es -c -- any-shell-command
 
-Use the --mem-cache flag to cache the latest values in memory and keep them automatically updated on changes. This avoid the latency of a request to the EnvKey host on each load, but offers less strong consistency guarantees:
+Use the --mem-cache/-m flag to cache the latest values in memory and keep them automatically updated on changes. This avoid the latency of a request to the EnvKey host on each load, but offers less strong consistency guarantees:
 
-es --mem-cache -- any-shell-command
+es -m -- any-shell-command
 `

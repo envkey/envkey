@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ import (
 )
 
 type AppConfig struct {
+	OrgId string `json:"orgId"`
 	AppId string `json:"appId"`
 }
 
@@ -70,7 +72,7 @@ func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localD
 				fmt.Fprintln(os.Stderr, "loaded app config")
 			}
 
-			envkey, err = EnvkeyFromAppId(appConfig.AppId, verboseOutput, localDevHost)
+			envkey, err = EnvkeyFromAppId(appConfig.OrgId, appConfig.AppId, verboseOutput, localDevHost)
 			utils.CheckError(err, toStderr)
 		}
 	}
@@ -86,7 +88,7 @@ func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localD
 	return envkey, appConfig
 }
 
-func EnvkeyFromAppId(appId string, verboseOutput bool, localDevHost bool) (string, error) {
+func EnvkeyFromAppId(orgId string, appId string, verboseOutput bool, localDevHost bool) (string, error) {
 	_, path, err := appEnvkeyPath(appId)
 	if err != nil {
 		return "", err
@@ -112,7 +114,7 @@ func EnvkeyFromAppId(appId string, verboseOutput bool, localDevHost bool) (strin
 		return envkey, nil
 	}
 
-	return genLocalKey(appId, verboseOutput, localDevHost)
+	return genLocalKey(orgId, appId, verboseOutput, localDevHost, 0)
 }
 
 func ClearAppEnvkey(appId string) error {
@@ -123,7 +125,7 @@ func ClearAppEnvkey(appId string) error {
 	return os.Remove(path)
 }
 
-func genLocalKey(appId string, verboseOutput bool, localDevHost bool) (string, error) {
+func genLocalKey(orgId string, appId string, verboseOutput bool, localDevHost bool, numAttempt uint8) (string, error) {
 	if verboseOutput {
 		fmt.Fprintln(os.Stderr, "will generate local key")
 	}
@@ -164,7 +166,7 @@ func genLocalKey(appId string, verboseOutput bool, localDevHost bool) (string, e
 	jsonBytes, err := cmd.CombinedOutput()
 
 	if verboseOutput {
-		fmt.Fprintln(os.Stderr, "executed `local-keys create` command. output:", string(jsonBytes), " error: ", err)
+		fmt.Fprintln(os.Stderr, "executed `local-keys create` command:", cmd.String(), "output:", string(jsonBytes), " error: ", err)
 	}
 
 	if err != nil {
@@ -178,7 +180,32 @@ func genLocalKey(appId string, verboseOutput bool, localDevHost bool) (string, e
 				return "", err
 			}
 
-			return "", errors.New(errorRes.Error)
+			if strings.HasPrefix(errorRes.Error, "Authentication required") {
+				if numAttempt == 0 {
+					authCommand := exec.Command(
+						cliPath,
+						"sign-in",
+						"--org-id",
+						orgId,
+					)
+
+					authCommand.Stderr = os.Stderr
+					authCommand.Stdout = os.Stdout
+					authCommand.Stdin = os.Stdin
+
+					authCommand.Start()
+					err := authCommand.Wait()
+
+					if err == nil {
+						return genLocalKey(orgId, appId, verboseOutput, localDevHost, numAttempt+1)
+					} else {
+						return "", err
+					}
+				}
+
+			} else {
+				return "", errors.New(errorRes.Error)
+			}
 		}
 	}
 

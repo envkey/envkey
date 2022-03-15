@@ -2,40 +2,42 @@
 
 package shell
 
-import ( 
+import (
 	"fmt"
 	"os"
 )
 
-func Hook (t string)  {
-	if ( t == "bash"){
+func Hook(t string) {
+	if t == "bash" {
 		fmt.Println(bashHook)
-	} else if ( t == "zsh"){
+	} else if t == "zsh" {
 		fmt.Println(zshHook)
 	} else {
 		fmt.Println("echo 'error: shell type not supported'; false")
 		os.Exit(1)
-	}	
+	}
 }
 
-const bashHook = `
+var execName = os.Args[0]
+
+var bashHook = fmt.Sprintf(`
 _envkey_source_hook() {
   local previous_exit_status=$?;
   trap -- '' SIGINT;
-  eval "$(envkey-source --unset)";
-  eval "$(envkey-source --mem-cache --ignore-missing)";
+  eval "$(%s --unset)";
+  eval "$(%s --mem-cache --ignore-missing)";
   trap - SIGINT;
   return $previous_exit_status;
 };
 if ! [[ "${PROMPT_COMMAND:-}" =~ _envkey_source_hook ]]; then
   PROMPT_COMMAND="_envkey_source_hook${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
-fi`
+fi`, execName, execName)
 
-const zshHook = `
+var zshHook = fmt.Sprintf(`
 _envkey_source_hook() {
   trap -- '' SIGINT;
-  eval "$(envkey-source --unset)";
-  eval "$(envkey-source --mem-cache --ignore-missing)";
+  eval "$(%s --unset)";
+  eval "$(%s --mem-cache --ignore-missing)";
   trap - SIGINT;
 }
 typeset -ag precmd_functions;
@@ -46,4 +48,4 @@ typeset -ag chpwd_functions;
 if [[ -z "${chpwd_functions[(r)_envkey_source_hook]+1}" ]]; then
   chpwd_functions=( _envkey_source_hook ${chpwd_functions[@]} )
 fi
-`
+`, execName, execName)

@@ -36,7 +36,7 @@ func init() {
 	RootCmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-run command whenever environment is updated (default is false)")
 	RootCmd.Flags().StringVarP(&onChangeCmdArg, "on-reload", "r", "", "command to execute when environment is updated (default is none)")
 	RootCmd.Flags().StringSliceVar(&watchVars, "only", nil, "when using -w or -r, reload only when specific vars change (comma-delimited list)")
-	RootCmd.Flags().Float64Var(&watchThrottle, "watch-throttle-ms", 10000, "min delay between restarts or reloads when using --watch/-w or --on-reload/-r")
+	RootCmd.Flags().Float64Var(&watchThrottle, "throttle-ms", 10000, "min delay between restarts or reloads when using --watch/-w or --on-reload/-r")
 
 	RootCmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite existing environment variables and/or other entries in .env file")
 	RootCmd.Flags().StringVar(&envFileOverride, "env-file", "", "Explicitly set path to ENVKEY-containing .env file (optional)")
@@ -46,9 +46,9 @@ func init() {
 	RootCmd.Flags().BoolVar(&unset, "unset", false, "unset all EnvKey vars in the current shell (example: eval $(envkey-source --unset))")
 	RootCmd.Flags().BoolVar(&ignoreMissing, "ignore-missing", false, "don't output an error if an ENVKEY or .envkey file is missing")
 
-	RootCmd.Flags().BoolVar(&shouldCache, "cache", false, "cache encrypted config on disk as a local backup for offline work (default is false)")
+	RootCmd.Flags().BoolVarP(&shouldCache, "cache", "c", false, "cache encrypted config on disk as a local backup for offline work (default is false)")
 	RootCmd.Flags().StringVar(&cacheDir, "cache-dir", "", "cache directory (default is $HOME/.envkey/cache)")
-	RootCmd.Flags().BoolVar(&memCache, "mem-cache", false, "keep in-memory cache up-to-date in realtime for zero latency (default is false)")
+	RootCmd.Flags().BoolVarP(&memCache, "mem-cache", "m", false, "keep in-memory cache up-to-date in realtime for zero latency (default is false)")
 
 	RootCmd.Flags().BoolVar(&verboseOutput, "verbose", false, "print verbose output (default is false)")
 	RootCmd.Flags().Float64Var(&timeoutSeconds, "timeout", 20.0, "timeout in seconds for http requests")

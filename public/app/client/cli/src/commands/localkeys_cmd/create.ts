@@ -26,9 +26,6 @@ import {
   tryApplyDetectedAppOverride,
 } from "../../app_detection";
 
-// old module
-const notifier = require("node-notifier");
-
 export const command = ["create [app] [environment] [key-name]"];
 export const desc = "Create a new local ENVKEY.";
 export const builder = (yargs: Argv<BaseArgs>) =>

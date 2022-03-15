@@ -21,9 +21,6 @@ import {
 import { autoModeOut, getPrompt } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
-// old module
-const notifier = require("node-notifier");
-
 export const command = ["regen [app] [key-name]"];
 export const desc = "Regenerate a local ENVKEY.";
 export const builder = (yargs: Argv<BaseArgs>) =>

@@ -17,8 +17,15 @@ import chalk from "chalk";
 export const command = ["sign-in", "login", "authenticate", "auth"];
 export const desc =
   "Sign in to an EnvKey account stored on this device. To sign in on a new device, use `envkey accept-invite`.";
-export const builder = (yargs: Argv<BaseArgs>) => yargs;
-export const handler = async (argv: BaseArgs): Promise<void> => {
+export const builder = (yargs: Argv<BaseArgs>) =>
+  yargs.option("org-id", {
+    type: "string",
+    describe: "Sign in to a specific org",
+    hidden: true,
+  });
+export const handler = async (
+  argv: BaseArgs & { "org-id"?: string }
+): Promise<void> => {
   let { state } = await initCore(argv, false);
   const accounts = Object.values(
     state.orgUserAccounts
@@ -39,6 +46,20 @@ export const handler = async (argv: BaseArgs): Promise<void> => {
       auth = R.find(
         R.propEq("email", argv.account),
         state.pendingSelfHostedDeployments
+      );
+    }
+  } else if (argv["org-id"]) {
+    auth = accounts.find(R.propEq("orgId", argv["org-id"]));
+
+    if (!auth) {
+      return await exit(
+        1,
+        chalk.bold.red(
+          "No account for this organization exists on your device."
+        ) +
+          "\n\nGet an invitation or device authorization, accept it with " +
+          chalk.bold("envkey accept-invite") +
+          " and try again."
       );
     }
   }
