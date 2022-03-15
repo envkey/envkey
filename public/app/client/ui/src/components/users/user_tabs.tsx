@@ -43,12 +43,7 @@ export const useUserTabs = (
   const canManageDevices = useMemo(
     () =>
       user
-        ? g.authz.canManageAnyUserDevicesOrGrants(
-            graph,
-            currentUserId,
-            user.id,
-            now
-          )
+        ? g.authz.canManageAnyUserDevicesOrGrants(graph, currentUserId, user.id)
         : false,
     [graphUpdatedAt, currentUserId, user?.id, now]
   );

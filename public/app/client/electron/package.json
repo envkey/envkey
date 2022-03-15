@@ -1,7 +1,7 @@
 {
   "_name": "---- Note!! The name below is public to end users as the OS identifier. ----",
   "name": "envkey",
-  "version": "2.0.37",
+  "version": "2.0.38",
   "_description": "---- NOTE!! The description below is public to end users. ----",
   "description": "EnvKey UI",
   "author": "Envkey Inc <support@envkey.com>",

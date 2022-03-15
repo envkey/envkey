@@ -279,7 +279,7 @@ apiAction<
     userGraph,
     auth,
     now
-  ) => authz.canRevokeDeviceGrant(userGraph, auth.user.id, id, now),
+  ) => authz.canRevokeDeviceGrant(userGraph, auth.user.id, id),
   graphHandler: async (action, orgGraph, auth, now) => {
     const deviceGrant = orgGraph[action.payload.id] as Api.Db.DeviceGrant;
 

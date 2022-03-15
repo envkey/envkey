@@ -37,6 +37,15 @@ export const canCreateDeviceGrant = (
       return false;
     }
 
+    // allow users with 'org_manage_user_devices' to authorize new devices
+    // (but not necessarily revoke them) for all users
+    // in practice, allows Org Admins to authorize devices for an Org Owner
+    // which is low risk and could be very helpful for restoring access to
+    // an org if the Org Owner leaves or is locked out somehow
+    if (currentOrgPermissions.has("org_manage_user_devices")) {
+      return true;
+    }
+
     if (
       !(
         currentOrgRole.canInviteAllOrgRoles ||
@@ -47,9 +56,7 @@ export const canCreateDeviceGrant = (
       return false;
     }
 
-    if (currentOrgPermissions.has("org_manage_user_devices")) {
-      return true;
-    } else if (currentOrgPermissions.has("org_approve_devices_for_permitted")) {
+    if (currentOrgPermissions.has("org_approve_devices_for_permitted")) {
       // ensure user has approve device permissions for each of the target user's apps
       const currentUserAppRoles = getUserAppRolesByAppId(graph, currentUserId),
         targetAppUserRoles = getUserAppRolesByAppId(graph, currentUserId);
@@ -82,8 +89,7 @@ export const canCreateDeviceGrant = (
   canRevokeDeviceGrant = (
     graph: Graph.Graph,
     currentUserId: string,
-    deviceGrantId: string,
-    now: number
+    deviceGrantId: string
   ): boolean => {
     const currentUserRes = authorizeUser(graph, currentUserId);
     if (!currentUserRes) {
@@ -170,25 +176,20 @@ export const canCreateDeviceGrant = (
         currentOrgRole.canManageOrgRoleIds.includes(targetOrgUser.orgRoleId))
     );
   },
-  canManageAnyDevicesOrGrants = (
-    graph: Graph.Graph,
-    currentUserId: string,
-    now: number
-  ) =>
+  canManageAnyDevicesOrGrants = (graph: Graph.Graph, currentUserId: string) =>
     getDeviceApprovableUsers(graph, currentUserId).length > 0 ||
     getRevokableDevices(graph, currentUserId).length > 0 ||
-    getRevokableDeviceGrants(graph, currentUserId, now).length > 0,
+    getRevokableDeviceGrants(graph, currentUserId).length > 0,
   canManageAnyUserDevicesOrGrants = (
     graph: Graph.Graph,
     currentUserId: string,
-    userId: string,
-    now: number
+    userId: string
   ) =>
     getDeviceApprovableUsers(graph, currentUserId).filter(
       R.propEq("id", userId)
     ).length == 1 ||
     getRevokableDevices(graph, currentUserId).filter(R.propEq("userId", userId))
       .length > 0 ||
-    getRevokableDeviceGrants(graph, currentUserId, now).filter(
+    getRevokableDeviceGrants(graph, currentUserId).filter(
       R.propEq("granteeId", userId)
     ).length > 0;

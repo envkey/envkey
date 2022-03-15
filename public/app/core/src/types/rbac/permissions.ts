@@ -245,6 +245,7 @@ export const DEFAULT_ORG_BASIC_USER_PERMISSIONS: OrgPermission[] = [
     "blocks_delete",
     "blocks_manage_environments",
     "org_manage_users",
+    "org_manage_user_devices",
     "org_manage_cli_users",
     "org_read_logs",
     "org_manage_app_roles",

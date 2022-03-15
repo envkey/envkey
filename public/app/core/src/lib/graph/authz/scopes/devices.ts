@@ -10,9 +10,9 @@ export const getDeviceApprovableUsers = memoize(
       )
   ),
   getRevokableDeviceGrants = memoize(
-    (graph: Graph.Graph, currentUserId: string, now: number) =>
+    (graph: Graph.Graph, currentUserId: string) =>
       graphTypes(graph).deviceGrants.filter(({ id }) =>
-        authz.canRevokeDeviceGrant(graph, currentUserId, id, now)
+        authz.canRevokeDeviceGrant(graph, currentUserId, id)
       )
   ),
   getRevokableDevices = memoize((graph: Graph.Graph, currentUserId: string) =>

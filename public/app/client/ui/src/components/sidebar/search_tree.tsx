@@ -159,8 +159,7 @@ export const SearchTree: OrgComponent<{}, Props> = (props) => {
       canCreateCliUser: g.authz.canCreateAnyCliUser(graph, currentUserId),
       canManageDevices: g.authz.canManageAnyDevicesOrGrants(
         graph,
-        currentUserId,
-        Date.now()
+        currentUserId
       ),
     };
   }, [graphUpdatedAt]);

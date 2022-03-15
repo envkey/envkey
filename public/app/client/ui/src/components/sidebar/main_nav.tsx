@@ -122,7 +122,7 @@ export const MainNav: OrgComponent = (props) => {
           <li key="devices">
             <Link to={orgRoute("/devices")}>Authorize Devices</Link>
           </li>,
-          g.authz.canManageAnyDevicesOrGrants(graph, currentUserId, Date.now()),
+          g.authz.canManageAnyDevicesOrGrants(graph, currentUserId),
         ],
       ])}
 

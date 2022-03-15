@@ -38,8 +38,7 @@ const getDevicesComponent = (isTopLevel?: true) => {
 
       const revokableDeviceGrants = g.authz.getRevokableDeviceGrants(
         graph,
-        currentUserId,
-        now
+        currentUserId
       );
       for (let { granteeId } of revokableDeviceGrants) {
         if (!userIds.has(granteeId)) {
@@ -506,10 +505,19 @@ const getDevicesComponent = (isTopLevel?: true) => {
               wait(MIN_ACTION_DELAY_MS).then(() => setAwaitingMinDelay(false));
 
               dispatchClearGenerated().then(() =>
-                props.dispatch({
-                  type: Client.ActionType.APPROVE_DEVICES,
-                  payload: [{ granteeId: userId }],
-                })
+                props
+                  .dispatch({
+                    type: Client.ActionType.APPROVE_DEVICES,
+                    payload: [{ granteeId: userId }],
+                  })
+                  .then((res) => {
+                    if (!res.success) {
+                      logAndAlertError(
+                        "There was a problem authorizing a device.",
+                        (res.resultAction as any)?.payload
+                      );
+                    }
+                  })
               );
             }}
           >

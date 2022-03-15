@@ -56,8 +56,7 @@ export const Welcome: OrgComponent = (props) => {
       canCreateCliUser: g.authz.canCreateAnyCliUser(graph, currentUserId),
       canManageDevices: g.authz.canManageAnyDevicesOrGrants(
         graph,
-        currentUserId,
-        Date.now()
+        currentUserId
       ),
       canManageOrgUsers: g.authz.hasOrgPermission(
         graph,
