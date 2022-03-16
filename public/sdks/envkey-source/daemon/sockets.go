@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/envkey/envkey/public/sdks/envkey-source/ws"
 	"github.com/google/uuid"
 )
+
+const WS_PING_INTERVAL = time.Duration(5) * time.Second
 
 var websocketsByEnvkey = map[string]*ws.ReconnectingWebsocket{}
 var tcpServerConnsByEnvkeyByConnId = map[string](map[string]net.Conn){}
@@ -157,6 +160,15 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 		defer close(done)
 
 		for {
+			if socket.IsClosedNoReconnect() {
+				return
+			}
+
+			if socket.IsClosed() || socket.IsClosing() {
+				time.Sleep(WS_PING_INTERVAL)
+				continue
+			}
+
 			_, message, err := socket.ReadMessage()
 
 			if message != nil {
@@ -180,15 +192,34 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 			}
 
 			if err != nil {
+				if !socket.IsConnected() {
+					time.Sleep(time.Duration(5000) * time.Millisecond)
+					continue
+				}
+
 				// 401, 404, 429 (throttled) don't reconnect
 				code := socket.GetHTTPResponse().StatusCode
 
 				log.Printf("read websocket error: %s, code: %d", err, code)
 
-				if code == 401 || code == 404 || code == 429 || socket.IsClosing() {
+				if code == 401 || code == 404 || code == 429 {
 					return
 				}
 			}
+		}
+	}()
+
+	go func() {
+		for {
+			if socket.IsClosedNoReconnect() {
+				return
+			}
+
+			if !(!socket.IsConnected() || socket.IsClosing() || socket.IsClosed()) {
+				socket.WriteHeartbeat()
+			}
+
+			time.Sleep(time.Duration(5000) * time.Millisecond)
 		}
 	}()
 
@@ -271,5 +302,15 @@ func closeWebsocket(envkey string) {
 	for _, conn := range tcpServerConns {
 		conn.Close()
 	}
-	socket.Close()
+	socket.Close(false)
+
+	var socketsRemaining int
+	mutex.Lock()
+	socketsRemaining = len(websocketsByEnvkey)
+	mutex.Unlock()
+
+	if socketsRemaining == 0 {
+		log.Printf("No socket connections remaining. Stopping daemon.")
+		os.Exit(0)
+	}
 }

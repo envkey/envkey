@@ -20,6 +20,7 @@ type ListenChangeProps struct {
 
 type DaemonOptions struct {
 	VerboseOutput bool
+	ShouldCache   bool
 }
 
 type SocketAuth struct {

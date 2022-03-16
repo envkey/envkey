@@ -15,8 +15,10 @@ import (
 )
 
 var mutex sync.Mutex
+var shouldCache bool
 
-func InlineStart() {
+func InlineStart(shouldCacheArg bool) {
+	shouldCache = shouldCacheArg
 
 	home, err := homedir.Dir()
 	if err != nil {

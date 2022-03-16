@@ -33,18 +33,24 @@ type ReconnectingWebsocket struct {
 
 	Verbose bool
 
-	dialer        *websocket.Dialer
-	url           string
-	requestHeader http.Header
-	httpResponse  *http.Response
-	mu            sync.Mutex
-	dialErr       error
-	isConnected   bool
-	isClosing     bool
-	isClosed      bool
+	dialer              *websocket.Dialer
+	url                 string
+	requestHeader       http.Header
+	httpResponse        *http.Response
+	mu                  sync.Mutex
+	dialErr             error
+	isConnected         bool
+	isClosing           bool
+	isClosed            bool
+	isClosedNoReconnect bool
+
+	justLoggedReconnected   bool
+	justLoggedWillReconnect bool
 
 	*websocket.Conn
 }
+
+const PING_TIMEOUT = time.Duration(2000 * time.Millisecond)
 
 func (ws *ReconnectingWebsocket) WriteJSON(v interface{}) error {
 	err := ErrNotConnected
@@ -70,7 +76,27 @@ func (ws *ReconnectingWebsocket) WriteMessage(messageType int, data []byte) erro
 	return err
 }
 
+func (ws *ReconnectingWebsocket) WriteHeartbeat() error {
+	err := ErrNotConnected
+	if ws.IsConnected() {
+		err = ws.Conn.WriteMessage(websocket.PingMessage, []byte(""))
+
+		ws.Conn.SetReadDeadline(time.Now().Add(PING_TIMEOUT))
+		ws.Conn.SetPongHandler(func(appData string) error {
+			ws.Conn.SetReadDeadline(time.Time{})
+			return nil
+		})
+
+		if err != nil {
+			ws.handleErrorCode(ws.httpResponse.StatusCode)
+		}
+	}
+
+	return err
+}
+
 func (ws *ReconnectingWebsocket) ReadMessage() (messageType int, message []byte, err error) {
+
 	err = ErrNotConnected
 	if ws.IsConnected() {
 		messageType, message, err = ws.Conn.ReadMessage()
@@ -81,7 +107,7 @@ func (ws *ReconnectingWebsocket) ReadMessage() (messageType int, message []byte,
 	return
 }
 
-func (ws *ReconnectingWebsocket) Close() {
+func (ws *ReconnectingWebsocket) Close(willReconnect bool) {
 	var err error
 	if ws.Conn != nil {
 		ws.mu.Lock()
@@ -96,12 +122,17 @@ func (ws *ReconnectingWebsocket) Close() {
 		ws.isConnected = false
 		ws.isClosed = true
 		ws.isClosing = false
+
+		if !willReconnect {
+			ws.isClosedNoReconnect = true
+		}
+
 		ws.mu.Unlock()
 	}
 }
 
 func (ws *ReconnectingWebsocket) CloseAndReconnect() {
-	ws.Close()
+	ws.Close(true)
 	ws.Connect(true)
 }
 
@@ -124,6 +155,7 @@ func (ws *ReconnectingWebsocket) Dial(urlStr string, reqHeader http.Header, opts
 	}
 
 	hs := ws.HandshakeTimeout
+
 	go ws.Connect(false)
 
 	// wait on first attempt
@@ -141,24 +173,53 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 	}
 
 	loggedReconnect := false
+	connectFailed := false
 
 	for {
 		nextInterval := b.Duration()
 		wsConn, httpResp, err := ws.dialer.Dial(ws.url, ws.requestHeader)
-		code := httpResp.StatusCode
 
 		ws.mu.Lock()
 		ws.Conn = wsConn
 		ws.dialErr = err
 		ws.isConnected = err == nil
 		ws.httpResponse = httpResp
+
+		if ws.isClosed && err == nil {
+			ws.isClosed = false
+		}
+
 		ws.mu.Unlock()
+
+		if err == nil {
+			if connectFailed && loggedReconnect {
+				loggedReconnect = false
+			}
+			if connectFailed {
+				connectFailed = false
+
+				ws.dispatchReconnected()
+			}
+		} else {
+			connectFailed = true
+			if !loggedReconnect {
+				log.Printf("Websocket[%s].Dial: can't connect to websocket, attempting to reconnect...\n", ws.url)
+				loggedReconnect = true
+
+				ws.dispatchWillReconnect()
+			}
+
+			time.Sleep(nextInterval)
+			continue
+		}
+
+		code := httpResp.StatusCode
 
 		if err == nil {
 			log.Printf("Websocket.Dial: connection was successfully established with %s\n", ws.url)
 
-			if isReconnect && ws.OnReconnect != nil {
-				ws.OnReconnect()
+			if isReconnect || connectFailed {
+				ws.dispatchReconnected()
 			}
 
 			return
@@ -177,6 +238,7 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 		} else {
 			if !loggedReconnect {
 				log.Printf("Websocket[%s].Dial: can't connect to websocket, attempting to reconnect...\n", ws.url)
+				ws.dispatchWillReconnect()
 				loggedReconnect = true
 			}
 		}
@@ -213,6 +275,20 @@ func (ws *ReconnectingWebsocket) IsClosing() bool {
 	return ws.isClosing
 }
 
+func (ws *ReconnectingWebsocket) IsClosedNoReconnect() bool {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	return ws.isClosedNoReconnect
+}
+
+func (ws *ReconnectingWebsocket) IsClosed() bool {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	return ws.isClosed
+}
+
 func (ws *ReconnectingWebsocket) setDefaults() {
 	if ws.ReconnectIntervalMin == 0 {
 		ws.ReconnectIntervalMin = 2 * time.Second
@@ -236,17 +312,49 @@ func (ws *ReconnectingWebsocket) handleErrorCode(code int) {
 		if ws.OnInvalid != nil {
 			ws.OnInvalid()
 		}
-		ws.Close()
+		ws.Close(false)
 	} else if code == 429 {
 		if ws.OnThrottled != nil {
 			ws.OnThrottled()
 		}
-		ws.Close()
+		ws.Close(false)
 	} else if !ws.IsClosing() {
-		if ws.OnWillReconnect != nil {
-			ws.OnWillReconnect()
-		}
+		ws.dispatchWillReconnect()
 		ws.CloseAndReconnect()
+	}
+}
+
+func (ws *ReconnectingWebsocket) dispatchReconnected() {
+	if ws.OnReconnect != nil && !ws.justLoggedReconnected {
+		ws.OnReconnect()
+
+		ws.mu.Lock()
+		ws.justLoggedReconnected = true
+		ws.mu.Unlock()
+
+		go func() {
+			time.Sleep(time.Duration(1000) * time.Millisecond)
+			ws.mu.Lock()
+			ws.justLoggedReconnected = false
+			ws.mu.Unlock()
+		}()
+	}
+}
+
+func (ws *ReconnectingWebsocket) dispatchWillReconnect() {
+	if !ws.IsClosing() && ws.OnWillReconnect != nil && !ws.justLoggedWillReconnect {
+		ws.OnWillReconnect()
+
+		ws.mu.Lock()
+		ws.justLoggedWillReconnect = true
+		ws.mu.Unlock()
+
+		go func() {
+			time.Sleep(time.Duration(1000) * time.Millisecond)
+			ws.mu.Lock()
+			ws.justLoggedWillReconnect = false
+			ws.mu.Unlock()
+		}()
 	}
 }
 

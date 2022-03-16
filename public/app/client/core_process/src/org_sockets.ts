@@ -6,12 +6,19 @@ import { getApiAuthParams } from "@core/lib/client";
 import { dispatch } from "./handler";
 import { getContext } from "./default_context";
 import { wait } from "@core/lib/utils/wait";
+import * as R from "ramda";
 
 const CONNECTION_TIMEOUT = 5000,
   CONNECT_MAX_JITTER = 1000 * 3, // 3 seconds
   RETRY_BASE_DELAY = 5000,
+  PING_INTERVAL = 5000,
+  PING_TIMEOUT = 2000,
   sockets: Record<string, WebSocket> = {},
-  retryTimeouts: Record<string, ReturnType<typeof setTimeout>> = {};
+  retryTimeouts: Record<string, ReturnType<typeof setTimeout>> = {},
+  receivedPong: Record<string, boolean> = {},
+  storeByUserId: Record<string, Client.ReduxStore> = {};
+
+let socketPingLoopTimeout: NodeJS.Timeout | undefined;
 
 let _localSocketUpdate: () => void;
 
@@ -54,6 +61,7 @@ export const resolveOrgSockets = async (
     }
   },
   clearSocket = (userId: string, silent = false) => {
+    delete storeByUserId[userId];
     const socket = sockets[userId];
     if (socket) {
       if (!silent) {
@@ -69,6 +77,39 @@ export const resolveOrgSockets = async (
       delete sockets[userId];
     }
     clearRetryTimeout(userId);
+  },
+  stopSocketPingLoop = () => {
+    if (socketPingLoopTimeout) {
+      clearTimeout(socketPingLoopTimeout);
+      socketPingLoopTimeout = undefined;
+    }
+  },
+  socketPingLoop = () => {
+    R.toPairs(sockets).forEach(([userId, socket]) => {
+      if (socket.readyState != WebSocket.OPEN) {
+        return;
+      }
+      socket.ping((err: Error | null) => {
+        if (err) {
+          log(`Socket error on ping. closing...`, { err, userId });
+          clearSocket(userId);
+        } else {
+          receivedPong[userId] = false;
+          setTimeout(() => {
+            if (!receivedPong[userId]) {
+              log(`Socket ping timed out. closing...`, { userId });
+              const store = storeByUserId[userId];
+              socket.close();
+              if (store) {
+                refreshSessions(store.getState(), _localSocketUpdate, [userId]);
+              }
+            }
+          }, PING_TIMEOUT);
+        }
+      });
+    });
+
+    socketPingLoopTimeout = setTimeout(socketPingLoop, PING_INTERVAL);
   };
 
 const connectSocket = async (
@@ -77,6 +118,7 @@ const connectSocket = async (
     reconnectAttempt = -1,
     skipJitter?: true
   ) => {
+    storeByUserId[userId] = store;
     const procState = store.getState();
     const account = procState.orgUserAccounts[userId];
 
@@ -96,6 +138,10 @@ const connectSocket = async (
         authorization: JSON.stringify(getApiAuthParams(account)),
       },
       timeout: CONNECTION_TIMEOUT,
+    });
+
+    socket.on("pong", () => {
+      receivedPong[userId] = true;
     });
 
     // getReconnectAttempt allows event listeners, defined below, to access the

@@ -23,8 +23,8 @@ export const startup = async (onInit: (authTokenRes: string) => void) => {
 
       const [cliLatestInstalledRes, envkeySourceLatestInstalledRes] =
         await Promise.all([
-          isLatestCliInstalled(),
-          isLatestEnvkeysourceInstalled(),
+          isLatestCliInstalled().catch((err) => <const>true),
+          isLatestEnvkeysourceInstalled().catch((err) => <const>true),
         ]);
 
       // Installs the CLI and envkey-source on app start if

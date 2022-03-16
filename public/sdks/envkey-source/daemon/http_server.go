@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
+	"github.com/envkey/envkey/public/sdks/envkey-source/version"
 	"github.com/gorilla/mux"
 )
 
@@ -23,7 +24,7 @@ func startHttpServer() {
 
 func aliveHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "Still kickin'")
+	fmt.Fprint(w, version.Version)
 }
 
 func stopHandler(w http.ResponseWriter, r *http.Request) {

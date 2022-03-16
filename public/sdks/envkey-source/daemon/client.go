@@ -45,6 +45,10 @@ func LaunchDetachedIfNeeded(opts DaemonOptions) error {
 		name := os.Args[0]
 		cmdArgs := []string{"--daemon"}
 
+		if opts.ShouldCache {
+			cmdArgs = append(cmdArgs, "--cache")
+		}
+
 		if opts.VerboseOutput {
 			stderrLogger.Println(utils.FormatTerminal(" | executing "+name, nil))
 		}

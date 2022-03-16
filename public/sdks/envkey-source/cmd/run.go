@@ -34,7 +34,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	}
 
 	if daemonMode {
-		daemon.InlineStart()
+		daemon.InlineStart(shouldCache)
 		return
 	}
 
@@ -104,6 +104,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	if memCache || onChangeCmdArg != "" || (execCmdArg != "" && watch) {
 		daemon.LaunchDetachedIfNeeded(daemon.DaemonOptions{
 			verboseOutput,
+			shouldCache,
 		})
 		res, _, err = daemon.FetchMap(envkey, clientName, clientVersion)
 

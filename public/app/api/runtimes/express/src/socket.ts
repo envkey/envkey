@@ -24,14 +24,17 @@ type RawSocket = IncomingMessage["socket"];
 let socketServer: WebSocket.Server;
 
 const HEARTBEAT_INTERVAL_MILLIS = 30000;
+const PING_TIMEOUT = 2000;
 
 let numDeviceConnections = 0;
 const userConnections: Api.UserSocketConnections = {};
 const connectedByDeviceId: Api.ConnectedByDeviceId = {};
+const receivedPongByDeviceId: Record<string, boolean> = {};
 
 let numEnvkeyConnections = 0;
 const envkeyConnections: Api.EnvkeySocketConnections = {};
 const connectedByConnectionId: Api.ConnectedByConnectionId = {};
+const receivedPongByConnectionId: Record<string, boolean> = {};
 
 const numConnectionsByOrg: {
   [orgId: string]: number;
@@ -58,6 +61,34 @@ const pingClient = async (
   });
 };
 
+const getOnPingDeviceSocket = (deviceId: string) => (err: Error | null) => {
+  const { orgId, userId } = connectedByDeviceId[deviceId];
+  if (err) {
+    clearDeviceSocket(orgId, userId, deviceId);
+  } else {
+    receivedPongByDeviceId[deviceId] = false;
+    setTimeout(() => {
+      if (!receivedPongByDeviceId[deviceId]) {
+        clearDeviceSocket(orgId, userId, deviceId);
+      }
+    }, PING_TIMEOUT);
+  }
+};
+
+const getOnPingEnvkeySocket = (connectionId: string) => (err: Error | null) => {
+  const { orgId, generatedEnvkeyId } = connectedByConnectionId[connectionId];
+  if (err) {
+    clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
+  } else {
+    receivedPongByConnectionId[connectionId] = false;
+    setTimeout(() => {
+      if (!receivedPongByConnectionId[connectionId]) {
+        clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
+      }
+    }, PING_TIMEOUT);
+  }
+};
+
 const pingAllClientsHeartbeat = async () => {
   // log("pinging all websocket clients...", {
   //   numDeviceConnections,
@@ -66,24 +97,17 @@ const pingAllClientsHeartbeat = async () => {
   let pingsQueued = 0;
 
   for (let deviceId in connectedByDeviceId) {
-    const { socket, orgId, userId } = connectedByDeviceId[deviceId];
-    pingClient(socket, (error) => {
-      if (error) {
-        clearDeviceSocket(orgId, userId, deviceId);
-      }
-    });
+    const { socket } = connectedByDeviceId[deviceId];
+
+    pingClient(socket, getOnPingDeviceSocket(deviceId));
+
     // every thousand pings, wait 2 seconds to cool off
     pingsQueued++;
   }
 
   for (let connectionId in connectedByConnectionId) {
-    const { socket, orgId, generatedEnvkeyId } =
-      connectedByConnectionId[connectionId];
-    pingClient(socket, (error) => {
-      if (error) {
-        clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
-      }
-    });
+    const { socket } = connectedByConnectionId[connectionId];
+    pingClient(socket, getOnPingEnvkeySocket(connectionId));
     // every thousand pings, wait 2 seconds to cool off
     pingsQueued++;
   }
@@ -199,6 +223,9 @@ const start: Api.SocketServer["start"] = () => {
 
           socket.on("close", getClearSocketFn("close", context));
           socket.on("error", getClearSocketFn("error", context));
+          socket.on("pong", () => {
+            receivedPongByDeviceId[context.orgUserDevice.id] = true;
+          });
 
           log("Websocket org user connected", {
             fromAddr: req.socket.remoteAddress + ":" + req.socket.remotePort,
@@ -253,6 +280,9 @@ const start: Api.SocketServer["start"] = () => {
 
           socket.on("close", getClearSocketFn("close", context));
           socket.on("error", getClearSocketFn("error", context));
+          socket.on("pong", () => {
+            receivedPongByConnectionId[connectionId] = true;
+          });
 
           log("Websocket envkey connected", {
             fromAddr: req.socket.remoteAddress + ":" + req.socket.remotePort,

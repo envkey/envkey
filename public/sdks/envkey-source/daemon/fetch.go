@@ -76,11 +76,11 @@ func fetchCurrent(envkey, clientName, clientVersion string) (changed bool, err e
 	changed = false
 
 	fetchOptions := fetch.FetchOptions{
-		ShouldCache:    false,
+		ShouldCache:    shouldCache,
 		CacheDir:       "",
 		ClientName:     clientName,
 		ClientVersion:  clientVersion,
-		VerboseOutput:  false,
+		VerboseOutput:  true,
 		TimeoutSeconds: 20,
 		Retries:        3,
 		RetryBackoff:   1,

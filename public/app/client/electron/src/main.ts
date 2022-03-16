@@ -208,14 +208,7 @@ const setupAppUpdateMenu = () => {
   Menu.setApplicationMenu(menu);
 };
 
-[
-  "SIGINT",
-  "SIGUSR1",
-  "SIGUSR2",
-  "uncaughtException",
-  "SIGTERM",
-  "SIGHUP",
-].forEach((eventType) => {
+["SIGINT", "SIGUSR1", "SIGUSR2", "SIGTERM", "SIGHUP"].forEach((eventType) => {
   process.on(eventType, () => {
     log(`EnvKey Electron exiting due to ${eventType}.`);
     if (app) {
@@ -224,7 +217,26 @@ const setupAppUpdateMenu = () => {
   });
 });
 
-// TODO: need to remove all floating promises and then remove this handler so unhandledRejections are treated like exceptions
 process.on("unhandledRejection", (reason, promise) => {
   log(`EnvKey Electron unhandledRejection.`, { reason });
+
+  if (
+    (reason as any)?.message?.startsWith(
+      "Workerpool Worker terminated Unexpectedly"
+    )
+  ) {
+    log(`Exiting due to uncaught workerpool error.`);
+    if (app) {
+      app.quit();
+    }
+  }
+});
+
+process.on("uncaughtException", (err) => {
+  log(`EnvKey Electron uncaughtException.`, { err });
+
+  log(`Exiting due to uncaughtException.`);
+  if (app) {
+    app.quit();
+  }
 });

@@ -186,11 +186,6 @@ const dotEnvkeyFileToDetectedApp = async (
     logVerbose(argv, "detect app warning:", ignored.toString());
   }
 
-  logVerbose(
-    argv,
-    JSON.stringify(Object.values(state.orgUserAccounts), null, 2)
-  );
-
   const account = Object.values(state.orgUserAccounts).find(
     (acct) => acct && acct.orgId == orgId
   );

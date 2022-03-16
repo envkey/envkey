@@ -24,7 +24,12 @@ import {
   enableLogging as clientStoreEnableLogging,
 } from "@core/lib/client_store";
 import { log, logStderr, initFileLogger } from "@core/lib/utils/logger";
-import { resolveOrgSockets, closeAllOrgSockets } from "./org_sockets";
+import {
+  resolveOrgSockets,
+  closeAllOrgSockets,
+  socketPingLoop,
+  stopSocketPingLoop,
+} from "./org_sockets";
 import { checkUpgradesAvailableLoop, clearUpgradesLoop } from "./upgrades";
 import {
   checkSuspendedLoop,
@@ -320,6 +325,7 @@ export const start = async (port = 19047, wsport = 19048) => {
   await new Promise((resolve) => startServer(resolve));
 
   const shutdownNetworking = () => {
+    stopSocketPingLoop();
     closeAllOrgSockets();
 
     if (wss) {
@@ -359,23 +365,33 @@ export const start = async (port = 19047, wsport = 19048) => {
   };
 
   if (!process.env.IS_ELECTRON) {
-    [
-      "SIGINT",
-      "SIGUSR1",
-      "SIGUSR2",
-      "uncaughtException",
-      "SIGTERM",
-      "SIGHUP",
-    ].forEach((eventType) => {
-      process.on(eventType, () => {
-        log(`Exiting due to ${eventType}.`);
-        gracefulShutdown();
-      });
-    });
+    ["SIGINT", "SIGUSR1", "SIGUSR2", "SIGTERM", "SIGHUP"].forEach(
+      (eventType) => {
+        process.on(eventType, () => {
+          log(`Exiting due to ${eventType}.`);
+          gracefulShutdown();
+        });
+      }
+    );
 
-    // TODO: need to remove all floating promises and then remove this handler so unhandledRejections are treated like exceptions
     process.on("unhandledRejection", (reason, promise) => {
       log(`Core process unhandledRejection.`, { reason });
+
+      if (
+        (reason as any)?.message?.startsWith(
+          "Workerpool Worker terminated Unexpectedly"
+        )
+      ) {
+        log(`Exiting due to uncaught workerpool error.`);
+        gracefulShutdown();
+      }
+    });
+
+    process.on("uncaughtException", (err) => {
+      log(`Core process uncaughtException.`, { err });
+
+      log(`Exiting due to uncaughtException.`);
+      gracefulShutdown();
     });
   }
 
@@ -459,6 +475,7 @@ const initReduxStore = async (forceReset?: true) => {
   initSocketsAndTimers = async () => {
     if (reduxStore) {
       await resolveOrgSockets(reduxStore, localSocketUpdate);
+      socketPingLoop();
       checkSuspendedLoop(reduxStore, localSocketUpdate);
       clearCacheLoop(reduxStore, localSocketUpdate);
     }
@@ -591,11 +608,13 @@ const initReduxStore = async (forceReset?: true) => {
       return;
     }
     const state = reduxStore.getState();
+
     if (!state.lockoutMs || !state.lastActiveAt) {
       return;
     }
 
     const now = nowArg ?? Date.now();
+
     if (now - state.lastActiveAt > state.lockoutMs) {
       await lockDevice();
     }

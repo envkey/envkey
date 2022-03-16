@@ -916,7 +916,8 @@ export const clientAction = <
               procState: Client.ProcState = Client.defaultProcState,
               action: Client.ActionTypeWithContextMeta<Client.Action.EnvkeyAction>
             ) =>
-              action.type.startsWith("envkey/client/")
+              action.type.startsWith("envkey/client/") &&
+              action.type != Client.ActionType.MERGE_PERSISTED
                 ? {
                     ...procState,
                     lastActiveAt: Date.now(),
