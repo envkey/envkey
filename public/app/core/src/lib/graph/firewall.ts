@@ -9,12 +9,8 @@ export const getAppAllowedIps = (
   const org = getOrg(graph);
   const app = graph[appId] as Model.App;
 
-  if (!app.environmentRoleIpsMergeStrategies) {
-    return undefined;
-  }
-
   const mergeStrategy =
-    app.environmentRoleIpsMergeStrategies[environmentRoleId];
+    app.environmentRoleIpsMergeStrategies?.[environmentRoleId];
 
   // no entry for an app's environmentRoleIpsMergeStrategies means it inherits from org
   if (!mergeStrategy) {
