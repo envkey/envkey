@@ -17,7 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const WS_PING_INTERVAL = time.Duration(5) * time.Second
+const WS_PING_INTERVAL = time.Duration(20) * time.Second
 
 var websocketsByEnvkey = map[string]*ws.ReconnectingWebsocket{}
 var tcpServerConnsByEnvkeyByConnId = map[string](map[string]net.Conn){}

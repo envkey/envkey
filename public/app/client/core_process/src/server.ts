@@ -579,7 +579,7 @@ const initReduxStore = async (forceReset?: true) => {
     if (lockoutTimeout) {
       clearTimeout(lockoutTimeout);
       lockoutTimeout = undefined;
-      log("Cleared lockout timer.");
+      // log("Cleared lockout timer.");
     }
   },
   resolveLockoutTimer = async (nowArg?: number) => {
@@ -598,9 +598,9 @@ const initReduxStore = async (forceReset?: true) => {
     const state = reduxStore.getState();
     if (state.requiresPassphrase && state.lockoutMs) {
       lockoutTimeout = setTimeout(lockDevice, state.lockoutMs);
-      log("Started lockout timer", {
-        lockoutInMinutes: Math.floor(state.lockoutMs / 1000 / 60),
-      });
+      // log("Started lockout timer", {
+      //   lockoutInMinutes: Math.floor(state.lockoutMs / 1000 / 60),
+      // });
     }
   },
   lockoutIfNeeded = async (nowArg?: number) => {

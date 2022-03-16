@@ -11,8 +11,8 @@ import * as R from "ramda";
 const CONNECTION_TIMEOUT = 5000,
   CONNECT_MAX_JITTER = 1000 * 3, // 3 seconds
   RETRY_BASE_DELAY = 5000,
-  PING_INTERVAL = 5000,
-  PING_TIMEOUT = 2000,
+  PING_INTERVAL = 20000,
+  PING_TIMEOUT = 10000,
   sockets: Record<string, WebSocket> = {},
   retryTimeouts: Record<string, ReturnType<typeof setTimeout>> = {},
   receivedPong: Record<string, boolean> = {},

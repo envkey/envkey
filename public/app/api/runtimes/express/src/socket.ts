@@ -24,7 +24,7 @@ type RawSocket = IncomingMessage["socket"];
 let socketServer: WebSocket.Server;
 
 const HEARTBEAT_INTERVAL_MILLIS = 30000;
-const PING_TIMEOUT = 2000;
+const PING_TIMEOUT = 10000;
 
 let numDeviceConnections = 0;
 const userConnections: Api.UserSocketConnections = {};
@@ -47,7 +47,7 @@ const pingClient = async (
   cb: (error: Error | null) => void
 ) => {
   // background
-  wait(upTo1Sec()).then(() => {
+  wait(upTo1Sec() * 10).then(() => {
     client.ping((err: Error | null) => {
       const clientInfo = (client as any)._socket?._peername;
       if (err) {
@@ -94,22 +94,15 @@ const pingAllClientsHeartbeat = async () => {
   //   numDeviceConnections,
   //   numEnvkeyConnections,
   // });
-  let pingsQueued = 0;
 
   for (let deviceId in connectedByDeviceId) {
     const { socket } = connectedByDeviceId[deviceId];
-
     pingClient(socket, getOnPingDeviceSocket(deviceId));
-
-    // every thousand pings, wait 2 seconds to cool off
-    pingsQueued++;
   }
 
   for (let connectionId in connectedByConnectionId) {
     const { socket } = connectedByConnectionId[connectionId];
     pingClient(socket, getOnPingEnvkeySocket(connectionId));
-    // every thousand pings, wait 2 seconds to cool off
-    pingsQueued++;
   }
 
   heartbeatTimeout = setTimeout(
@@ -129,7 +122,6 @@ let balanceSocketsFn: Api.BalanceSocketsFn | undefined;
 export const registerBalanceSocketsFn = (fn: Api.BalanceSocketsFn) => {
   balanceSocketsFn = fn;
 };
-
 let incrementActiveSocketsFn: Api.UpdateActiveSocketConnectionsFn | undefined;
 export const registerIncrementActiveSocketsFn = (
   fn: Api.UpdateActiveSocketConnectionsFn

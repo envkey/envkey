@@ -50,7 +50,7 @@ type ReconnectingWebsocket struct {
 	*websocket.Conn
 }
 
-const PING_TIMEOUT = time.Duration(2000 * time.Millisecond)
+const PING_TIMEOUT = time.Duration(10000 * time.Millisecond)
 
 func (ws *ReconnectingWebsocket) WriteJSON(v interface{}) error {
 	err := ErrNotConnected

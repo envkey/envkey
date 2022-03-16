@@ -1,17 +1,17 @@
-version: 2.0.39
+version: 2.0.40
 files:
-  - url: EnvKey-2.0.39-mac.zip
-    sha512: 3nfDv1Mkobnnwe14f1er3D3MFS+BKiDXUvvnC92QsQJcg409n4NycitFRKpsWKyzYzmqp86YWljhC5IYnFQ9iQ==
-    size: 82880236
-  - url: EnvKey-2.0.39-arm64-mac.zip
-    sha512: ZR6Rh35cJC4TzE2J238Yr96d43kuiGFzaFggyzXe0hOyREZZCejLPnRKBybOLRcLOTgFpcuDt3BE/vuACxpsiA==
-    size: 84540046
-  - url: EnvKey-2.0.39.dmg
-    sha512: Ap2dbJTs4naizQJxpi53a6bT+G/aoEL/pT2+M2XoNCvBrETTuIzy+i7p9p1gvFQJG8kR8CD5+IqB/RT520znZA==
-    size: 85946681
-  - url: EnvKey-2.0.39-arm64.dmg
-    sha512: 08Vv23lutB+0xyJ8krXbGGIX+TKdAO20LREELpxU9FtN4J0PPci/N8QSwsTdwDiPsMyfURMzow8q/PWNrZLFWw==
-    size: 87881128
-path: EnvKey-2.0.39-mac.zip
-sha512: 3nfDv1Mkobnnwe14f1er3D3MFS+BKiDXUvvnC92QsQJcg409n4NycitFRKpsWKyzYzmqp86YWljhC5IYnFQ9iQ==
-releaseDate: '2022-03-16T00:31:43.595Z'
+  - url: EnvKey-2.0.40-mac.zip
+    sha512: QvLG89vgLiWV90kXmJS+rOSpdMs7Fta9qILMKPHzD2yRwSZ/rTMm37Zmp83uGCfQLwu013IGJIwhGs8tWxA5Wg==
+    size: 82880243
+  - url: EnvKey-2.0.40-arm64-mac.zip
+    sha512: GGndpIV9aGc/5m//2xR81Ol+ERzjgS4jjKvpDm7WAlKP5Sg/xltpEpjNrfdApjzcsvsFgbosqVgQnYWWPPeQdQ==
+    size: 84540045
+  - url: EnvKey-2.0.40.dmg
+    sha512: W8Gosm+kbzNowzUPRozsJEXCSFVXIj6lfWSp+6XkdHBHS3sDBhB4/hNxhkMjwOpub4N5GuvW1eWsBkXxAqGfmg==
+    size: 85945861
+  - url: EnvKey-2.0.40-arm64.dmg
+    sha512: F0ISaFqziE8bvQ5q5Jv1+W7G2+HCt58JRlJbxQfDSBNiZvCepRp/Uvdcc1XJKPyKDeVNgoz+j12SEqnVaUPARQ==
+    size: 87881634
+path: EnvKey-2.0.40-mac.zip
+sha512: QvLG89vgLiWV90kXmJS+rOSpdMs7Fta9qILMKPHzD2yRwSZ/rTMm37Zmp83uGCfQLwu013IGJIwhGs8tWxA5Wg==
+releaseDate: '2022-03-16T06:11:50.364Z'
