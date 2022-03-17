@@ -14,7 +14,7 @@ import { log } from "@core/lib/utils/logger";
 import { registerVerifyLicenseFn } from "../../../shared/src/auth";
 import startup from "./startup";
 import { registerSocketServer } from "../../../shared/src/handler";
-import socketServer from "./socket";
+import socketServer, { clearAllSockets } from "./socket";
 import { ensureEnv } from "./../../../shared/src/env";
 
 ensureEnv("COMMUNITY_AUTH_HASH", "SMTP_TRANSPORT_JSON");
@@ -25,12 +25,18 @@ const injectHandlers = () => {
   require("../../../community/src/api_handlers");
 };
 
-startup(injectHandlers, async (port: number) => {
-  registerVerifyLicenseFn(getCommunityLicense);
-  registerEmailTransporter(getCommunityTransporter());
-  socketServer.start();
-  registerSocketServer(socketServer);
-})
+startup(
+  injectHandlers,
+  async (port: number) => {
+    registerVerifyLicenseFn(getCommunityLicense);
+    registerEmailTransporter(getCommunityTransporter());
+    socketServer.start();
+    registerSocketServer(socketServer);
+  },
+  async () => {
+    clearAllSockets(false);
+  }
+)
   .then(() => {
     log("EnvKey API Community Edition has started!");
   })

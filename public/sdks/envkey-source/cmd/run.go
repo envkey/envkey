@@ -56,7 +56,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 
 	if (clientNameArg != "" && clientVersionArg == "") ||
 		(clientVersionArg != "" && clientNameArg == "") {
-		utils.Fatal("if one of --client-name or --client-version is set, the other must also be set", execCmdArg == "")
+		utils.Fatal("if one of --client-name or --client-version is set, the other must also be set", execCmdArg != "")
 	}
 
 	var envkey string
@@ -72,13 +72,13 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	*	  5 - .env file at ~/.env
 	 */
 
-	envkey, appConfig = env.GetEnvkey(verboseOutput, envFileOverride, execCmdArg == "", localDevHost)
+	envkey, appConfig = env.GetEnvkey(verboseOutput, envFileOverride, execCmdArg != "", localDevHost)
 
 	if envkey == "" {
 		if ignoreMissing {
 			os.Exit(0)
 		} else {
-			utils.Fatal("ENVKEY missing\n", execCmdArg == "")
+			utils.Fatal("ENVKEY missing\n", execCmdArg != "")
 		}
 	}
 
@@ -123,7 +123,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 		return
 	}
 
-	utils.CheckError(err, execCmdArg == "")
+	utils.CheckError(err, execCmdArg != "")
 
 	execWithEnv(envkey, res, clientName, clientVersion)
 }

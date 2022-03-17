@@ -137,7 +137,8 @@ export const apiAction = <
         auth = await authenticate(
           action.meta.auth,
           transactionConn,
-          requestParams.ip
+          requestParams.ip,
+          action.type == Api.ActionType.FETCH_ORG_STATS
         ).catch((err) => {
           throw err;
         });
@@ -1981,18 +1982,25 @@ const apiActions: {
       socketServer!.clearDeviceSocket(
         params.orgId,
         params.userId,
-        params.deviceId
+        params.deviceId,
+        true,
+        true
       );
     } else if ("userId" in params) {
-      socketServer!.clearUserSockets(params.orgId, params.userId);
+      socketServer!.clearUserSockets(params.orgId, params.userId, true, true);
     } else {
-      socketServer!.clearOrgSockets(params.orgId);
+      socketServer!.clearOrgSockets(params.orgId, true, true);
     }
   },
   clearEnvkeySockets = (params: Api.ClearEnvkeySocketParams) => {
     if ("generatedEnvkeyId" in params) {
-      socketServer!.clearEnvkeySockets(params.orgId, params.generatedEnvkeyId);
+      socketServer!.clearEnvkeySockets(
+        params.orgId,
+        params.generatedEnvkeyId,
+        true,
+        true
+      );
     } else {
-      socketServer!.clearOrgEnvkeySockets(params.orgId);
+      socketServer!.clearOrgEnvkeySockets(params.orgId, true, true);
     }
   };

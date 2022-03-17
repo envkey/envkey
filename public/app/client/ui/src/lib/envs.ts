@@ -58,7 +58,7 @@ export const getEnvsUiPermissions = (
     ),
   getValDisplay = (val: string) =>
     val.split(/\n/).join("\\n").split(/\r/).join("\\r"),
-  fetchEnvsIfNeeded = (
+  shouldFetchEnvs = (
     props: OrgComponentProps,
     envParentIdOrIds: string | string[]
   ) => {
@@ -94,10 +94,22 @@ export const getEnvsUiPermissions = (
     }
 
     if (shouldFetch) {
+      return toFetchEnvs;
+    } else {
+      return false;
+    }
+  },
+  fetchEnvsIfNeeded = (
+    props: OrgComponentProps,
+    envParentIdOrIds: string | string[]
+  ) => {
+    const shouldFetch = shouldFetchEnvs(props, envParentIdOrIds);
+
+    if (shouldFetch) {
       return props.dispatch({
         type: Client.ActionType.FETCH_ENVS,
         payload: {
-          byEnvParentId: toFetchEnvs,
+          byEnvParentId: shouldFetch,
         },
       });
     }

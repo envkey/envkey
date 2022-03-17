@@ -6,18 +6,6 @@ import bodyParser from "body-parser";
 import { runMigrationsIfNeeded } from "./migrate";
 import { resolveMaxPacketSize } from "../../../shared/src/db";
 
-process.on("uncaughtException", (err) => {
-  logStderr("uncaughtException", { err });
-  // flush that log buffer before suicide
-  setTimeout(() => {
-    process.exit(1);
-  }, 200);
-});
-
-process.on("unhandledRejection", (reason, promise) => {
-  logStderr("Unhandled Rejection at:", { promise, reason });
-});
-
 ensureEnv();
 
 require("../../../shared/src/api_handlers");
@@ -30,8 +18,13 @@ app.use(bodyParser.json({ limit: "200mb" }));
 
 export default (
   injectHandlers: (app: express.Application) => void,
-  afterDbCallback?: (port: number) => Promise<void>
+  afterDbCallback?: (port: number) => Promise<void>,
+  exitHandlerArg?: () => Promise<void>
 ) => {
+  if (exitHandlerArg) {
+    addExitHandler(exitHandlerArg);
+  }
+
   // init routes after the caller of startup(app) so they can attach any routes before
   // we initRoutes(app) and add the 404 and final error handler
   injectHandlers(app);
@@ -53,3 +46,43 @@ export default (
       };
     });
 };
+
+let exitHandler: (() => Promise<void>) | undefined;
+const addExitHandler = (fn: () => Promise<void>) => {
+  exitHandler = fn;
+};
+
+const doExit = () => {
+  if (exitHandler) {
+    exitHandler()
+      .then(() => process.exit(0))
+      .catch((err) => {
+        log("Exit handler error", { err });
+        // allows log buffer to flush
+        setTimeout(() => {
+          process.exit(1);
+        }, 200);
+      });
+  } else {
+    // allows log buffer to flush
+    setTimeout(() => {
+      process.exit(0);
+    }, 200);
+  }
+};
+
+for (let exitSignal of ["SIGINT", "SIGUSR1", "SIGUSR2", "SIGTERM", "SIGHUP"]) {
+  process.on(exitSignal, () => {
+    log(`caught exit signal ${exitSignal}`);
+    doExit();
+  });
+}
+
+process.on("uncaughtException", (err) => {
+  logStderr("uncaughtException", { err });
+  doExit();
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  logStderr("Unhandled Rejection at:", { promise, reason });
+});

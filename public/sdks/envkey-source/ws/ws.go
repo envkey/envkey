@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,7 +58,7 @@ func (ws *ReconnectingWebsocket) WriteJSON(v interface{}) error {
 	if ws.IsConnected() {
 		err = ws.Conn.WriteJSON(v)
 		if err != nil {
-			ws.handleErrorCode(ws.httpResponse.StatusCode)
+			ws.handleError(err, ws.httpResponse.StatusCode)
 		}
 	}
 
@@ -69,7 +70,7 @@ func (ws *ReconnectingWebsocket) WriteMessage(messageType int, data []byte) erro
 	if ws.IsConnected() {
 		err = ws.Conn.WriteMessage(messageType, data)
 		if err != nil {
-			ws.handleErrorCode(ws.httpResponse.StatusCode)
+			ws.handleError(err, ws.httpResponse.StatusCode)
 		}
 	}
 
@@ -88,7 +89,7 @@ func (ws *ReconnectingWebsocket) WriteHeartbeat() error {
 		})
 
 		if err != nil {
-			ws.handleErrorCode(ws.httpResponse.StatusCode)
+			ws.handleError(err, ws.httpResponse.StatusCode)
 		}
 	}
 
@@ -100,8 +101,10 @@ func (ws *ReconnectingWebsocket) ReadMessage() (messageType int, message []byte,
 	err = ErrNotConnected
 	if ws.IsConnected() {
 		messageType, message, err = ws.Conn.ReadMessage()
+
 		if err != nil {
-			ws.handleErrorCode(ws.httpResponse.StatusCode)
+			log.Println("WebSocket ReadMessage err:", err)
+			ws.handleError(err, ws.httpResponse.StatusCode)
 		}
 	}
 	return
@@ -203,7 +206,7 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 		} else {
 			connectFailed = true
 			if !loggedReconnect {
-				log.Printf("Websocket[%s].Dial: can't connect to websocket, attempting to reconnect...\n", ws.url)
+				log.Printf("Websocket[%s].Dial: can't connect to websocket (err: %s, httpResp: %v), attempting to reconnect...\n", ws.url, err, httpResp == nil)
 				loggedReconnect = true
 
 				ws.dispatchWillReconnect()
@@ -223,13 +226,13 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 			}
 
 			return
-		} else if code == 401 || code == 404 {
+		} else if strings.Contains(err.Error(), "4001: forbidden") || code == 401 || code == 404 {
 			log.Printf("Websocket.Dial: connection to %s failed: %d (invalid ENVKEY)\n", ws.url, code)
 			if ws.OnInvalid != nil {
 				ws.OnInvalid()
 			}
 			return
-		} else if code == 429 {
+		} else if strings.Contains(err.Error(), "4002: throttled") || code == 429 {
 			log.Printf("Websocket.Dial: connection to %s failed: %d (throttled)\n", ws.url, code)
 			if ws.OnThrottled != nil {
 				ws.OnThrottled()
@@ -237,7 +240,7 @@ func (ws *ReconnectingWebsocket) Connect(isReconnect bool) {
 			return
 		} else {
 			if !loggedReconnect {
-				log.Printf("Websocket[%s].Dial: can't connect to websocket, attempting to reconnect...\n", ws.url)
+				log.Printf("Websocket[%s].Dial: can't connect to websocket (status: %d) attempting to reconnect...\n", ws.url, code)
 				ws.dispatchWillReconnect()
 				loggedReconnect = true
 			}
@@ -307,13 +310,14 @@ func (ws *ReconnectingWebsocket) setDefaults() {
 	}
 }
 
-func (ws *ReconnectingWebsocket) handleErrorCode(code int) {
-	if code == 401 || code == 404 {
+func (ws *ReconnectingWebsocket) handleError(err error, code int) {
+
+	if strings.Contains(err.Error(), "4001: forbidden") || code == 401 || code == 404 {
 		if ws.OnInvalid != nil {
 			ws.OnInvalid()
 		}
 		ws.Close(false)
-	} else if code == 429 {
+	} else if strings.Contains(err.Error(), "4002: throttled") || code == 429 {
 		if ws.OnThrottled != nil {
 			ws.OnThrottled()
 		}

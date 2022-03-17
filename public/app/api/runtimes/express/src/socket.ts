@@ -23,8 +23,10 @@ type RawSocket = IncomingMessage["socket"];
 
 let socketServer: WebSocket.Server;
 
-const HEARTBEAT_INTERVAL_MILLIS = 30000;
+const HEARTBEAT_INTERVAL_MS = 30000;
 const PING_TIMEOUT = 10000;
+const SYNC_ACTIVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const SYNC_ACTIVE_JITTER = 60 * 1000; // 1 minute
 
 let numDeviceConnections = 0;
 const userConnections: Api.UserSocketConnections = {};
@@ -40,7 +42,8 @@ const numConnectionsByOrg: {
   [orgId: string]: number;
 } = {};
 
-let heartbeatTimeout: NodeJS.Timeout;
+let heartbeatTimeout: NodeJS.Timeout | undefined;
+let syncActiveTimeout: NodeJS.Timeout | undefined;
 
 const pingClient = async (
   client: WebSocket,
@@ -62,28 +65,52 @@ const pingClient = async (
 };
 
 const getOnPingDeviceSocket = (deviceId: string) => (err: Error | null) => {
-  const { orgId, userId } = connectedByDeviceId[deviceId];
+  const connected = connectedByDeviceId[deviceId];
+
+  if (!connected) {
+    return;
+  }
+
+  const { orgId, userId } = connected;
   if (err) {
-    clearDeviceSocket(orgId, userId, deviceId);
+    clearDeviceSocket(orgId, userId, deviceId, true, false);
   } else {
     receivedPongByDeviceId[deviceId] = false;
     setTimeout(() => {
       if (!receivedPongByDeviceId[deviceId]) {
-        clearDeviceSocket(orgId, userId, deviceId);
+        clearDeviceSocket(orgId, userId, deviceId, true, false);
       }
     }, PING_TIMEOUT);
   }
 };
 
 const getOnPingEnvkeySocket = (connectionId: string) => (err: Error | null) => {
-  const { orgId, generatedEnvkeyId } = connectedByConnectionId[connectionId];
+  const connected = connectedByConnectionId[connectionId];
+
+  if (!connected) {
+    return;
+  }
+
+  const { orgId, generatedEnvkeyId } = connected;
   if (err) {
-    clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
+    clearEnvkeyConnectionSocket(
+      orgId,
+      generatedEnvkeyId,
+      connectionId,
+      true,
+      false
+    );
   } else {
     receivedPongByConnectionId[connectionId] = false;
     setTimeout(() => {
       if (!receivedPongByConnectionId[connectionId]) {
-        clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
+        clearEnvkeyConnectionSocket(
+          orgId,
+          generatedEnvkeyId,
+          connectionId,
+          true,
+          false
+        );
       }
     }, PING_TIMEOUT);
   }
@@ -105,10 +132,7 @@ const pingAllClientsHeartbeat = async () => {
     pingClient(socket, getOnPingEnvkeySocket(connectionId));
   }
 
-  heartbeatTimeout = setTimeout(
-    pingAllClientsHeartbeat,
-    HEARTBEAT_INTERVAL_MILLIS
-  );
+  heartbeatTimeout = setTimeout(pingAllClientsHeartbeat, HEARTBEAT_INTERVAL_MS);
 };
 
 let throttleSocketConnectionFn: Api.ThrottleSocketConnectionFn | undefined;
@@ -118,22 +142,41 @@ export const registerThrottleSocketConnectionFn = (
   throttleSocketConnectionFn = fn;
 };
 
-let balanceSocketsFn: Api.BalanceSocketsFn | undefined;
-export const registerBalanceSocketsFn = (fn: Api.BalanceSocketsFn) => {
-  balanceSocketsFn = fn;
-};
-let incrementActiveSocketsFn: Api.UpdateActiveSocketConnectionsFn | undefined;
-export const registerIncrementActiveSocketsFn = (
-  fn: Api.UpdateActiveSocketConnectionsFn
-) => {
-  incrementActiveSocketsFn = fn;
+let clusterFns:
+  | {
+      balanceSockets: Api.BalanceSocketsFn;
+
+      addActiveDeviceSocket: Api.AddActiveDeviceSocketFn;
+      addActiveEnvkeySocket: Api.AddActiveEnvkeySocketFn;
+
+      clearActiveDeviceSocket: Api.ClearActiveDeviceSocketFn;
+      clearActiveEnvkeyConnectionSocket: Api.ClearActiveEnvkeyConnectionSocketFn;
+      clearActiveEnvkeySockets: Api.ClearActiveEnvkeySocketsFn;
+      clearActiveUserSockets: Api.ClearActiveUserSocketsFn;
+
+      clearActiveOrgDeviceSockets: Api.ClearActiveOrgSocketsFn;
+      clearActiveOrgEnvkeySockets: Api.ClearActiveOrgSocketsFn;
+
+      syncActiveSockets: Api.SyncActiveSocketsFn;
+    }
+  | undefined;
+
+export const registerClusterFns = (fns: Required<typeof clusterFns>) => {
+  clusterFns = fns;
+  syncActiveTimeout = setTimeout(
+    syncActiveLoop,
+    SYNC_ACTIVE_INTERVAL_MS + Math.floor(Math.random() * SYNC_ACTIVE_JITTER)
+  );
 };
 
-let decrementActiveSocketsFn: Api.UpdateActiveSocketConnectionsFn | undefined;
-export const registerDecrementActiveSocketsFn = (
-  fn: Api.UpdateActiveSocketConnectionsFn
-) => {
-  decrementActiveSocketsFn = fn;
+export const clearAllSockets = (clearActive = false) => {
+  for (let orgId in userConnections) {
+    clearOrgSockets(orgId, clearActive, false);
+  }
+
+  for (let orgId in envkeyConnections) {
+    clearOrgEnvkeySockets(orgId, clearActive, false);
+  }
 };
 
 const start: Api.SocketServer["start"] = () => {
@@ -165,7 +208,8 @@ const start: Api.SocketServer["start"] = () => {
       (
         socket: WebSocket,
         req: IncomingMessage,
-        context: Auth.TokenAuthContext | Auth.EnvkeySocketAuthContext
+        context: Auth.TokenAuthContext | Auth.EnvkeySocketAuthContext,
+        ip: string
       ) => {
         const orgId =
           context.type == "tokenAuthContext"
@@ -181,10 +225,16 @@ const start: Api.SocketServer["start"] = () => {
             userConnections[orgId][context.user.id] = {};
           }
 
-          clearDeviceSocket(orgId, context.user.id, context.orgUserDevice.id);
+          clearDeviceSocket(
+            orgId,
+            context.user.id,
+            context.orgUserDevice.id,
+            true,
+            false
+          );
 
-          if (balanceSocketsFn) {
-            balanceSocketsFn(
+          if (clusterFns) {
+            clusterFns.balanceSockets(
               "device",
               connectedByDeviceId,
               connectedByConnectionId,
@@ -200,6 +250,7 @@ const start: Api.SocketServer["start"] = () => {
             orgId,
             userId: context.user.id,
             socket,
+            consumerIp: ip,
           };
           numDeviceConnections++;
           if (!numConnectionsByOrg[orgId]) {
@@ -208,9 +259,14 @@ const start: Api.SocketServer["start"] = () => {
             numConnectionsByOrg[orgId]++;
           }
 
-          if (incrementActiveSocketsFn) {
-            // increment active sockets in background
-            incrementActiveSocketsFn(orgId);
+          if (clusterFns) {
+            // add active socket in background
+            clusterFns.addActiveDeviceSocket(
+              orgId,
+              context.user.id,
+              context.orgUserDevice.id,
+              ip
+            );
           }
 
           socket.on("close", getClearSocketFn("close", context));
@@ -240,10 +296,16 @@ const start: Api.SocketServer["start"] = () => {
             envkeyConnections[orgId][generatedEnvkeyId] = {};
           }
 
-          clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
+          clearEnvkeyConnectionSocket(
+            orgId,
+            generatedEnvkeyId,
+            connectionId,
+            true,
+            false
+          );
 
-          if (balanceSocketsFn) {
-            balanceSocketsFn(
+          if (clusterFns) {
+            clusterFns.balanceSockets(
               "generatedEnvkey",
               connectedByDeviceId,
               connectedByConnectionId,
@@ -259,15 +321,21 @@ const start: Api.SocketServer["start"] = () => {
             orgId,
             generatedEnvkeyId,
             socket,
+            consumerIp: ip,
           };
           if (!numConnectionsByOrg[orgId]) {
             numConnectionsByOrg[orgId] = 1;
           } else {
             numConnectionsByOrg[orgId]++;
           }
-          if (incrementActiveSocketsFn) {
+          if (clusterFns) {
             // increment active sockets in background
-            incrementActiveSocketsFn(orgId);
+            clusterFns.addActiveEnvkeySocket(
+              orgId,
+              generatedEnvkeyId,
+              connectionId,
+              ip
+            );
           }
 
           socket.on("close", getClearSocketFn("close", context));
@@ -301,7 +369,10 @@ const start: Api.SocketServer["start"] = () => {
 
         if (typeof req.headers["authorization"] != "string") {
           log("Websocket authorization header missing", { ip });
-          socketAuthErr(socket);
+          // socketAuthErr(socket);
+          socketServer.handleUpgrade(req, socket, head, (ws) => {
+            ws.close(4001, "forbidden");
+          });
           return;
         }
 
@@ -317,11 +388,14 @@ const start: Api.SocketServer["start"] = () => {
               context = await authenticate<Auth.TokenAuthContext>(
                 authParams,
                 transactionConn,
-                ip
+                ip,
+                true
               );
             } catch (err) {
               log("socket httpServer.authenticate error", { err });
-              socketAuthErr(socket);
+              socketServer.handleUpgrade(req, socket, head, (ws) => {
+                ws.close(4001, "forbidden");
+              });
               return;
             } finally {
               releaseTransaction(transactionConn);
@@ -336,13 +410,15 @@ const start: Api.SocketServer["start"] = () => {
                 );
               } catch (err) {
                 log("socket connection throttle error", { err });
-                socketThrottleErr(socket);
+                socketServer.handleUpgrade(req, socket, head, (ws) => {
+                  ws.close(4002, "throttled");
+                });
                 return;
               }
             }
 
             socketServer.handleUpgrade(req, socket, head, (ws) => {
-              socketServer.emit("connection", ws, req, context);
+              socketServer.emit("connection", ws, req, context, ip);
             });
           } else if (authParams.type == "fetchEnvkeySocketAuthParams") {
             let generatedEnvkey: Api.Db.GeneratedEnvkey | undefined;
@@ -361,13 +437,15 @@ const start: Api.SocketServer["start"] = () => {
               if (generatedEnvkey && throttleSocketConnectionFn) {
                 [org, orgStats] = await Promise.all([
                   getOrg(generatedEnvkey.pkey, transactionConn),
-                  getOrgStats(generatedEnvkey.pkey, transactionConn),
+                  getOrgStats(generatedEnvkey.pkey, transactionConn, true),
                 ]);
                 if (!org || !orgStats) {
                   log("socket httpServer.authenticate error", {
                     err: "org or orgStats missing",
                   });
-                  socketAuthErr(socket);
+                  socketServer.handleUpgrade(req, socket, head, (ws) => {
+                    ws.close(4001, "forbidden");
+                  });
                   return;
                 }
                 license = verifySignedLicense(
@@ -379,7 +457,9 @@ const start: Api.SocketServer["start"] = () => {
               }
             } catch (err) {
               log("socket httpServer.authenticate error", { err });
-              socketAuthErr(socket);
+              socketServer.handleUpgrade(req, socket, head, (ws) => {
+                ws.close(4001, "forbidden");
+              });
               return;
             } finally {
               releaseTransaction(transactionConn);
@@ -388,7 +468,6 @@ const start: Api.SocketServer["start"] = () => {
             if (generatedEnvkey) {
               if (throttleSocketConnectionFn && org && license && orgStats) {
                 try {
-                  log("throttle socket...");
                   throttleSocketConnectionFn(
                     "generatedEnvkey",
                     license,
@@ -397,21 +476,31 @@ const start: Api.SocketServer["start"] = () => {
                 } catch (err) {
                   log("caught throttle error...");
                   log("socket connection throttle error", { err });
-                  socketThrottleErr(socket);
+                  socketServer.handleUpgrade(req, socket, head, (ws) => {
+                    ws.close(4001, "throttled");
+                  });
                   return;
                 }
               }
 
               socketServer.handleUpgrade(req, socket, head, (ws) => {
-                socketServer.emit("connection", ws, req, {
-                  type: "envkeySocketAuthContext",
-                  generatedEnvkey,
-                  connectionId: authParams.connectionId,
-                });
+                socketServer.emit(
+                  "connection",
+                  ws,
+                  req,
+                  {
+                    type: "envkeySocketAuthContext",
+                    generatedEnvkey,
+                    connectionId: authParams.connectionId,
+                  },
+                  ip
+                );
               });
             } else {
               log("socket httpServer.authenticate error: not found");
-              socketAuthErr(socket);
+              socketServer.handleUpgrade(req, socket, head, (ws) => {
+                ws.close(4001, "forbidden");
+              });
             }
           } else {
             releaseTransaction(transactionConn).then(() => {
@@ -425,15 +514,24 @@ const start: Api.SocketServer["start"] = () => {
     httpServer.listen(port, () => {
       log(`Socket server waiting for connections`, {
         port,
-        heartbeatIntervalMillis: HEARTBEAT_INTERVAL_MILLIS,
+        heartbeatIntervalMillis: HEARTBEAT_INTERVAL_MS,
       });
 
       heartbeatTimeout = setTimeout(
         pingAllClientsHeartbeat,
-        HEARTBEAT_INTERVAL_MILLIS
+        HEARTBEAT_INTERVAL_MS
       );
 
-      socketServer.on("close", () => clearTimeout(heartbeatTimeout));
+      socketServer.on("close", () => {
+        if (heartbeatTimeout) {
+          clearTimeout(heartbeatTimeout);
+          heartbeatTimeout = undefined;
+        }
+        if (syncActiveTimeout) {
+          clearTimeout(syncActiveTimeout);
+          syncActiveTimeout = undefined;
+        }
+      });
     });
   },
   sendOrgUpdate: Api.SocketServer["sendOrgUpdate"] = (
@@ -468,10 +566,18 @@ const start: Api.SocketServer["start"] = () => {
                 deviceId,
                 err,
               });
-              clearDeviceSocket(orgId, userId, deviceId);
+              clearDeviceSocket(orgId, userId, deviceId, true, false);
             } else {
               // bring to the front (for balancing logic)
-              connectedByDeviceId[deviceId] = { orgId, userId, socket: conn };
+              const connected = connectedByDeviceId[deviceId];
+              if (connected) {
+                connectedByDeviceId[deviceId] = {
+                  orgId,
+                  userId,
+                  socket: conn,
+                  consumerIp: connected.consumerIp,
+                };
+              }
             }
           });
           devicesPublishedTo++;
@@ -502,14 +608,27 @@ const start: Api.SocketServer["start"] = () => {
               connectionId,
               err,
             });
-            clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
-          } else {
-            // bring to the front (for balancing logic)
-            connectedByConnectionId[connectionId] = {
+            clearEnvkeyConnectionSocket(
               orgId,
               generatedEnvkeyId,
-              socket: conn,
-            };
+              connectionId,
+              true,
+              false
+            );
+          } else {
+            const connected = connectedByConnectionId[connectionId];
+
+            if (connected) {
+              const { consumerIp } = connected;
+
+              // bring to the front (for balancing logic)
+              connectedByConnectionId[connectionId] = {
+                orgId,
+                generatedEnvkeyId,
+                socket: conn,
+                consumerIp,
+              };
+            }
           }
         });
         connectionsPublishedTo++;
@@ -521,9 +640,11 @@ const start: Api.SocketServer["start"] = () => {
   clearDeviceSocket: Api.SocketServer["clearDeviceSocket"] = (
     orgId,
     userId,
-    deviceId
+    deviceId,
+    clearActive,
+    noReconnect
   ) => {
-    if (connectedByDeviceId) {
+    if (connectedByDeviceId[deviceId]) {
       delete connectedByDeviceId[deviceId];
     }
 
@@ -537,7 +658,7 @@ const start: Api.SocketServer["start"] = () => {
       if (conn) {
         try {
           conn.removeAllListeners();
-          conn.close();
+          noReconnect ? conn.close(4001, "forbidden") : conn.close();
         } catch (err) {
           log("Error closing socket:", { err, orgId, userId, deviceId });
         }
@@ -557,17 +678,19 @@ const start: Api.SocketServer["start"] = () => {
         delete userConnections[orgId];
       }
 
-      if (decrementActiveSocketsFn && !exiting) {
-        decrementActiveSocketsFn(orgId);
+      if (clearActive && clusterFns) {
+        clusterFns.clearActiveDeviceSocket(deviceId);
       }
     }
   },
   clearEnvkeyConnectionSocket: Api.ClearEnvkeyConnectionSocketFn = (
     orgId,
     generatedEnvkeyId,
-    connectionId
+    connectionId,
+    clearActive,
+    noReconnect
   ) => {
-    if (connectedByConnectionId) {
+    if (connectedByConnectionId[connectionId]) {
       delete connectedByConnectionId[connectionId];
     }
     if (
@@ -584,7 +707,7 @@ const start: Api.SocketServer["start"] = () => {
       if (conn) {
         try {
           conn.removeAllListeners();
-          conn.close();
+          noReconnect ? conn.close(4001, "forbidden") : conn.close();
         } catch (err) {
           log("Error closing socket:", {
             err,
@@ -609,14 +732,16 @@ const start: Api.SocketServer["start"] = () => {
         delete envkeyConnections[orgId];
       }
 
-      if (decrementActiveSocketsFn && !exiting) {
-        decrementActiveSocketsFn(orgId);
+      if (clearActive && clusterFns) {
+        clusterFns.clearActiveEnvkeyConnectionSocket(connectionId);
       }
     }
   },
   clearEnvkeySockets: Api.SocketServer["clearEnvkeySockets"] = (
     orgId,
-    generatedEnvkeyId
+    generatedEnvkeyId,
+    clearActive,
+    noReconnect
   ) => {
     if (
       envkeyConnections[orgId] &&
@@ -624,45 +749,68 @@ const start: Api.SocketServer["start"] = () => {
     ) {
       const byConnectionId = envkeyConnections[orgId][generatedEnvkeyId];
       for (let connectionId in byConnectionId) {
-        clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
+        clearEnvkeyConnectionSocket(
+          orgId,
+          generatedEnvkeyId,
+          connectionId,
+          false,
+          noReconnect
+        );
+      }
+
+      if (clearActive && clusterFns) {
+        clusterFns.clearActiveEnvkeySockets(generatedEnvkeyId);
       }
     }
   },
-  clearUserSockets: Api.SocketServer["clearUserSockets"] = (orgId, userId) => {
+  clearUserSockets: Api.SocketServer["clearUserSockets"] = (
+    orgId,
+    userId,
+    clearActive,
+    noReconnect
+  ) => {
     if (userConnections[orgId] && userConnections[orgId][userId]) {
       const byDeviceId = userConnections[orgId][userId];
       for (let deviceId in byDeviceId) {
-        clearDeviceSocket(orgId, userId, deviceId);
+        clearDeviceSocket(orgId, userId, deviceId, false, noReconnect);
+      }
+
+      if (clearActive && clusterFns) {
+        clusterFns.clearActiveUserSockets(userId);
       }
     }
   },
-  clearOrgSockets: Api.SocketServer["clearOrgSockets"] = (orgId) => {
+  clearOrgSockets: Api.SocketServer["clearOrgSockets"] = (
+    orgId,
+    clearActive,
+    noReconnect
+  ) => {
     if (userConnections[orgId]) {
       const byUserId = userConnections[orgId];
       for (let userId in byUserId) {
-        clearUserSockets(orgId, userId);
+        clearUserSockets(orgId, userId, false, noReconnect);
+      }
+
+      if (clearActive && clusterFns) {
+        clusterFns.clearActiveOrgDeviceSockets(orgId);
       }
     }
   },
   clearOrgEnvkeySockets: Api.SocketServer["clearOrgEnvkeySockets"] = (
-    orgId
+    orgId,
+    clearActive,
+    noReconnect
   ) => {
     if (envkeyConnections[orgId]) {
       const byGeneratedEnvkeyid = envkeyConnections[orgId];
       for (let generatedEnvkeyId in byGeneratedEnvkeyid) {
-        clearEnvkeySockets(orgId, generatedEnvkeyId);
+        clearEnvkeySockets(orgId, generatedEnvkeyId, false, noReconnect);
+      }
+
+      if (clearActive && clusterFns) {
+        clusterFns.clearActiveOrgEnvkeySockets(orgId);
       }
     }
-  },
-  socketAuthErr = (socket: RawSocket) => {
-    socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
-    socket.removeAllListeners();
-    socket.destroy();
-  },
-  socketThrottleErr = (socket: RawSocket) => {
-    socket.write("HTTP/1.1 429 Too Many Connections\r\n\r\n");
-    socket.removeAllListeners();
-    socket.destroy();
   },
   getClearSocketFn =
     (
@@ -679,7 +827,9 @@ const start: Api.SocketServer["start"] = () => {
         clearDeviceSocket(
           context.org.id,
           context.user.id,
-          context.orgUserDevice.id
+          context.orgUserDevice.id,
+          true,
+          false
         );
       } else {
         const { generatedEnvkey, connectionId } = context;
@@ -692,54 +842,28 @@ const start: Api.SocketServer["start"] = () => {
           connectionId,
         });
 
-        clearEnvkeyConnectionSocket(orgId, generatedEnvkeyId, connectionId);
+        clearEnvkeyConnectionSocket(
+          orgId,
+          generatedEnvkeyId,
+          connectionId,
+          true,
+          false
+        );
       }
-    };
+    },
+  syncActiveLoop = async () => {
+    if (clusterFns) {
+      await clusterFns.syncActiveSockets(
+        connectedByDeviceId,
+        connectedByConnectionId
+      );
 
-let exiting = false;
-
-for (let exitSignal of [
-  "SIGINT",
-  "SIGUSR1",
-  "SIGUSR2",
-  "uncaughtException",
-  "SIGTERM",
-  "SIGHUP",
-]) {
-  process.on(exitSignal, () => {
-    log(
-      `Received ${exitSignal} - clearing socket connections before exiting...`
-    );
-
-    exiting = true;
-    const promises: Promise<any>[] = [];
-
-    if (decrementActiveSocketsFn) {
-      for (let orgId in numConnectionsByOrg) {
-        const numConnections = numConnectionsByOrg[orgId];
-        promises.push(decrementActiveSocketsFn(orgId, numConnections));
-      }
+      syncActiveTimeout = setTimeout(
+        syncActiveLoop,
+        SYNC_ACTIVE_INTERVAL_MS + Math.floor(Math.random() * SYNC_ACTIVE_JITTER)
+      );
     }
-
-    const clearFn = () => {
-      for (let orgId in userConnections) {
-        clearOrgSockets(orgId);
-      }
-
-      for (let orgId in envkeyConnections) {
-        clearOrgEnvkeySockets(orgId);
-      }
-
-      process.exit(0);
-    };
-
-    if (promises.length > 0) {
-      Promise.all(promises).then(clearFn);
-    } else {
-      clearFn();
-    }
-  });
-}
+  };
 
 const res: Api.SocketServer = {
   start,

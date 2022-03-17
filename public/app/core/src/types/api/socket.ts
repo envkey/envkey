@@ -68,13 +68,37 @@ export interface SocketServer {
 
   sendEnvkeyUpdate: EnvkeySocketBroadcastFn;
 
-  clearOrgSockets: (orgId: string) => void;
+  clearOrgSockets: (
+    orgId: string,
+    clearActive: boolean,
+    noReconnect: boolean
+  ) => void;
 
-  clearUserSockets: (orgId: string, userId: string) => void;
+  clearUserSockets: (
+    orgId: string,
+    userId: string,
+    clearActive: boolean,
+    noReconnect: boolean
+  ) => void;
 
-  clearDeviceSocket: (orgId: string, userId: string, deviceId: string) => void;
+  clearDeviceSocket: (
+    orgId: string,
+    userId: string,
+    deviceId: string,
+    clearActive: boolean,
+    noReconnect: boolean
+  ) => void;
 
-  clearOrgEnvkeySockets: (orgId: string) => void;
+  clearOrgEnvkeySockets: (
+    orgId: string,
+    clearActive: boolean,
+    noReconnect: boolean
+  ) => void;
 
-  clearEnvkeySockets: (orgId: string, generatedEnvkeyId: string) => void;
+  clearEnvkeySockets: (
+    orgId: string,
+    generatedEnvkeyId: string,
+    clearActive: boolean,
+    noReconnect: boolean
+  ) => void;
 }

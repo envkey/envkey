@@ -200,7 +200,9 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 				// 401, 404, 429 (throttled) don't reconnect
 				code := socket.GetHTTPResponse().StatusCode
 
-				log.Printf("read websocket error: %s, code: %d", err, code)
+				if strings.Contains(err.Error(), "4001: forbidden") || strings.Contains(err.Error(), "4002: throttled") {
+					return
+				}
 
 				if code == 401 || code == 404 || code == 429 {
 					return

@@ -351,13 +351,10 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       props.location.pathname.endsWith(orgId)
     ) {
       const { apps } = g.graphTypes(props.core.graph);
-      console.log("number of apps:", apps.length);
 
       if (apps.length > 0) {
-        console.log("redirecting to first app");
         return getEnvParentPath(apps[0]);
       } else {
-        console.log("no apps, redirecting to /welcome");
         return "/welcome";
       }
     }

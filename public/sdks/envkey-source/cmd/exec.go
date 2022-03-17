@@ -47,7 +47,7 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 			res, err = shell.Source(env, force, pamCompatible, dotEnvCompatible)
 		}
 
-		utils.CheckError(err, execCmdArg == "")
+		utils.CheckError(err, execCmdArg != "")
 		stdoutLogger.Println(res)
 
 		os.Exit(0)
@@ -193,17 +193,17 @@ func execute(c string, env []string, copyOrAttach string, includeStdin bool, cop
 
 	if copyOrAttach == "copy" {
 		outPipe, err := command.StdoutPipe()
-		utils.CheckError(err, execCmdArg == "")
+		utils.CheckError(err, execCmdArg != "")
 		errPipe, err := command.StderrPipe()
-		utils.CheckError(err, execCmdArg == "")
+		utils.CheckError(err, execCmdArg != "")
 
 		var inPipe io.WriteCloser
 		if includeStdin {
 			inPipe, err = command.StdinPipe()
-			utils.CheckError(err, execCmdArg == "")
+			utils.CheckError(err, execCmdArg != "")
 		}
 
-		utils.CheckError(err, execCmdArg == "")
+		utils.CheckError(err, execCmdArg != "")
 
 		go io.Copy(os.Stdout, prefixer.New(outPipe, copyOutputPrefix))
 		go io.Copy(os.Stderr, prefixer.New(errPipe, copyOutputPrefix))
@@ -222,7 +222,7 @@ func execute(c string, env []string, copyOrAttach string, includeStdin bool, cop
 	}
 
 	err := command.Start()
-	utils.CheckError(err, execCmdArg == "")
+	utils.CheckError(err, execCmdArg != "")
 
 	return command
 }

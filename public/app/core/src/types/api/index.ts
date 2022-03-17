@@ -208,7 +208,7 @@ namespace Api {
 
   export type ConnectedByDeviceId = Record<
     string,
-    { orgId: string; userId: string; socket: WebSocket }
+    { orgId: string; userId: string; consumerIp: string; socket: WebSocket }
   >;
 
   export type EnvkeySocketConnections = {
@@ -221,13 +221,20 @@ namespace Api {
 
   export type ConnectedByConnectionId = Record<
     string,
-    { orgId: string; generatedEnvkeyId: string; socket: WebSocket }
+    {
+      orgId: string;
+      generatedEnvkeyId: string;
+      consumerIp: string;
+      socket: WebSocket;
+    }
   >;
 
   export type ClearEnvkeyConnectionSocketFn = (
     orgId: string,
     generatedEnvkeyId: string,
-    connectionId: string
+    connectionId: string,
+    clearActive: boolean,
+    noReconnect: boolean
   ) => void;
 
   export type ReplicationFn = (
@@ -247,8 +254,43 @@ namespace Api {
 
   export type UpdateActiveSocketConnectionsFn = (
     orgId: string,
-    n?: number
+    n: number
   ) => Promise<void>;
+
+  export type AddActiveDeviceSocketFn = (
+    orgId: string,
+    userId: string,
+    deviceId: string,
+    consumerIp: string
+  ) => Promise<void>;
+
+  export type AddActiveEnvkeySocketFn = (
+    orgId: string,
+    generatedEnvkeyId: string,
+    connectionId: string,
+    consumerIp: string
+  ) => Promise<void>;
+
+  export type SyncActiveSocketsFn = (
+    connectedByDeviceId: Api.ConnectedByDeviceId,
+    connectedByConnectionId: Api.ConnectedByConnectionId
+  ) => Promise<void>;
+
+  export type ClearHostActiveSocketsFn = () => Promise<void>;
+
+  export type ClearActiveDeviceSocketFn = (deviceId: string) => Promise<void>;
+
+  export type ClearActiveEnvkeyConnectionSocketFn = (
+    connectionId: string
+  ) => Promise<void>;
+
+  export type ClearActiveUserSocketsFn = (userId: string) => Promise<void>;
+
+  export type ClearActiveEnvkeySocketsFn = (
+    generatedEnvkeyId: string
+  ) => Promise<void>;
+
+  export type ClearActiveOrgSocketsFn = (orgId: string) => Promise<void>;
 
   export type ThrottleRequestFn = (
     orgStats: Model.OrgStats,

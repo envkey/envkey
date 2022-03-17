@@ -29,7 +29,8 @@ import { log } from "@core/lib/utils/logger";
 
 let getOrgStatsFn: (
   orgId: string,
-  transactionConn: PoolConnection
+  transactionConn: PoolConnection,
+  includeActiveConnections?: boolean
 ) => Promise<Model.OrgStats> | undefined;
 export const registerGetOrgStatsFn = (fn: typeof getOrgStatsFn) => {
   getOrgStatsFn = fn;
@@ -37,9 +38,12 @@ export const registerGetOrgStatsFn = (fn: typeof getOrgStatsFn) => {
 
 export const getOrgStats = async (
   orgId: string,
-  transactionConn: PoolConnection
+  transactionConn: PoolConnection,
+  includeActiveConnections?: boolean
 ) => {
-  return getOrgStatsFn ? getOrgStatsFn(orgId, transactionConn) : undefined;
+  return getOrgStatsFn
+    ? getOrgStatsFn(orgId, transactionConn, includeActiveConnections)
+    : undefined;
 };
 
 // any request that is authenticated runs through this
@@ -48,7 +52,8 @@ export const authenticate = async <
   >(
     params: Auth.ApiAuthParams,
     transactionConn: PoolConnection,
-    ip: string
+    ip: string,
+    isSocketConnection?: boolean
   ): Promise<T> => {
     const now = Date.now();
 
@@ -78,7 +83,7 @@ export const authenticate = async <
           ),
           getOrgUser(params.orgId, params.userId, transactionConn),
           getOrg(params.orgId, transactionConn),
-          getOrgStats(params.orgId, transactionConn),
+          getOrgStats(params.orgId, transactionConn, isSocketConnection),
           getDb<Api.Db.OrgUserDevice>(params.deviceId, { transactionConn }),
         ]);
         break;
@@ -86,7 +91,7 @@ export const authenticate = async <
         [user, org, orgStats] = await Promise.all([
           getDb<Api.Db.CliUser>(params.userId, { transactionConn }),
           getOrg(params.orgId, transactionConn),
-          getOrgStats(params.orgId, transactionConn),
+          getOrgStats(params.orgId, transactionConn, isSocketConnection),
         ]);
         break;
       case "loadInviteAuthParams":
@@ -112,7 +117,7 @@ export const authenticate = async <
 
         [org, orgStats, invite] = await Promise.all([
           getOrg(invitePointer.orgId, transactionConn),
-          getOrgStats(invitePointer.orgId, transactionConn),
+          getOrgStats(invitePointer.orgId, transactionConn, isSocketConnection),
           getDb<Api.Db.Invite>(invitePointer.inviteId, { transactionConn }),
         ]);
 
@@ -153,7 +158,11 @@ export const authenticate = async <
 
         [org, orgStats, deviceGrant] = await Promise.all([
           getOrg(deviceGrantPointer.orgId, transactionConn),
-          getOrgStats(deviceGrantPointer.orgId, transactionConn),
+          getOrgStats(
+            deviceGrantPointer.orgId,
+            transactionConn,
+            isSocketConnection
+          ),
           getDb<Api.Db.DeviceGrant>(deviceGrantPointer.deviceGrantId, {
             transactionConn,
           }),
@@ -190,7 +199,11 @@ export const authenticate = async <
 
         [org, orgStats, recoveryKey] = await Promise.all([
           getOrg(recoveryKeyPointer.orgId, transactionConn),
-          getOrgStats(recoveryKeyPointer.orgId, transactionConn),
+          getOrgStats(
+            recoveryKeyPointer.orgId,
+            transactionConn,
+            isSocketConnection
+          ),
           getDb<Api.Db.RecoveryKey>(recoveryKeyPointer.recoveryKeyId, {
             transactionConn,
           }),
@@ -223,7 +236,11 @@ export const authenticate = async <
         }
         [org, orgStats] = await Promise.all([
           getOrg(provisioningProvider.orgId, transactionConn),
-          getOrgStats(provisioningProvider.orgId, transactionConn),
+          getOrgStats(
+            provisioningProvider.orgId,
+            transactionConn,
+            isSocketConnection
+          ),
         ]);
         if (!org || org?.deletedAt) {
           throw new Api.ApiError("Provider org not found", 404);

@@ -248,7 +248,10 @@ const connectSocket = async (
         refreshSessions(state, _localSocketUpdate, [account.userId]);
       }
 
-      if ("message" in evt && evt.message.endsWith("401")) {
+      if (
+        ("message" in evt && evt.message.endsWith("401")) ||
+        ("code" in evt && evt.code === 4001)
+      ) {
         // don't retry when response is unauthorized
         log("Socket connection unauthorized. Won't retry.", logAccountData);
         refreshSessions(state, _localSocketUpdate, [account.userId]);
