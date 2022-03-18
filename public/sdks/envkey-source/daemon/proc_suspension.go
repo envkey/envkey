@@ -47,7 +47,8 @@ func startSuspendedWatcher() {
 							writeTCP(envkey, []byte("suspended_no_change"))
 						}
 					} else {
-						log.Println("fetchCurrent error:", err.Error())
+						log.Println("awake from suspension: fetchCurrent error")
+						socket.CloseAndReconnect()
 					}
 				}
 

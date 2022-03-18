@@ -2,7 +2,7 @@ import { log } from "@core/lib/utils/logger";
 import { inspect } from "util";
 import { app, dialog } from "electron";
 import { getCoreProcAuthToken } from "@core/lib/client_store/key_store";
-import { startCoreFromElectron } from "./core_proc";
+import { startCore } from "./core_proc";
 import {
   downloadAndInstallCliTools,
   isLatestCliInstalled,
@@ -11,7 +11,7 @@ import {
 } from "./cli_tools";
 
 export const startup = async (onInit: (authTokenRes: string) => void) => {
-  startCoreFromElectron()
+  startCore()
     .then(() => {
       log("core is running", {
         currentAppVersion: app.getVersion(),

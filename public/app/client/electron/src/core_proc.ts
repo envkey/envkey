@@ -1,8 +1,10 @@
+import { getCliBinPath, getCliCurrentVersion } from "./cli_tools";
 import { log } from "@core/lib/utils/logger";
 import { start } from "@core_proc/server";
 import { isAlive, stop } from "@core/lib/core_proc";
 import { version as cliVersion } from "../../cli/package.json";
 import * as semver from "semver";
+import { exec } from "child_process";
 
 const KEEP_ALIVE_POLL_INTERVAL = 1000;
 
@@ -10,19 +12,75 @@ let keepAliveTimeout: ReturnType<typeof setTimeout> | undefined;
 
 let gracefulShutdown: (onShutdown?: () => void) => void;
 
-export const startCoreFromElectron = async (
-  keepAlive = true
-): Promise<boolean> => {
+export const startCore = async (keepAlive = true): Promise<boolean> => {
   try {
     let alive = await isAlive();
     log("Core process status", { alive });
     if (alive) {
-      log("Core process is already running");
-      return false;
+      if (semver.valid(alive) && semver.gt(alive, cliVersion)) {
+        log(
+          "Core process is running an outdated version. Stopping and retrying..."
+        );
+        const res = await stop();
+        if (res) {
+          return startCore(keepAlive);
+        } else {
+          throw new Error(
+            "Couldn't stop EnvKey core process that is running an outdated version."
+          );
+        }
+      } else {
+        log("Core process is already running");
+        return false;
+      }
     }
-    log("Starting core_process inline");
-    process.env.LOG_REQUESTS = "1";
-    ({ gracefulShutdown } = await start(19047, 19048));
+
+    const [cliBinPath, cliCurrent] = await Promise.all([
+      getCliBinPath(),
+      getCliCurrentVersion(),
+    ]);
+    let error = false;
+
+    if (cliBinPath && cliCurrent != false && cliCurrent == cliVersion) {
+      log("Starting core process daemon via CLI");
+
+      await new Promise<void>((resolve, reject) => {
+        const child = exec(
+          `${cliBinPath} core start`,
+          {
+            env: {
+              LOG_REQUESTS: "1",
+            },
+          },
+          (err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          }
+        );
+        child.unref();
+      }).catch((err) => {
+        log("Error starting core process daemon from CLI");
+        error = true;
+      });
+    } else if (cliCurrent === false || cliCurrent != cliVersion) {
+      log("CLI is outdated for this version of UI");
+    } else if (!cliBinPath) {
+      log("Couldn't find CLI");
+    }
+
+    if (
+      error ||
+      !cliBinPath ||
+      cliCurrent === false ||
+      cliCurrent != cliVersion
+    ) {
+      log("Starting core process inline");
+      process.env.LOG_REQUESTS = "1";
+      ({ gracefulShutdown } = await start(19047, 19048));
+    }
 
     while (true) {
       alive = await isAlive();
@@ -40,36 +98,36 @@ export const startCoreFromElectron = async (
   }
 };
 
-export const stopCoreProcess = (onShutdown?: () => void) => {
+export const stopCoreProcess = (onShutdown?: (stopped: boolean) => void) => {
   if (keepAliveTimeout) {
     clearTimeout(keepAliveTimeout);
     keepAliveTimeout = undefined;
   }
 
   if (gracefulShutdown) {
-    gracefulShutdown(onShutdown);
+    gracefulShutdown(() => onShutdown?.(true));
   } else if (onShutdown) {
-    onShutdown();
+    onShutdown(false);
   }
 };
 
 const keepAliveLoop = async () => {
   let alive = await isAlive();
 
-  // if core process died, restart inline
-  // if core process is running an outdated version, stop it and restart inline
+  // if core process died, restart
+  // if core process is running an outdated version, stop it and restart
   if (!alive) {
     log("Core process died while EnvKey UI is running. Restarting now...");
-    await startCoreFromElectron(false);
+    await startCore(false);
   } else if (
     typeof alive == "string" &&
     semver.valid(alive) &&
     semver.gt(alive, cliVersion)
   ) {
-    log("Core process is outdated. Restarting inline now...");
+    log("Core process is outdated. Restarting now...");
     const res = await stop();
     if (res) {
-      await startCoreFromElectron(false);
+      await startCore(false);
     } else {
       throw new Error(
         "Couldn't stop EnvKey core process that is running an outdated version."

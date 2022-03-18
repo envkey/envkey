@@ -16,6 +16,7 @@ export type NavFilter =
 export type LocalUiState = {
   accountId: string | undefined;
   loadedAccountId: string | undefined;
+  lastLoadedAccountId: string | undefined;
   selectedCategoryFilter: NavFilter;
   selectedObjectId?: string;
   envManager: EnvManagerState;

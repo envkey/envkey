@@ -80,9 +80,13 @@ app.on("before-quit", async (e) => {
     log("Stopping check updates loop...");
     stopCheckUpgradesLoop();
     // if it's running inline, core process must be stopped before the worker pool, since the core process itself relies on workers.
-    log("stopping core process...");
-    stopCoreProcess(async () => {
-      log("stopped core process.");
+    log("stopping core process if it's running inline...");
+    stopCoreProcess(async (stopped) => {
+      if (stopped) {
+        log("stopped inline core process.");
+      } else {
+        log("core process wasn't running inline.");
+      }
 
       // manually terminating worker pool seems to cause more harm than good now.
       // at one point it had seemed necessary.

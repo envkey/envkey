@@ -9,7 +9,7 @@ elif version_info[0] == 3 and version_info[1] <= 4:
 else:
     from importlib import reload # Python 3.5+
 
-VALID_ENVKEY = "ekunDrefdPeELwPpupdzJpsz-2Hs3HCiscoY1TfGcVdefum"
+VALID_ENVKEY = "ekAc8p6PiPp1Di7nQu5vGomx-qXknocWWVYqyVMaxaBco12"
 INVALID_ENVKEY = "ekunDrefdPeELwPpupdzJpsz-2Hs3HCiscoY1TfGinvalid"
 
 def clear_env():

@@ -18,6 +18,7 @@ import * as styles from "@styles";
 import { style } from "typestyle";
 import { SvgImage } from "@images";
 import { getEnvWithMeta } from "@core/lib/client";
+import { ENV_LABEL_ROW_HEIGHT } from "src/styles/layout";
 
 export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
   const { routeParams, core } = props;
@@ -132,6 +133,10 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
   }, [envParentId, graphUpdatedAt]);
 
   useEffect(() => {
+    if (envsJustUpdated) {
+      return;
+    }
+
     const tempInitialEnvsUpdatedAtByEnvParentId: typeof initialEnvsUpdatedAtByEnvParentId =
       {};
     const tempInitialEnvWithMetaByEnvironmentId: typeof initialEnvWithMetaByEnvironmentId =
@@ -167,17 +172,17 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
     setInitialEnvsUpdatedAtByEnvParentId(tempInitialEnvsUpdatedAtByEnvParentId);
 
     setInitialEnvWithMetaByEnvironmentId(tempInitialEnvWithMetaByEnvironmentId);
-  }, [envParentId, appRoleId, JSON.stringify(connectedBlockIds)]);
+  }, [
+    envParentId,
+    appRoleId,
+    JSON.stringify(connectedBlockIds),
+    Boolean(envsJustUpdated),
+  ]);
 
   useEffect(() => {
     let latestJustUpdatedAt = 0;
     const updatedEnvironmentIds: string[] = [];
     let updatedById: string | undefined;
-
-    const tempInitialEnvsUpdatedAtByEnvParentId: typeof initialEnvsUpdatedAtByEnvParentId =
-      {};
-    const tempInitialEnvWithMetaByEnvironmentId: typeof initialEnvWithMetaByEnvironmentId =
-      {};
 
     for (let envParentId in initialEnvsUpdatedAtByEnvParentId) {
       const initialUpdatedAt = initialEnvsUpdatedAtByEnvParentId[envParentId];
@@ -222,17 +227,6 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
             latestJustUpdatedAt = fetchedAt;
           }
         }
-
-        tempInitialEnvsUpdatedAtByEnvParentId[envParentId] = fetchedAt;
-        const environments =
-          g.getEnvironmentsByEnvParentId(graph)[envParentId] ?? [];
-        for (let environment of environments) {
-          tempInitialEnvWithMetaByEnvironmentId[environment.id] =
-            getEnvWithMeta(core, {
-              envParentId,
-              environmentId: environment.id,
-            });
-        }
       }
     }
 
@@ -247,13 +241,6 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
         updatedEnvironmentIds,
         updatedById,
       });
-
-      setInitialEnvsUpdatedAtByEnvParentId(
-        tempInitialEnvsUpdatedAtByEnvParentId
-      );
-      setInitialEnvWithMetaByEnvironmentId(
-        tempInitialEnvWithMetaByEnvironmentId
-      );
     }
   }, [
     envParentId,
@@ -374,7 +361,10 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
     const labelRowHeight = layout.ENV_LABEL_ROW_HEIGHT;
 
     const viewHeight =
-      props.winHeight - (headerHeight + props.ui.pendingFooterHeight);
+      props.winHeight -
+      (headerHeight +
+        props.ui.pendingFooterHeight +
+        (envsJustUpdated ? ENV_LABEL_ROW_HEIGHT : 0));
 
     const gridHeight = viewHeight - (labelRowHeight + 1);
 
@@ -590,7 +580,8 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
           headerHeight +
           labelRowHeight +
           layout.ENV_ROW_HEIGHT +
-          (props.ui.envManager.showAddForm ? layout.ENV_ROW_HEIGHT : 0)
+          (props.ui.envManager.showAddForm ? layout.ENV_ROW_HEIGHT : 0) +
+          (envsJustUpdated ? labelRowHeight : 0)
         }
       />
     );
@@ -604,6 +595,7 @@ export const EnvManager: OrgComponent<EnvManagerRouteProps> = (props) => {
         (isSub ? " is-sub" : "") +
         (editingMultiline ? " editing-multiline" : "") +
         (props.ui.envManager.editingEntryKey ? " editing" : "") +
+        (envsJustUpdated ? " has-envs-just-updated" : "") +
         " " +
         style({
           paddingBottom: editingMultiline ? 0 : props.ui.pendingFooterHeight,

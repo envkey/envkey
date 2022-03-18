@@ -24,6 +24,9 @@ const memoizeableProps = (props: OrgComponentProps<{}, Props>) => [
   props.core.pendingEnvsUpdatedAt,
   props.ui.pendingFooterHeight,
   JSON.stringify(props.core.updateEnvsErrors),
+  props.pendingUpdateDetails,
+  props.pendingConflicts,
+  props.numPendingConflicts,
 ];
 
 export const PendingFooter: OrgComponent<{}, Props> = React.memo(
@@ -67,6 +70,7 @@ export const PendingFooter: OrgComponent<{}, Props> = React.memo(
         Object.keys(props.core.updateEnvsErrors).length > 0
       ) {
         setDispatchedCommit(false);
+        resetState();
         const msg = "There was a problem comitting your changes.";
         alert(msg);
         console.log(msg, props.core.updateEnvsErrors);

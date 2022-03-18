@@ -456,9 +456,12 @@ const initReduxStore = async (forceReset?: true) => {
     await procHeartbeatLoop();
     await initSocketsAndTimers();
     if (reduxStore) {
-      refreshSessions(reduxStore.getState(), localSocketUpdate).then(() =>
-        checkUpgradesAvailableLoop(reduxStore!, localSocketUpdate)
-      );
+      refreshSessions(
+        reduxStore.getState(),
+        localSocketUpdate,
+        undefined,
+        true
+      ).then(() => checkUpgradesAvailableLoop(reduxStore!, localSocketUpdate));
     }
   },
   clearTimers = () => {
@@ -474,7 +477,7 @@ const initReduxStore = async (forceReset?: true) => {
   },
   initSocketsAndTimers = async () => {
     if (reduxStore) {
-      await resolveOrgSockets(reduxStore, localSocketUpdate);
+      await resolveOrgSockets(reduxStore, localSocketUpdate, true);
       socketPingLoop();
       checkSuspendedLoop(reduxStore, localSocketUpdate);
       clearCacheLoop(reduxStore, localSocketUpdate);
@@ -568,11 +571,24 @@ const initReduxStore = async (forceReset?: true) => {
   },
   unlockDevice = async (passphrase: string) => {
     await unlock(passphrase);
+    log("unlocked");
+
     clearStore();
+    log("cleared store");
+
     await initReduxStore();
+    log("initialized store");
+
     await initSocketsAndTimers();
+    log("initialized sockets and timers");
+
     if (reduxStore) {
-      refreshSessions(reduxStore.getState(), localSocketUpdate);
+      refreshSessions(
+        reduxStore.getState(),
+        localSocketUpdate,
+        undefined,
+        true
+      );
     }
   },
   clearLockoutTimer = () => {

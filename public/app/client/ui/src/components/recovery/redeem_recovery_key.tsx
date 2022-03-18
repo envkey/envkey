@@ -205,6 +205,7 @@ export const RedeemRecoveryKey: Component = (props) => {
     props.setUiState({
       accountId: recoveringUser.id,
       loadedAccountId: recoveringUser.id,
+      lastLoadedAccountId: recoveringUser.id,
     });
     setRedeemedUserId(recoveringUser.id);
   };

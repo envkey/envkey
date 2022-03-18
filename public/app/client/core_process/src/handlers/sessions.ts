@@ -1,8 +1,5 @@
 import * as R from "ramda";
-import {
-  decryptedEnvsStateProducer,
-  fetchRequiredPendingEnvs,
-} from "../lib/envs";
+import { decryptedEnvsStateProducer, fetchLoadedEnvs } from "../lib/envs";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
 import { pick } from "@core/lib/utils/pick";
@@ -103,10 +100,7 @@ clientAction<
         throw new Error("Couldn't verify current user");
       }
 
-      const fetchPendingRes = await fetchRequiredPendingEnvs(
-        verifyRes.state,
-        context
-      );
+      const fetchPendingRes = await fetchLoadedEnvs(verifyRes.state, context);
 
       if (fetchPendingRes && !fetchPendingRes.success) {
         throw new Error(
@@ -226,7 +220,7 @@ clientAction<
         throw new Error("Couldn't verify current user");
       }
 
-      const fetchPendingRes = await fetchRequiredPendingEnvs(
+      const fetchPendingRes = await fetchLoadedEnvs(
         verifyRes.state,
         context,
         action.payload?.skipWaitForReencryption

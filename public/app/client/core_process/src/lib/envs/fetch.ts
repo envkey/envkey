@@ -6,6 +6,7 @@ import {
   getEnvParentPermissions,
   getOrgPermissions,
 } from "@core/lib/graph";
+import * as g from "@core/lib/graph";
 import {
   envsNeedFetch,
   changesetsNeedFetch,
@@ -145,39 +146,22 @@ export const fetchEnvsForUserOrAccessParams = async (
 
     return undefined;
   },
-  fetchRequiredPendingEnvs = async (
+  fetchLoadedEnvs = async (
     state: Client.State,
     context: Client.Context,
     skipWaitForReencryption?: true
   ): Promise<Client.DispatchResult | undefined> => {
-    const pendingEnvironmentIds = getPendingEnvironmentIds(state);
+    const envParentIds = new Set(Object.keys(state.envsFetchedAt));
 
-    if (pendingEnvironmentIds.length > 0) {
-      const pendingEnvParentIds = new Set(
-        pendingEnvironmentIds.map((environmentId) => {
-          const environment = state.graph[environmentId] as
-            | Model.Environment
-            | undefined;
-
-          if (environment) {
-            return environment.envParentId;
-          } else {
-            const [envParentId] = environmentId.split("|");
-            return envParentId;
-          }
-        })
+    if (envParentIds.size > 0) {
+      return fetchRequiredEnvs(
+        state,
+        envParentIds,
+        new Set(),
+        context,
+        skipWaitForReencryption
       );
-
-      if (pendingEnvParentIds.size > 0) {
-        return fetchRequiredEnvs(
-          state,
-          pendingEnvParentIds,
-          new Set(),
-          context,
-          skipWaitForReencryption
-        );
-      }
-
+    } else {
       return undefined;
     }
   };

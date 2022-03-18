@@ -10,6 +10,14 @@ export const LockLink: Component = ({ core, dispatch, children }) => (
     onClick={(e) => {
       if (core.requiresPassphrase) {
         e.preventDefault();
+
+        const confirmed = confirm(
+          "Lock this device? You'll need your passphrase to unlock it."
+        );
+        if (!confirmed) {
+          return;
+        }
+
         dispatch({
           type: Client.ActionType.LOCK_DEVICE,
         }).then((res) => {

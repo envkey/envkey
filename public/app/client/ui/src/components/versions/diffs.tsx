@@ -163,7 +163,7 @@ export const Diffs: OrgComponent<{}, Props> = (props) => {
         <div>
           <h4>{envParent.name} </h4>
         </div>
-        <div>{diffEnvironmentIds.map(renderEnvironment)}</div>
+        <div>{updatedEnvironmentIds.map(renderEnvironment)}</div>
       </div>
     );
   };

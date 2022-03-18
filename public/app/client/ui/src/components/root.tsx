@@ -38,6 +38,7 @@ const LOCAL_UI_STATE_KEY = "localUiState";
 const defaultLocalStateWithoutTimestamp: Omit<LocalUiState, "now"> = {
   accountId: undefined,
   loadedAccountId: undefined,
+  lastLoadedAccountId: undefined,
   envManager: emptyEnvManagerState,
   selectedCategoryFilter: "all",
   sidebarWidth: styles.layout.SIDEBAR_WIDTH,
@@ -107,7 +108,10 @@ const clientParams: Client.ClientParams<"app"> = {
         const accountId = uiStateRef.current.accountId;
         const loadedAccountId = uiStateRef.current.loadedAccountId;
         if (accountId != loadedAccountId) {
-          setLocalUiState({ loadedAccountId: accountId });
+          setLocalUiState({
+            loadedAccountId: accountId,
+            lastLoadedAccountId: accountId,
+          });
         }
 
         if (accountId != state.uiLastSelectedAccountId) {

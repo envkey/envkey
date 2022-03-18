@@ -82,6 +82,10 @@ export const isLatestCliInstalled = () => isLatestInstalled("cli");
 export const isLatestEnvkeysourceInstalled = () =>
   isLatestInstalled("envkeysource");
 
+export const getCliBinPath = () => getBinPath("cli");
+
+export const getCliCurrentVersion = () => getCurrentVersion("cli");
+
 export const sudoNeededDialog = async () => {
   let button: number | undefined;
   try {
@@ -124,6 +128,15 @@ export const installCliAutocomplete = async () => {
         })
     )
   );
+};
+
+export const fileExists = async (filepath: string): Promise<boolean> => {
+  try {
+    await fsp.stat(filepath);
+    return true;
+  } catch (ignored) {
+    return false;
+  }
 };
 
 const isLatestInstalled = async (
@@ -172,7 +185,7 @@ const getLatestVersion = async (project: "cli" | "envkeysource") =>
     bucket: ENVKEY_RELEASES_BUCKET,
   });
 
-const getCurrentVersion = async (
+const getBinPath = async (
   project: "cli" | "envkeysource"
 ): Promise<false | string> => {
   const execName = { cli: "envkey", envkeysource: "envkey-source" }[project];
@@ -182,7 +195,6 @@ const getCurrentVersion = async (
    * what envkey-source will be installed as if envkey-source v1
    * is already installed on the system
    */
-
   const maybeExecSuffix = project == "envkeysource" ? "-v2" : "";
 
   let expectedBin =
@@ -202,6 +214,18 @@ const getCurrentVersion = async (
   }
 
   if (!exists) {
+    return false;
+  }
+
+  return expectedBin;
+};
+
+const getCurrentVersion = async (
+  project: "cli" | "envkeysource"
+): Promise<false | string> => {
+  const expectedBin = await getBinPath(project);
+
+  if (!expectedBin) {
     return false;
   }
 
@@ -603,14 +627,5 @@ const copyExecFiles = async (
         throw err;
       }
     }
-  }
-};
-
-const fileExists = async (filepath: string): Promise<boolean> => {
-  try {
-    await fsp.stat(filepath);
-    return true;
-  } catch (ignored) {
-    return false;
   }
 };

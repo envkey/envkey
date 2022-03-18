@@ -54,10 +54,11 @@ export const clearCheckSuspendedLoop = () => {
   }
 };
 
-export const refreshSessions = (
+export const refreshSessions = async (
   state: Client.ProcState,
   localSocketUpdate: () => void,
-  accountIdsArg?: string[]
+  accountIdsArg?: string[],
+  initialFetch?: boolean
 ) => {
   let accountIds = accountIdsArg;
   if (!accountIds) {
@@ -69,11 +70,30 @@ export const refreshSessions = (
       .map(R.prop("userId"));
   }
 
-  log("Refreshing signed in sessions.", { accountIds, REFRESH_MAX_JITTER });
+  const firstToFetch = [
+    state.uiLastSelectedAccountId,
+    state.defaultAccountId,
+  ].filter((id): id is string => Boolean(id));
 
-  return Promise.all(
-    accountIds.map((accountId, i) =>
-      wait(i * 50 + Math.random() * REFRESH_MAX_JITTER).then(() => {
+  let restToFetch = R.without(firstToFetch, accountIds);
+  restToFetch = R.sortBy(
+    (id) => state.orgUserAccounts[id]?.lastAuthAt ?? Infinity,
+    restToFetch
+  );
+
+  log("Refreshing signed in sessions.", {
+    firstToFetch,
+    restToFetch,
+  });
+
+  const getFetchFn =
+    (skipJitter?: boolean) => (accountId: string, i: number) => {
+      const baseWait = i * 50;
+      const toWait = skipJitter
+        ? baseWait
+        : baseWait + Math.random() * REFRESH_MAX_JITTER;
+
+      return wait(toWait).then(() => {
         dispatch(
           {
             type: Client.ActionType.GET_SESSION,
@@ -82,7 +102,14 @@ export const refreshSessions = (
         ).finally(localSocketUpdate);
 
         localSocketUpdate();
-      })
-    )
-  );
+      });
+    };
+
+  if (firstToFetch.length > 0) {
+    await Promise.all(firstToFetch.map(getFetchFn(initialFetch)));
+  }
+
+  if (restToFetch.length > 0) {
+    await Promise.all(restToFetch.map(getFetchFn()));
+  }
 };

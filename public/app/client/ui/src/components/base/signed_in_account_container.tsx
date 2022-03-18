@@ -47,6 +47,13 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     if (maybeAuth) {
       auth = maybeAuth;
     }
+  } else if (accountsForOrg.length > 1 && props.ui.lastLoadedAccountId) {
+    const lastSelected = accountsForOrg.find(
+      R.propEq("userId", props.ui.lastLoadedAccountId)
+    );
+    if (lastSelected) {
+      auth = lastSelected;
+    }
   }
 
   // clear selected account on unmount

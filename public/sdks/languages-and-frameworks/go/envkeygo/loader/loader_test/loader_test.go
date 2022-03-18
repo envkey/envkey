@@ -9,7 +9,7 @@ import (
 	"github.com/envkey/envkeygo/v2/loader"
 )
 
-const VALID_ENVKEY = "ekunDrefdPeELwPpupdzJpsz-2Hs3HCiscoY1TfGcVdefum"
+const VALID_ENVKEY = "ekAc8p6PiPp1Di7nQu5vGomx-qXknocWWVYqyVMaxaBco12"
 const INVALID_ENVKEY = "ekunDrefdPeELwPpupdzJpsz-2Hs3HCiscoY1TfGinvalid"
 
 func TestLoadMissing(t *testing.T) {

@@ -47,6 +47,7 @@ export const InitSelfHosted: Component<{ subdomain: string }> = (props) => {
       props.setUiState({
         accountId: account.userId,
         loadedAccountId: account.userId,
+        lastLoadedAccountId: account.userId,
       });
     }
   }, [account, core.graphUpdatedAt, props.ui.loadedAccountId]);

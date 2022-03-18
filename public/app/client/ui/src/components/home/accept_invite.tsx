@@ -355,6 +355,7 @@ export const AcceptInvite: Component = (props) => {
     props.setUiState({
       accountId: inviteeOrGranteeId,
       loadedAccountId: inviteeOrGranteeId,
+      lastLoadedAccountId: inviteeOrGranteeId,
     });
 
     setAcceptedUserId(inviteeOrGranteeId);

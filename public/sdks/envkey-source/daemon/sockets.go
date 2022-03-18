@@ -17,7 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const WS_PING_INTERVAL = time.Duration(20) * time.Second
+const WS_PING_INTERVAL = time.Duration(10) * time.Second
 
 var websocketsByEnvkey = map[string]*ws.ReconnectingWebsocket{}
 var tcpServerConnsByEnvkeyByConnId = map[string](map[string]net.Conn){}
@@ -161,7 +161,7 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 
 		for {
 			if socket.IsClosedNoReconnect() {
-				return
+				break
 			}
 
 			if socket.IsClosed() || socket.IsClosing() {
@@ -176,8 +176,8 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 
 				changed, err := fetchCurrent(envkey, clientName, clientVersion)
 				if err != nil {
-					log.Printf("fetchCurrent error: %s", err)
-					return
+					log.Printf("socket read loop: fetchCurrent error: %s", err)
+					break
 				}
 				log.Printf("%s fetched latest env. changed: %v", utils.IdPart(envkey), changed)
 
@@ -187,7 +187,7 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 
 				if err != nil {
 					log.Printf("writeTCP error: %s", err)
-					return
+					break
 				}
 			}
 
@@ -201,28 +201,31 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 				code := socket.GetHTTPResponse().StatusCode
 
 				if strings.Contains(err.Error(), "4001: forbidden") || strings.Contains(err.Error(), "4002: throttled") {
-					return
+					break
 				}
 
 				if code == 401 || code == 404 || code == 429 {
-					return
+					break
 				}
 			}
 		}
+
+		log.Println("Read websocket message loop stopped")
 	}()
 
 	go func() {
 		for {
 			if socket.IsClosedNoReconnect() {
-				return
+				break
 			}
 
 			if !(!socket.IsConnected() || socket.IsClosing() || socket.IsClosed()) {
 				socket.WriteHeartbeat()
 			}
 
-			time.Sleep(time.Duration(5000) * time.Millisecond)
+			time.Sleep(WS_PING_INTERVAL)
 		}
+		log.Println("Websocket ping loop stopped")
 	}()
 
 	for {

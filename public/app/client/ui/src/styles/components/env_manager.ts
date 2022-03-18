@@ -166,9 +166,9 @@ export const EnvManager = style({
           display: "none",
         },
 
-        ".title-row .actions": {
-          display: "none",
-        },
+        // ".title-row .actions": {
+        //   display: "none",
+        // },
       },
     },
 

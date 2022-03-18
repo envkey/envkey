@@ -89,8 +89,8 @@ export const envUpdateAction = <
             },
           };
 
+        clearOverwrittenActionsProducer(draft, pendingAction);
         draft.pendingEnvUpdates.push(pendingAction);
-
         clearVoidedPendingEnvUpdatesProducer(draft);
 
         draft.pendingEnvsUpdatedAt = Date.now();

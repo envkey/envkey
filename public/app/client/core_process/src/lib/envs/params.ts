@@ -231,7 +231,7 @@ export const envParamsForEnvironments = async (params: {
         const overridesByEnvironmentId =
           inheritanceOverridesByEnvironmentId[inheritingEnvironmentId];
 
-        if (overridesByEnvironmentId[baseEnvironment.id]) {
+        if (overridesByEnvironmentId?.[baseEnvironment.id]) {
           const composite = getUserEncryptedKeyOrBlobComposite({
             environmentId: inheritingEnvironmentId,
             inheritsEnvironmentId: baseEnvironment.id,
