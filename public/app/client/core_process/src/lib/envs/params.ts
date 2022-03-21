@@ -1,3 +1,4 @@
+import { getEnvironmentName } from "./../../../../../core/src/lib/graph/names";
 import * as R from "ramda";
 import { Client, Api, Model, Crypto, Rbac } from "@core/types";
 import { getEnvironmentsByEnvParentId } from "@core/lib/graph";
@@ -48,6 +49,8 @@ export const envParamsForEnvironments = async (params: {
 
   const toEncrypt: [string[], Parameters<typeof encryptSymmetricWithKey>[0]][] =
     [];
+
+  const addPaths: [string[], any][] = [];
   const {
     environmentKeysByComposite,
     changesetKeysByEnvironmentId,
@@ -78,6 +81,7 @@ export const envParamsForEnvironments = async (params: {
     } else {
       [envParentId, localsUserId] = environmentId.split("|");
     }
+    const envParent = state.graph[envParentId] as Model.EnvParent;
 
     ensureEnvsFetched(state, envParentId);
 
@@ -163,13 +167,17 @@ export const envParamsForEnvironments = async (params: {
 
     if (reencryptChangesets) {
       ensureChangesetsFetched(state, envParentId);
-      if (!changesetKeysByEnvironmentId[environmentId]) {
-        throw new Error("Missing changeset encryption key");
-      }
 
       const changesets = state.changesets[environmentId]?.changesets ?? [];
 
-      if (changesets.length > 0) {
+      if (
+        changesets.length > 0 &&
+        !changesetKeysByEnvironmentId[environmentId]
+      ) {
+        throw new Error("Missing changeset encryption key");
+      }
+
+      if (changesetKeysByEnvironmentId[environmentId]) {
         const byId = R.groupBy(R.prop("id"), changesets);
 
         for (let changesetId in byId) {
@@ -184,6 +192,10 @@ export const envParamsForEnvironments = async (params: {
             },
           ]);
         }
+      }
+
+      if (changesets.length == 0) {
+        addPaths.push([[...blobBasePath, "changesetsById"], {}]);
       }
     } else if (pending) {
       if (!changesetKeysByEnvironmentId[environmentId]) {
@@ -272,6 +284,10 @@ export const envParamsForEnvironments = async (params: {
     pathResults = await Promise.all(cryptoPromises);
 
   for (let [path, data] of pathResults) {
+    set(blobs, path, data);
+  }
+
+  for (let [path, data] of addPaths) {
     set(blobs, path, data);
   }
 

@@ -49,15 +49,7 @@ export namespace Env {
 
   export type UserEnvCell = EnvWithMetaCell | EnvMetaCell;
 
-  export type KeyableEnvVal =
-    | {
-        val: string;
-        inheritsEnvironmentId?: undefined;
-      }
-    | {
-        val?: undefined;
-        inheritsEnvironmentId: string;
-      };
+  export type KeyableEnvVal = EnvWithMetaCell;
 
   export type EnvWithMeta = {
     inherits: Record<string, string[]>;

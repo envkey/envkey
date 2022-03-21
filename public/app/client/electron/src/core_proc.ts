@@ -83,7 +83,7 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
     }
 
     while (true) {
-      alive = await isAlive();
+      alive = await isAlive(200);
       if (alive) {
         break;
       }

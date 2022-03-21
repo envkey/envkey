@@ -389,9 +389,8 @@ export const start = async (port = 19047, wsport = 19048) => {
 
     process.on("uncaughtException", (err) => {
       log(`Core process uncaughtException.`, { err });
-
-      log(`Exiting due to uncaughtException.`);
-      gracefulShutdown();
+      // log(`Exiting due to uncaughtException.`);
+      // gracefulShutdown();
     });
   }
 

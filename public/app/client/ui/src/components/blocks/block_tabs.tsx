@@ -108,6 +108,7 @@ export const useBlockTabs = (
     tabs,
     redirectFromBasePath: true,
     basePathTest,
-    className: styles.SelectedObjectTabs,
+    className: styles.SelectedObjectTabs(1150),
+    collapsible: true,
   });
 };

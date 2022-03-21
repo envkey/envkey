@@ -102,6 +102,7 @@ export const useUserTabs = (
     tabs,
     redirectFromBasePath: true,
     basePathTest,
-    className: styles.SelectedObjectTabs,
+    className: styles.SelectedObjectTabs(user?.type == "orgUser" ? 1100 : 950),
+    collapsible: true,
   });
 };

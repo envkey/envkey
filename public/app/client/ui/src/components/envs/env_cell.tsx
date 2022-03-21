@@ -85,6 +85,8 @@ const memoizeableProps = (props: EnvManagerComponentProps<{}, Props>) => {
     isEditing,
     isEditing && props.ui.envManager.clickedToEdit,
     props.ui.envManager.hideValues,
+    props.ui.envManager.showBlocks,
+    props.ui.envManager.userSetShowBlocks,
     Boolean(committedVal),
   ];
 };
@@ -285,6 +287,8 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
       props.setEnvManagerState({
         ...CLEARED_EDIT_STATE,
         committingToCore: { ...committingToCore, [cellId]: inputVal },
+        showBlocks: props.ui.envManager.showBlocks,
+        userSetShowBlocks: props.ui.envManager.userSetShowBlocks,
       });
       setInputVal("");
       delete cursorPositionByCellId[cellId];
@@ -303,6 +307,8 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
           ...committingToCore,
           [cellId]: stripUndefinedRecursive(update),
         },
+        showBlocks: props.ui.envManager.showBlocks,
+        userSetShowBlocks: props.ui.envManager.userSetShowBlocks,
       });
 
       props
@@ -339,6 +345,8 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
       } else if (inputVal == val && !showAutocomplete) {
         props.setEnvManagerState({
           ...CLEARED_EDIT_STATE,
+          showBlocks: props.ui.envManager.showBlocks,
+          userSetShowBlocks: props.ui.envManager.userSetShowBlocks,
         });
         setInputVal("");
         delete cursorPositionByCellId[cellId];
@@ -416,7 +424,11 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
                 commitInput();
               }
             } else if (e.key == "Escape") {
-              props.setEnvManagerState(CLEARED_EDIT_STATE);
+              props.setEnvManagerState({
+                ...CLEARED_EDIT_STATE,
+                showBlocks: props.ui.envManager.showBlocks,
+                userSetShowBlocks: props.ui.envManager.userSetShowBlocks,
+              });
               setInputVal("");
               delete cursorPositionByCellId[cellId];
             } else if (inputRef.current) {
@@ -532,6 +544,8 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
               if (props.type == "entry") {
                 props.setEnvManagerState({
                   ...CLEARED_EDIT_STATE,
+                  showBlocks: props.ui.envManager.showBlocks,
+                  userSetShowBlocks: props.ui.envManager.userSetShowBlocks,
                   entryForm: EntryForm.CLEARED_EDIT_STATE,
                   showAddForm: false,
                   confirmingDeleteEntryKeyComposite: [
@@ -589,6 +603,10 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
           onClick={() => {
             if (!isEditing && props.canUpdate) {
               setInputVal(val);
+              console.log({
+                showBlocks: props.ui.envManager.showBlocks,
+                userSetShowBlocks: props.ui.envManager.userSetShowBlocks,
+              });
               props.setEnvManagerState({
                 editingEntryKey: props.entryKey,
                 editingEnvParentId: props.envParentId,
@@ -598,6 +616,8 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
                 clickedToEdit: true,
                 showAddForm: false,
                 confirmingDeleteEntryKeyComposite: undefined,
+                showBlocks: props.ui.envManager.showBlocks,
+                userSetShowBlocks: props.ui.envManager.userSetShowBlocks,
                 entryForm: EntryForm.CLEARED_EDIT_STATE,
               });
             }

@@ -98,8 +98,12 @@ export const getPoolConn = async () => {
       qs += ";";
     }
 
+    if (!qs.endsWith("COMMIT;")) {
+      qs += " COMMIT;";
+    }
+
     try {
-      return transactionConn.query(qs + " COMMIT;", qargs);
+      return transactionConn.query(qs, qargs);
     } finally {
       transactionConn.release();
     }

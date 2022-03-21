@@ -104,6 +104,7 @@ export const useAppTabs = (
     tabs,
     redirectFromBasePath: true,
     basePathTest,
-    className: styles.SelectedObjectTabs,
+    className: styles.SelectedObjectTabs(1250),
+    collapsible: true,
   });
 };

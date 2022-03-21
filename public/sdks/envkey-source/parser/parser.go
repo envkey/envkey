@@ -639,16 +639,17 @@ func (response *ResponseWithTrustChains) verifyAndDecrypt() (*DecryptedResponse,
 
 func (response *DecryptedResponse) toMap() (EnvMap, error) {
 	env := make(EnvMap)
-	localsOrSubEnvs := make(EnvMap) // either subenv or locals
+	localsOrSubEnvs := make(KeyableEnv) // either subenv or locals
 
 	if len(response.DecryptedBlocks) > 0 {
 		for _, decryptedKeyableBlob := range response.DecryptedBlocks {
-			blockEnv, blockLocalsOrSubEnv, err := decryptedKeyableBlob.toMaps()
+			blockEnv, blockLocalsOrSubEnv, err := decryptedKeyableBlob.toKeyableEnvs()
+
 			if err != nil {
 				return nil, err
 			}
 			for k, v := range blockEnv {
-				env[k] = v
+				env.setVal(k, v)
 			}
 			for k, v := range blockLocalsOrSubEnv {
 				localsOrSubEnvs[k] = v
@@ -658,13 +659,13 @@ func (response *DecryptedResponse) toMap() (EnvMap, error) {
 	}
 
 	if response.DecryptedKeyableBlob != nil {
-		keyableEnv, keyableLocalsOrSubEnv, err := response.DecryptedKeyableBlob.toMaps()
+		keyableEnv, keyableLocalsOrSubEnv, err := response.DecryptedKeyableBlob.toKeyableEnvs()
 		if err != nil {
 			return nil, err
 		}
 
 		for k, v := range keyableEnv {
-			env[k] = v
+			env.setVal(k, v)
 		}
 		for k, v := range keyableLocalsOrSubEnv {
 			localsOrSubEnvs[k] = v
@@ -672,15 +673,15 @@ func (response *DecryptedResponse) toMap() (EnvMap, error) {
 	}
 
 	for k, v := range localsOrSubEnvs {
-		env[k] = v
+		env.setVal(k, v)
 	}
 
 	return env, nil
 }
 
-func (blob *DecryptedKeyableBlob) toMaps() (EnvMap, EnvMap, error) {
-	env := make(EnvMap)
-	localsOrSubEnv := make(EnvMap) // either subenv or locals
+func (blob *DecryptedKeyableBlob) toKeyableEnvs() (KeyableEnv, KeyableEnv, error) {
+	env := make(KeyableEnv)
+	localsOrSubEnv := make(KeyableEnv) // either subenv or locals
 
 	if blob.Env != nil {
 		for k, v := range blob.Env {
@@ -696,11 +697,11 @@ func (blob *DecryptedKeyableBlob) toMaps() (EnvMap, EnvMap, error) {
 
 				}
 				if inheritedVal != nil {
-					env[k] = inheritedVal.Val
+					env[k] = inheritedVal
 				}
 
 			} else {
-				env[k] = v.Val
+				env[k] = v
 			}
 		}
 	}
@@ -718,11 +719,11 @@ func (blob *DecryptedKeyableBlob) toMaps() (EnvMap, EnvMap, error) {
 					}
 				}
 				if inheritedVal != nil {
-					localsOrSubEnv[k] = inheritedVal.Val
+					localsOrSubEnv[k] = inheritedVal
 				}
 
 			} else {
-				localsOrSubEnv[k] = v.Val
+				localsOrSubEnv[k] = v
 			}
 		}
 	}
@@ -730,7 +731,7 @@ func (blob *DecryptedKeyableBlob) toMaps() (EnvMap, EnvMap, error) {
 	if blob.Locals != nil {
 		for k, v := range blob.Locals {
 			if v != nil {
-				localsOrSubEnv[k] = v.Val
+				localsOrSubEnv[k] = v
 			}
 		}
 	}
@@ -832,4 +833,14 @@ func parseRootPubkeyReplacements(trustedRoot trust.TrustedKeyablesMap, replaceme
 	}
 
 	return newTrustedRootMap, signed, replacementIds, nil
+}
+
+func (env EnvMap) setVal(k string, envVal *KeyableEnvVal) {
+	if envVal.IsUndefined {
+		delete(env, k)
+	} else if envVal.IsEmpty {
+		env[k] = ""
+	} else {
+		env[k] = envVal.Val
+	}
 }

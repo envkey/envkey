@@ -1,5 +1,5 @@
-// Production logger is all on one line, and omits date, which suits cloudwatch better. Cloudwatch
-// already logs the date, and has a tree collapse feature.
+// Production logger is all on one line, and omits date, which suits cloudwatch better.
+// Cloudwatch already logs the date, and has a tree collapse feature.
 
 import path from "path";
 import os from "os";
@@ -19,12 +19,17 @@ const createAndOpenLogFile = (logName: string) => {
   // keeps only 10 log files
   const oldLogFiles: string[] = fs
     .readdirSync(logdir)
-    .sort()
-    .reverse()
-    .slice(10);
-  Promise.all(
-    oldLogFiles.map((filename) => fs.promises.unlink(`${logdir}/${filename}`))
-  ).catch((err) => console.error(err));
+    .filter((fileName) => fileName.startsWith(logName));
+
+  if (oldLogFiles.length > 10) {
+    Promise.all(
+      oldLogFiles
+        .sort()
+        .reverse()
+        .slice(10)
+        .map((filename) => fs.promises.unlink(`${logdir}/${filename}`))
+    ).catch((err) => console.error(err));
+  }
 
   const logFileLoc = path.resolve(logdir, `${logName}-${today}.log`);
 

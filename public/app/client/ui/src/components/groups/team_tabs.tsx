@@ -51,6 +51,6 @@ export const useTeamTabs = (
     tabs,
     redirectFromBasePath: true,
     basePathTest,
-    className: styles.SelectedObjectTabs,
+    className: styles.SelectedObjectTabs(),
   });
 };

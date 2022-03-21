@@ -14,8 +14,10 @@ export const up = async (knex: Knex) => {
 };
 
 export const down = async (knex: Knex) => {
-  await knex.schema.dropTable("active_sockets");
-  await knex.schema.alterTable("org_stats", (t) => {
-    t.bigInteger("activeSocketConnections").notNullable().defaultTo(0);
-  });
+  await knex.schema.dropTableIfExists("active_sockets");
+  try {
+    await knex.schema.alterTable("org_stats", (t) => {
+      t.bigInteger("activeSocketConnections").notNullable().defaultTo(0);
+    });
+  } catch (err) {}
 };

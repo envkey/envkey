@@ -10,11 +10,11 @@ type EnvMap map[string]string
 type KeyableEnvVal struct {
 	Val                   string `json:"val,omitempty"`
 	InheritsEnvironmentId string `json:"inheritsEnvironmentId,omitempty"`
+	IsUndefined           bool   `json:"isUndefined,omitempty"`
+	IsEmpty               bool   `json:"isEmpty,omitempty"`
 }
 
 type KeyableEnv map[string]*KeyableEnvVal
-
-type KeyableRawEnv map[string]interface{}
 
 type KeyableBlobFields struct {
 	EncryptedEnv          *crypto.EncryptedData `json:"encryptedEnv"`

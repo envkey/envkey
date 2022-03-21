@@ -188,14 +188,8 @@ export const getEnvWithMeta = memoize(
       environmentId: string;
     },
     pending?: true
-  ) => (<any>R.map(
-      R.omit(["isEmpty", "isUndefined"]),
-      R.filter(
-        ({ isUndefined }) => !isUndefined,
-        (pending ? getPendingEnvWithMeta : getEnvWithMeta)(state, params)
-          .variables
-      )
-    )) as Client.Env.KeyableEnv,
+  ) =>
+    (pending ? getPendingEnvWithMeta : getEnvWithMeta)(state, params).variables,
   getRawEnv = memoize(
     (
       state: Client.State,
@@ -479,10 +473,7 @@ export const getEnvWithMeta = memoize(
           }
         }
 
-        if (
-          inheritsKeyableVal &&
-          (inheritsKeyableVal.inheritsEnvironmentId || inheritsKeyableVal.val)
-        ) {
+        if (inheritsKeyableVal) {
           res = R.assocPath(
             [currentInheritsEnvironmentId, k],
             inheritsKeyableVal,

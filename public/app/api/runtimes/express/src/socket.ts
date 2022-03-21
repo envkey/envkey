@@ -25,8 +25,8 @@ let socketServer: WebSocket.Server;
 
 const HEARTBEAT_INTERVAL_MS = 30000;
 const PING_TIMEOUT = 10000;
-const SYNC_ACTIVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-const SYNC_ACTIVE_JITTER = 60 * 1000; // 1 minute
+// const SYNC_ACTIVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+// const SYNC_ACTIVE_JITTER = 60 * 1000; // 1 minute
 
 let numDeviceConnections = 0;
 const userConnections: Api.UserSocketConnections = {};
@@ -123,12 +123,20 @@ const pingAllClientsHeartbeat = async () => {
   // });
 
   for (let deviceId in connectedByDeviceId) {
-    const { socket } = connectedByDeviceId[deviceId];
+    const conn = connectedByDeviceId[deviceId];
+    if (!conn) {
+      continue;
+    }
+    const { socket } = conn;
     pingClient(socket, getOnPingDeviceSocket(deviceId));
   }
 
   for (let connectionId in connectedByConnectionId) {
-    const { socket } = connectedByConnectionId[connectionId];
+    const conn = connectedByConnectionId[connectionId];
+    if (!conn) {
+      continue;
+    }
+    const { socket } = conn;
     pingClient(socket, getOnPingEnvkeySocket(connectionId));
   }
 
@@ -157,16 +165,16 @@ let clusterFns:
       clearActiveOrgDeviceSockets: Api.ClearActiveOrgSocketsFn;
       clearActiveOrgEnvkeySockets: Api.ClearActiveOrgSocketsFn;
 
-      syncActiveSockets: Api.SyncActiveSocketsFn;
+      // syncActiveSockets: Api.SyncActiveSocketsFn;
     }
   | undefined;
 
 export const registerClusterFns = (fns: Required<typeof clusterFns>) => {
   clusterFns = fns;
-  syncActiveTimeout = setTimeout(
-    syncActiveLoop,
-    SYNC_ACTIVE_INTERVAL_MS + Math.floor(Math.random() * SYNC_ACTIVE_JITTER)
-  );
+  // syncActiveTimeout = setTimeout(
+  //   syncActiveLoop,
+  //   SYNC_ACTIVE_INTERVAL_MS + Math.floor(Math.random() * SYNC_ACTIVE_JITTER)
+  // );
 };
 
 export const clearAllSockets = (clearActive = false) => {
@@ -205,7 +213,7 @@ const start: Api.SocketServer["start"] = () => {
 
     socketServer.on(
       "connection",
-      (
+      async (
         socket: WebSocket,
         req: IncomingMessage,
         context: Auth.TokenAuthContext | Auth.EnvkeySocketAuthContext,
@@ -229,12 +237,12 @@ const start: Api.SocketServer["start"] = () => {
             orgId,
             context.user.id,
             context.orgUserDevice.id,
-            true,
+            false,
             false
           );
 
           if (clusterFns) {
-            clusterFns.balanceSockets(
+            await clusterFns.balanceSockets(
               "device",
               connectedByDeviceId,
               connectedByConnectionId,
@@ -260,8 +268,8 @@ const start: Api.SocketServer["start"] = () => {
           }
 
           if (clusterFns) {
-            // add active socket in background
-            clusterFns.addActiveDeviceSocket(
+            // add active socket
+            await clusterFns.addActiveDeviceSocket(
               orgId,
               context.user.id,
               context.orgUserDevice.id,
@@ -300,12 +308,12 @@ const start: Api.SocketServer["start"] = () => {
             orgId,
             generatedEnvkeyId,
             connectionId,
-            true,
+            false,
             false
           );
 
           if (clusterFns) {
-            clusterFns.balanceSockets(
+            await clusterFns.balanceSockets(
               "generatedEnvkey",
               connectedByDeviceId,
               connectedByConnectionId,
@@ -329,8 +337,8 @@ const start: Api.SocketServer["start"] = () => {
             numConnectionsByOrg[orgId]++;
           }
           if (clusterFns) {
-            // increment active sockets in background
-            clusterFns.addActiveEnvkeySocket(
+            // increment active sockets
+            await clusterFns.addActiveEnvkeySocket(
               orgId,
               generatedEnvkeyId,
               connectionId,
@@ -637,7 +645,7 @@ const start: Api.SocketServer["start"] = () => {
 
     log("Dispatched client socket update", { orgId, connectionsPublishedTo });
   },
-  clearDeviceSocket: Api.SocketServer["clearDeviceSocket"] = (
+  clearDeviceSocket: Api.SocketServer["clearDeviceSocket"] = async (
     orgId,
     userId,
     deviceId,
@@ -679,11 +687,11 @@ const start: Api.SocketServer["start"] = () => {
       }
 
       if (clearActive && clusterFns) {
-        clusterFns.clearActiveDeviceSocket(deviceId);
+        await clusterFns.clearActiveDeviceSocket(deviceId);
       }
     }
   },
-  clearEnvkeyConnectionSocket: Api.ClearEnvkeyConnectionSocketFn = (
+  clearEnvkeyConnectionSocket: Api.ClearEnvkeyConnectionSocketFn = async (
     orgId,
     generatedEnvkeyId,
     connectionId,
@@ -733,11 +741,11 @@ const start: Api.SocketServer["start"] = () => {
       }
 
       if (clearActive && clusterFns) {
-        clusterFns.clearActiveEnvkeyConnectionSocket(connectionId);
+        await clusterFns.clearActiveEnvkeyConnectionSocket(connectionId);
       }
     }
   },
-  clearEnvkeySockets: Api.SocketServer["clearEnvkeySockets"] = (
+  clearEnvkeySockets: Api.SocketServer["clearEnvkeySockets"] = async (
     orgId,
     generatedEnvkeyId,
     clearActive,
@@ -759,11 +767,11 @@ const start: Api.SocketServer["start"] = () => {
       }
 
       if (clearActive && clusterFns) {
-        clusterFns.clearActiveEnvkeySockets(generatedEnvkeyId);
+        await clusterFns.clearActiveEnvkeySockets(generatedEnvkeyId);
       }
     }
   },
-  clearUserSockets: Api.SocketServer["clearUserSockets"] = (
+  clearUserSockets: Api.SocketServer["clearUserSockets"] = async (
     orgId,
     userId,
     clearActive,
@@ -776,11 +784,11 @@ const start: Api.SocketServer["start"] = () => {
       }
 
       if (clearActive && clusterFns) {
-        clusterFns.clearActiveUserSockets(userId);
+        await clusterFns.clearActiveUserSockets(userId);
       }
     }
   },
-  clearOrgSockets: Api.SocketServer["clearOrgSockets"] = (
+  clearOrgSockets: Api.SocketServer["clearOrgSockets"] = async (
     orgId,
     clearActive,
     noReconnect
@@ -792,11 +800,11 @@ const start: Api.SocketServer["start"] = () => {
       }
 
       if (clearActive && clusterFns) {
-        clusterFns.clearActiveOrgDeviceSockets(orgId);
+        await clusterFns.clearActiveOrgDeviceSockets(orgId);
       }
     }
   },
-  clearOrgEnvkeySockets: Api.SocketServer["clearOrgEnvkeySockets"] = (
+  clearOrgEnvkeySockets: Api.SocketServer["clearOrgEnvkeySockets"] = async (
     orgId,
     clearActive,
     noReconnect
@@ -808,7 +816,7 @@ const start: Api.SocketServer["start"] = () => {
       }
 
       if (clearActive && clusterFns) {
-        clusterFns.clearActiveOrgEnvkeySockets(orgId);
+        await clusterFns.clearActiveOrgEnvkeySockets(orgId);
       }
     }
   },
@@ -850,20 +858,20 @@ const start: Api.SocketServer["start"] = () => {
           false
         );
       }
-    },
-  syncActiveLoop = async () => {
-    if (clusterFns) {
-      await clusterFns.syncActiveSockets(
-        connectedByDeviceId,
-        connectedByConnectionId
-      );
+    };
+// syncActiveLoop = async () => {
+//   if (clusterFns) {
+//     await clusterFns.syncActiveSockets(
+//       connectedByDeviceId,
+//       connectedByConnectionId
+//     );
 
-      syncActiveTimeout = setTimeout(
-        syncActiveLoop,
-        SYNC_ACTIVE_INTERVAL_MS + Math.floor(Math.random() * SYNC_ACTIVE_JITTER)
-      );
-    }
-  };
+//     syncActiveTimeout = setTimeout(
+//       syncActiveLoop,
+//       SYNC_ACTIVE_INTERVAL_MS + Math.floor(Math.random() * SYNC_ACTIVE_JITTER)
+//     );
+//   }
+// };
 
 const res: Api.SocketServer = {
   start,

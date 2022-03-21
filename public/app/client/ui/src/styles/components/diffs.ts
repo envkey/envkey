@@ -136,7 +136,7 @@ export const KeyChange = style({
 
     ".change": {
       $nest: {
-        "& > div": {
+        "> div": {
           height: layout.ENV_ROW_HEIGHT,
           display: "flex",
           borderBottom: "1px solid rgba(0,0,0,0.1)",
@@ -146,7 +146,7 @@ export const KeyChange = style({
               borderBottom: "none",
             },
 
-            "& > label": {
+            "> label": {
               fontFamily: fonts.CONDENSED,
               fontSize: "13.5px",
               fontWeight: 600,
@@ -161,7 +161,7 @@ export const KeyChange = style({
               borderRight: "1px solid rgba(0,0,0,0.1)",
             },
 
-            "& > span": {
+            "> span": {
               width: "calc(100% - 90px)",
               display: "inline-flex",
               height: "100%",
@@ -174,15 +174,15 @@ export const KeyChange = style({
                 span: {
                   position: "relative",
                 },
-                "& *": {
+                "*": {
                   fontFamily: fonts.CODE,
                   fontSize: "14px",
                   color: color(colors.DARK_TEXT).fadeOut(0.3).toString(),
                 },
-                "& .special > span": {
-                  top: 0,
+                ".special > span": {
+                  top: 2,
                 },
-                "& .special *": {
+                ".special *": {
                   fontFamily: fonts.MAIN,
                   color: "rgba(0,0,0,0.45)",
 
@@ -195,10 +195,10 @@ export const KeyChange = style({
                     },
                   },
                 },
-                "& > span": {
+                "> span": {
                   maxWidth: "90%",
                 },
-                "& > span > span": {
+                "> span > span": {
                   width: "auto",
                   maxWidth: "100%",
                   overflow: "hidden",
@@ -214,25 +214,6 @@ export const KeyChange = style({
               color: colors.DARK_TEXT,
             },
 
-            "&.set-by": {
-              $nest: {
-                "& > span > span": {
-                  top: 0,
-                },
-                "> span *": {
-                  fontFamily: fonts.MAIN,
-                  color: "rgba(0,0,0,0.5)",
-                },
-                strong: {
-                  color: colors.DARK_BLUE,
-                },
-                ".sep": {
-                  margin: "0 5px",
-                  color: "rgba(0,0,0,0.2)",
-                },
-              },
-            },
-
             ".strikethrough": {
               display: "block",
               width: "calc(100% + 10px)",
@@ -242,6 +223,25 @@ export const KeyChange = style({
               left: "-5px",
               top: "47.5%",
               transform: "translateY(-50%)",
+            },
+          },
+        },
+
+        ".set-by": {
+          $nest: {
+            "> span > span": {
+              top: 0,
+            },
+            "> span *": {
+              fontFamily: fonts.MAIN,
+              color: "rgba(0,0,0,0.5)",
+            },
+            strong: {
+              color: colors.DARK_BLUE,
+            },
+            ".sep": {
+              margin: "0 5px",
+              color: "rgba(0,0,0,0.2)",
             },
           },
         },

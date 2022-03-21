@@ -107,6 +107,7 @@ export const useMyOrgTabs = (props: OrgComponentProps<{ orgId: string }>) => {
     tabs,
     redirectFromBasePath: true,
     basePathTest,
-    className: styles.SelectedObjectTabs,
+    className: styles.SelectedObjectTabs(1200),
+    collapsible: true,
   });
 };

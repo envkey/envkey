@@ -1,7 +1,8 @@
-import React, { useLayoutEffect, useEffect } from "react";
+import React, { useLayoutEffect, useEffect, useState } from "react";
 import { OrgComponent, OrgComponentProps } from "@ui_types";
 import { Link } from "react-router-dom";
 import * as R from "ramda";
+import { SvgImage } from "@images";
 
 type Tab = {
   label?: string;
@@ -15,28 +16,57 @@ const Tabs: OrgComponent<
   {
     tabs: Tab[];
     className?: string;
+    collapsible?: boolean;
   }
 > = (props) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const tabLinks = props.tabs.map((tab, i) => {
+    return tab.hidden ? (
+      ""
+    ) : (
+      <Link
+        className={props.location.pathname.includes(tab.path) ? "selected" : ""}
+        to={props.match.url + tab.path}
+        key={i}
+        onClick={() => {
+          if (showDropdown) {
+            setShowDropdown(false);
+          }
+          props.setUiState({ lastSelectedTab: tab.path });
+        }}
+      >
+        <label>{tab.label}</label>
+      </Link>
+    );
+  });
+
   return props.tabs.length > 1 ? (
-    <div className={props.className}>
-      {props.tabs.map((tab, i) => {
-        return tab.hidden ? (
-          ""
-        ) : (
-          <Link
-            className={
-              props.location.pathname.includes(tab.path) ? "selected" : ""
-            }
-            to={props.match.url + tab.path}
-            key={i}
-            onClick={() => {
-              props.setUiState({ lastSelectedTab: tab.path });
-            }}
-          >
-            <label>{tab.label}</label>
-          </Link>
-        );
-      })}
+    <div
+      className={
+        "tabs " +
+        props.className +
+        (props.collapsible ? " collapsible" : "") +
+        (props.collapsible && showDropdown ? " toggled" : "")
+      }
+    >
+      {props.collapsible ? (
+        <span
+          className="dropdown-tabs-toggle"
+          onClick={() => setShowDropdown(!showDropdown)}
+        >
+          <SvgImage type="down-caret" />
+        </span>
+      ) : (
+        ""
+      )}
+
+      {showDropdown && props.collapsible ? (
+        <div className="dropdown-tabs">{tabLinks}</div>
+      ) : (
+        ""
+      )}
+      <div className="horizontal-tabs">{tabLinks}</div>
     </div>
   ) : (
     <div />
@@ -50,9 +80,11 @@ export const useTabs = (
     className?: string;
     redirectFromBasePath?: true;
     basePathTest?: () => boolean;
+    collapsible?: boolean;
   }
 ) => {
-  const { tabs, className, redirectFromBasePath, basePathTest } = opts;
+  const { tabs, className, redirectFromBasePath, basePathTest, collapsible } =
+    opts;
 
   const permittedTabs = tabs.filter(({ permitted }) => permitted());
   const permittedPaths = permittedTabs.map(R.prop("path"));
@@ -108,7 +140,12 @@ export const useTabs = (
     tabsComponent: shouldRedirect ? (
       ""
     ) : (
-      <Tabs {...props} tabs={permittedTabs} className={className} />
+      <Tabs
+        {...props}
+        tabs={permittedTabs}
+        collapsible={collapsible}
+        className={className}
+      />
     ),
   };
 };

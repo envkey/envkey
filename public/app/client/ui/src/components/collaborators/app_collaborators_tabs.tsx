@@ -45,6 +45,6 @@ export const useAppCollaboratorsTabs = (
     redirectFromBasePath: true,
     basePathTest,
     // hide these tabs until groups are implemented
-    className: styles.SelectedObjectTabs + " " + style({ display: "none" }),
+    className: styles.SelectedObjectTabs() + " " + style({ display: "none" }),
   });
 };

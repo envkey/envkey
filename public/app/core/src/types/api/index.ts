@@ -235,7 +235,7 @@ namespace Api {
     connectionId: string,
     clearActive: boolean,
     noReconnect: boolean
-  ) => void;
+  ) => Promise<void>;
 
   export type ReplicationFn = (
     updatedOrg: Api.Db.Org,
@@ -332,7 +332,7 @@ namespace Api {
     numEnvkeyConnections: number,
     clearDeviceSocketFn: SocketServer["clearDeviceSocket"],
     clearEnvkeyConnectionSocketFn: ClearEnvkeyConnectionSocketFn
-  ) => void;
+  ) => Promise<void>;
 }
 
 export default Api;

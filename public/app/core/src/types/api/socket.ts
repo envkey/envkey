@@ -72,14 +72,14 @@ export interface SocketServer {
     orgId: string,
     clearActive: boolean,
     noReconnect: boolean
-  ) => void;
+  ) => Promise<void>;
 
   clearUserSockets: (
     orgId: string,
     userId: string,
     clearActive: boolean,
     noReconnect: boolean
-  ) => void;
+  ) => Promise<void>;
 
   clearDeviceSocket: (
     orgId: string,
@@ -87,18 +87,18 @@ export interface SocketServer {
     deviceId: string,
     clearActive: boolean,
     noReconnect: boolean
-  ) => void;
+  ) => Promise<void>;
 
   clearOrgEnvkeySockets: (
     orgId: string,
     clearActive: boolean,
     noReconnect: boolean
-  ) => void;
+  ) => Promise<void>;
 
   clearEnvkeySockets: (
     orgId: string,
     generatedEnvkeyId: string,
     clearActive: boolean,
     noReconnect: boolean
-  ) => void;
+  ) => Promise<void>;
 }
