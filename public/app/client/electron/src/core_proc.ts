@@ -17,7 +17,7 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
     let alive = await isAlive();
     log("Core process status", { alive });
     if (alive) {
-      if (semver.valid(alive) && semver.gt(alive, cliVersion)) {
+      if (semver.valid(alive) && semver.gt(cliVersion, alive)) {
         log(
           "Core process is running an outdated version. Stopping and retrying..."
         );
@@ -40,6 +40,8 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
       getCliCurrentVersion(),
     ]);
     let error = false;
+
+    log("", { cliBinPath, cliCurrent, cliVersion });
 
     if (cliBinPath && cliCurrent != false && cliCurrent == cliVersion) {
       log("Starting core process daemon via CLI");
