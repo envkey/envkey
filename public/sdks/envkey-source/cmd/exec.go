@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/daemon"
@@ -19,6 +20,13 @@ import (
 	colors "github.com/logrusorgru/aurora/v3"
 	"gopkg.in/yaml.v2"
 )
+
+/*
+* if we receive a SIGINT or SIGTERM, envkey-source will pass it on to
+* the watched child process. if it doesn't die after a timeout, it gets
+* killed by a hard SIGKILL.
+ */
+const EXIT_SIGNAL_TIMEOUT = time.Duration(3) * time.Second
 
 var stdoutLogger = log.New(os.Stdout, "", 0)
 var stderrLogger = log.New(os.Stderr, "", 0)
@@ -53,17 +61,10 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 		os.Exit(0)
 	}
 
-	execFn := func(latestEnv parser.EnvMap, previousEnv parser.EnvMap, onFinish func(), runSync bool) {
-		fn := func() {
-			watchCommand = execute(execCmdArg, shell.ToPairs(latestEnv, previousEnv, true, force), "attach", true, "")
-			watchCommand.Wait()
-		}
-
-		if runSync {
-			fn()
-		} else {
-			go fn()
-		}
+	execFn := func(latestEnv parser.EnvMap, previousEnv parser.EnvMap, onFinish func()) {
+		env := shell.ToPairs(latestEnv, previousEnv, true, force)
+		watchCommand = execute(execCmdArg, env, "attach", true, "")
+		watchCommand.Wait()
 
 		if onFinish != nil {
 			onFinish()
@@ -71,25 +72,24 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 	}
 
 	if onChangeCmdArg != "" || (execCmdArg != "" && watch) {
-		execFn(
+		go execFn(
 			env,
 			nil,
 			func() {
 				if !isKillingWatch() {
-					var msg string
-					if execCmdArg != "" {
-						msg = " | executing command and waiting for changes..."
-					} else {
-						msg = " | waiting for changes..."
-					}
+					// var msg string
+					// if execCmdArg != "" {
+					// 	msg = " | executing command and waiting for changes..."
+					// } else {
+					// 	msg = " | waiting for changes..."
+					// }
 
-					stderrLogger.Println(utils.FormatTerminal(msg, nil))
+					// stderrLogger.Println(utils.FormatTerminal(msg, nil))
 				}
 			},
-			false,
 		)
 	} else {
-		execFn(env, nil, nil, true)
+		execFn(env, nil, nil)
 		return
 	}
 
@@ -127,7 +127,7 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 
 		if onChangeCmdArg != "" {
 			go func() {
-				stderrLogger.Println(utils.FormatTerminal(" | executing on-reload...", colors.Cyan))
+				// stderrLogger.Println(utils.FormatTerminal(" | executing on-reload...", colors.Cyan))
 
 				execute(
 					onChangeCmdArg,
@@ -137,33 +137,24 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 					utils.FormatTerminal(" | on-reload > ", colors.Cyan),
 				).Wait()
 
-				stderrLogger.Println(utils.FormatTerminal(" | executed on-reload–waiting for changes...", colors.Cyan))
+				// stderrLogger.Println(utils.FormatTerminal(" | executed on-reload–waiting for changes...", colors.Cyan))
 			}()
 		}
 
 		if execCmdArg != "" && watch {
 			go func() {
-				stderrLogger.Println(utils.FormatTerminal(" | restarting after update...", nil))
+				stderrLogger.Println(utils.FormatTerminal(" | reloading after update...", nil))
 
-				setIsKillingWatch(true)
-				c := getWatchCommand()
-				// ignore errors on Kill/Wait since process may already have finished
-				err := c.Process.Kill()
-				if err == nil {
-					_, err = c.Process.Wait()
-				}
-
-				setIsKillingWatch(false)
+				killWatchCommandIfRunning(syscall.SIGTERM)
 
 				execFn(
 					updatedEnv,
 					previousEnv,
 					func() {
 						if !isKillingWatch() {
-							stderrLogger.Println(utils.FormatTerminal(" | executing command and waiting for changes...", nil))
+							// stderrLogger.Println(utils.FormatTerminal(" | executing command and waiting for changes...", nil))
 						}
 					},
-					false,
 				)
 			}()
 		}
@@ -172,10 +163,33 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 	daemon.ListenChangeWithEnv(envkey, clientName, clientVersion, onChange)
 }
 
+func killWatchCommandIfRunning(sig syscall.Signal) {
+	setIsKillingWatch(true)
+	defer setIsKillingWatch(false)
+
+	c := getWatchCommand()
+
+	if c == nil {
+		return
+	}
+
+	// ignore errors on Kill/Wait since process may already have finished
+	c.Process.Signal(sig)
+
+	if sig != syscall.SIGKILL {
+		go func() {
+			time.Sleep(EXIT_SIGNAL_TIMEOUT)
+			killWatchCommandIfRunning(syscall.SIGKILL)
+		}()
+	}
+
+	c.Process.Wait()
+}
+
 func execute(c string, env []string, copyOrAttach string, includeStdin bool, copyOutputPrefix string) *exec.Cmd {
 	// if we're in an environment where a shell (`sh`) is defined, use that
 	// so we get shell expansion/other shell features.
-	// if we're on windows and not a bash-link env where `sh` is defined, pass to `cmd`.
+	// if we're on windows and not in a bash-like env where `sh` is defined, pass to `cmd`.
 	// otherwise, try passing the command directly to the system.
 	var command *exec.Cmd
 	if utils.CommandExists("sh") {
@@ -211,7 +225,6 @@ func execute(c string, env []string, copyOrAttach string, includeStdin bool, cop
 		if includeStdin {
 			go io.Copy(inPipe, os.Stdin)
 		}
-
 	} else if copyOrAttach == "attach" {
 		command.Stdout = os.Stdout
 		command.Stderr = os.Stderr

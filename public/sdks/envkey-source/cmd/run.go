@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/daemon"
 	"github.com/envkey/envkey/public/sdks/envkey-source/env"
@@ -21,6 +23,8 @@ import (
 
 var ClientLogEnabled = false
 var execCmdArg = ""
+
+var closed chan os.Signal
 
 func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	if printVersion {
@@ -109,7 +113,6 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 		res, _, err = daemon.FetchMap(envkey, clientName, clientVersion)
 
 		if err != nil {
-
 			res, err = fetch.FetchMap(envkey, fetchOpts)
 		}
 	} else {
@@ -124,6 +127,22 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	}
 
 	utils.CheckError(err, execCmdArg != "")
+
+	closed = make(chan os.Signal)
+	signal.Notify(closed, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		sig := <-closed
+		// stderrLogger.Println(utils.FormatTerminal(" | received "+sig.String()+" signal--cleaning up and exiting", nil))
+		log.Println("Received " + sig.String() + " signal. Cleaning up and exiting.")
+		if sig == os.Interrupt {
+			killWatchCommandIfRunning(syscall.SIGINT)
+		} else if sig == syscall.SIGTERM {
+			killWatchCommandIfRunning(syscall.SIGTERM)
+		}
+
+		os.Exit(0)
+	}()
 
 	execWithEnv(envkey, res, clientName, clientVersion)
 }

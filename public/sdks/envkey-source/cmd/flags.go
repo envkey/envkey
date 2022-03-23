@@ -36,7 +36,7 @@ func init() {
 	RootCmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-run command whenever environment is updated (default is false)")
 	RootCmd.Flags().StringVarP(&onChangeCmdArg, "on-reload", "r", "", "command to execute when environment is updated (default is none)")
 	RootCmd.Flags().StringSliceVar(&watchVars, "only", nil, "when using -w or -r, reload only when specific vars change (comma-delimited list)")
-	RootCmd.Flags().Float64Var(&watchThrottle, "throttle-ms", 10000, "min delay between restarts or reloads when using --watch/-w or --on-reload/-r")
+	RootCmd.Flags().Float64Var(&watchThrottle, "throttle-ms", 5000, "min delay between restarts or reloads when using --watch/-w or --on-reload/-r")
 
 	RootCmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite existing environment variables and/or other entries in .env file")
 	RootCmd.Flags().StringVar(&envFileOverride, "env-file", "", "Explicitly set path to ENVKEY-containing .env file (optional)")

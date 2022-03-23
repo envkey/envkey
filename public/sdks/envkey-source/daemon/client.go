@@ -284,7 +284,7 @@ func ListenChangeWithEnv(envkey, clientName, clientVersion string, onChange func
 			stderrLogger.Println(utils.FormatTerminal(" | lost connection to EnvKey host–attempting to reconnect...", colors.Red))
 		},
 		OnReconnected: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | reconnected to EnvKey host–checking for changes...", colors.Green))
+			stderrLogger.Println(utils.FormatTerminal(" | reconnected to EnvKey host", colors.Green))
 		},
 		OnReconnectedNoChange: func() {
 			stderrLogger.Println(utils.FormatTerminal(" | nothing changed–waiting for changes...", colors.Green))
