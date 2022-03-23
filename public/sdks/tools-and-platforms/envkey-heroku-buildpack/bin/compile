@@ -36,6 +36,12 @@ if [ -f $ENV_DIR/ENVKEY ]; then
   mkdir -p $ENVKEY_DIR
   mv envkey-source $ENVKEY_DIR
 
+  # don't ovewrite existing es command
+  if [ ! -x "$(command -v es)" ]; then
+    echo "creating es alias"
+    ln -s $ENVKEY_DIR/envkey-source $ENVKEY_DIR/es
+  fi
+
   echo "ENVKEY is set" | indent
   export "ENVKEY=$(cat $ENV_DIR/ENVKEY)"
   echo $($ENVKEY_DIR/envkey-source) > $BP_DIR/export
