@@ -37,11 +37,11 @@ var clientVersionArg string
 func init() {
 	RootCmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-run command whenever environment is updated (default is false)")
 	RootCmd.Flags().StringVarP(&onChangeCmdArg, "on-reload", "r", "", "command to execute when environment is updated (default is none)")
-	RootCmd.Flags().StringSliceVar(&watchVars, "only", nil, "when using -w or -r, reload only when specific vars change (comma-delimited list)")
-	RootCmd.Flags().Uint32Var(&watchThrottle, "throttle", 5000, "min delay between restarts or reloads when using --watch/-w or --on-reload/-r")
+	RootCmd.Flags().StringSliceVar(&watchVars, "only", nil, "with -w or -r, reload only when specific vars change (comma-delimited list)")
+	RootCmd.Flags().Uint32Var(&watchThrottle, "throttle", 5000, "min delay between reloads with -w, -r, or --rolling")
 
-	RootCmd.Flags().BoolVar(&rollingReload, "rolling", false, "apply a rolling reload across multiple connected ENVKEYs to avoid downtime when using --watch/-w or --on-reload/-r")
-	RootCmd.Flags().Uint8Var(&rollingPct, "rolling-pct", 25, "minimum percentage of connected ENVKEYs to reload in each batch when using --rolling for rolling reloads")
+	RootCmd.Flags().BoolVar(&rollingReload, "rolling", false, "no-downtime rolling reloads across all connected processes with -w or -r")
+	RootCmd.Flags().Uint8Var(&rollingPct, "rolling-pct", 25, "min % of connected processes to reload in each batch with --rolling")
 
 	RootCmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite existing environment variables and/or other entries in .env file")
 	RootCmd.Flags().StringVar(&envFileOverride, "env-file", "", "Explicitly set path to ENVKEY-containing .env file (optional)")
