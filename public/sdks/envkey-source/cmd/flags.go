@@ -35,6 +35,8 @@ var clientNameArg string
 var clientVersionArg string
 
 func init() {
+	RootCmd.PersistentFlags().BoolP("help", "h", false, "help for envkey-source")
+
 	RootCmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-run command whenever environment is updated (default is false)")
 	RootCmd.Flags().StringVarP(&onChangeCmdArg, "on-reload", "r", "", "command to execute when environment is updated (default is none)")
 	RootCmd.Flags().StringSliceVar(&watchVars, "only", nil, "with -w or -r, reload only when specific vars change (comma-delimited list)")
@@ -53,7 +55,7 @@ func init() {
 
 	RootCmd.Flags().BoolVarP(&shouldCache, "cache", "c", false, "cache encrypted config on disk as a local backup for offline work (default is false)")
 	RootCmd.Flags().StringVar(&cacheDir, "cache-dir", "", "cache directory (default is $HOME/.envkey/cache)")
-	RootCmd.Flags().BoolVarP(&memCache, "mem-cache", "m", false, "keep in-memory cache up-to-date in realtime for zero latency (default is false)")
+	RootCmd.Flags().BoolVarP(&memCache, "mem-cache", "m", false, "keep in-memory cache up-to-date for zero latency (default is false)")
 
 	RootCmd.Flags().BoolVar(&verboseOutput, "verbose", false, "print verbose output (default is false)")
 	RootCmd.Flags().Float64Var(&timeoutSeconds, "timeout", 20.0, "timeout in seconds for http requests")

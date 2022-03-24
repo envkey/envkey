@@ -212,54 +212,57 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string, rollingRel
 							break
 						}
 
-						err = writeTCP(envkey, []byte(fmt.Sprintf("start_rolling|%d|%d", batchNum, totalBatches)))
+						if totalBatches > 1 {
+							err = writeTCP(envkey, []byte(fmt.Sprintf("start_rolling|%d|%d", batchNum, totalBatches)))
 
-						if err != nil {
-							log.Printf("writeTCP error: %s", err)
-							break
-						}
+							if err != nil {
+								log.Printf("writeTCP error: %s", err)
+								break
+							}
 
-						mutex.Lock()
-						isRollingByEnvkey[envkey] = true
-						mutex.Unlock()
+							mutex.Lock()
+							isRollingByEnvkey[envkey] = true
+							mutex.Unlock()
 
-						go func() {
-							defer func() {
-								mutex.Lock()
-								delete(isRollingByEnvkey, envkey)
-								mutex.Unlock()
+							go func() {
+								defer func() {
+									mutex.Lock()
+									delete(isRollingByEnvkey, envkey)
+									mutex.Unlock()
+								}()
+
+								batchWaitMs := watchThrottle * uint32(batchNum)
+								totalWaitMs := watchThrottle * uint32(totalBatches)
+
+								if batchWaitMs > 0 {
+									time.Sleep(time.Duration(batchWaitMs) * time.Millisecond)
+								} else {
+									time.Sleep(time.Duration(1) * time.Millisecond)
+								}
+
+								err = writeTCP(envkey, []byte("env_update"))
+								if err != nil {
+									log.Printf("writeTCP error: %s", err)
+									return
+								}
+
+								delay := time.Duration(totalWaitMs-batchWaitMs) * time.Millisecond
+
+								if delay > 0 {
+									time.Sleep(delay)
+								} else {
+									time.Sleep(time.Duration(1) * time.Millisecond)
+								}
+
+								err = writeTCP(envkey, []byte("rolling_complete"))
+								if err != nil {
+									log.Printf("writeTCP error: %s", err)
+									return
+								}
 							}()
-
-							batchWaitMs := watchThrottle * uint32(batchNum)
-							totalWaitMs := watchThrottle * uint32(totalBatches)
-
-							if batchWaitMs > 0 {
-								time.Sleep(time.Duration(batchWaitMs) * time.Millisecond)
-							} else {
-								time.Sleep(time.Duration(1) * time.Millisecond)
-							}
-
+						} else {
 							err = writeTCP(envkey, []byte("env_update"))
-							if err != nil {
-								log.Printf("writeTCP error: %s", err)
-								return
-							}
-
-							delay := time.Duration(totalWaitMs-batchWaitMs) * time.Millisecond
-
-							if delay > 0 {
-								time.Sleep(delay)
-							} else {
-								time.Sleep(time.Duration(1) * time.Millisecond)
-							}
-
-							err = writeTCP(envkey, []byte("rolling_complete"))
-							if err != nil {
-								log.Printf("writeTCP error: %s", err)
-								return
-							}
-						}()
-
+						}
 					} else {
 						err = writeTCP(envkey, []byte("env_update"))
 					}

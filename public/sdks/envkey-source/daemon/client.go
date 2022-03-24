@@ -308,10 +308,10 @@ func ListenChangeWithEnv(envkey, clientName, clientVersion string, rollingReload
 			// stderrLogger.Println(utils.FormatTerminal(" | nothing changed–waiting for changes...", colors.Green))
 		},
 		OnSuspended: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | process was suspended–checking for changes...", colors.Green))
+			// stderrLogger.Println(utils.FormatTerminal(" | process was suspended–checking for changes...", colors.Green))
 		},
 		OnSuspendedNoChange: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | nothing changed–waiting for changes...", colors.Green))
+			// stderrLogger.Println(utils.FormatTerminal(" | nothing changed–waiting for changes...", colors.Green))
 		},
 	})
 }
