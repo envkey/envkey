@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -100,8 +101,8 @@ func Stop() {
 	http.Get("http://127.0.0.1:19409/stop")
 }
 
-func Fetch(envkey, clientNameArg, clientVersionArg string) (string, error) {
-	env, _, err := FetchMap(envkey, clientNameArg, clientVersionArg)
+func Fetch(envkey, clientNameArg, clientVersionArg string, rollingReload bool, rollingPct uint8, watchThrottle uint32) (string, error) {
+	env, _, err := FetchMap(envkey, clientNameArg, clientVersionArg, rollingReload, rollingPct, watchThrottle)
 
 	if err != nil {
 		return "", err
@@ -110,7 +111,8 @@ func Fetch(envkey, clientNameArg, clientVersionArg string) (string, error) {
 	return env.ToJson()
 }
 
-func FetchMap(envkey, clientNameArg, clientVersionArg string) (parser.EnvMap, parser.EnvMap, error) {
+func FetchMap(envkey, clientNameArg, clientVersionArg string, rollingReload bool, rollingPct uint8, watchThrottle uint32) (parser.EnvMap, parser.EnvMap, error) {
+
 	clientName := clientNameArg
 	if clientName == "" {
 		clientName = fetch.DefaultClientName
@@ -121,8 +123,8 @@ func FetchMap(envkey, clientNameArg, clientVersionArg string) (parser.EnvMap, pa
 		clientVersion = version.Version
 	}
 
-	fetchUrl := fmt.Sprintf("http://127.0.0.1:19409/fetch/%s/%s/%s", envkey, url.QueryEscape(clientName),
-		url.QueryEscape(clientVersion))
+	fetchUrl := fmt.Sprintf("http://127.0.0.1:19409/fetch/%s/%s/%s/%v/%d/%d", envkey, url.QueryEscape(clientName),
+		url.QueryEscape(clientVersion), rollingReload, rollingPct, watchThrottle)
 
 	resp, err := http.Get(fetchUrl)
 
@@ -208,6 +210,8 @@ func ListenChange(props ListenChangeProps) {
 			}
 			msg := strings.TrimSpace(res)
 
+			log.Println("Received TCP message:", msg)
+
 			if msg == "envkey_invalid" {
 				props.OnInvalid()
 			} else if msg == "connection_throttled" {
@@ -222,7 +226,14 @@ func ListenChange(props ListenChangeProps) {
 				props.OnSuspended()
 			} else if msg == "suspended_no_change" {
 				props.OnSuspendedNoChange()
-			} else {
+			} else if strings.HasPrefix(msg, "start_rolling") {
+				split := strings.Split(msg, "|")
+				batchNumConv, _ := strconv.ParseUint(split[1], 10, 16)
+				totalBatches, _ := strconv.ParseUint(split[2], 10, 16)
+				props.OnStartRolling(uint16(batchNumConv), uint16(totalBatches), props.WatchThrottle)
+			} else if msg == "rolling_complete" {
+				props.OnRollingComplete()
+			} else if msg == "env_update" {
 				props.OnChange()
 			}
 		}
@@ -251,11 +262,12 @@ func RemoveListener(envkey string) {
 	}
 }
 
-func ListenChangeWithEnv(envkey, clientName, clientVersion string, onChange func(parser.EnvMap, parser.EnvMap)) {
+func ListenChangeWithEnv(envkey, clientName, clientVersion string, rollingReload bool, rollingPct uint8, watchThrottle uint32, onChange func(parser.EnvMap, parser.EnvMap)) {
 	ListenChange(ListenChangeProps{
-		Envkey: envkey,
+		Envkey:        envkey,
+		WatchThrottle: watchThrottle,
 		OnChange: func() {
-			currentEnv, previousEnv, err := FetchMap(envkey, clientName, clientVersion)
+			currentEnv, previousEnv, err := FetchMap(envkey, clientName, clientVersion, rollingReload, rollingPct, watchThrottle)
 
 			if err != nil {
 				stderrLogger.Println(utils.FormatTerminal(" | couldn't fetch latest env: "+err.Error(), colors.Red))
@@ -263,6 +275,12 @@ func ListenChangeWithEnv(envkey, clientName, clientVersion string, onChange func
 			}
 
 			onChange(currentEnv, previousEnv)
+		},
+		OnStartRolling: func(batchNum, totalBatches uint16, watchThrottle uint32) {
+			stderrLogger.Println(utils.FormatTerminal(fmt.Sprintf(" | started rolling reload (batch %d/%d)--waiting %dms to reload...", batchNum+1, totalBatches, watchThrottle*uint32(batchNum)), colors.Green))
+		},
+		OnRollingComplete: func() {
+			stderrLogger.Println(utils.FormatTerminal(fmt.Sprintf(" | rolling reload complete"), colors.Green))
 		},
 		OnInvalid: func() {
 			stderrLogger.Println(utils.FormatTerminal(" | ENVKEY invalid–watcher will exit", colors.Red))
@@ -287,7 +305,7 @@ func ListenChangeWithEnv(envkey, clientName, clientVersion string, onChange func
 			stderrLogger.Println(utils.FormatTerminal(" | reconnected to EnvKey host", colors.Green))
 		},
 		OnReconnectedNoChange: func() {
-			stderrLogger.Println(utils.FormatTerminal(" | nothing changed–waiting for changes...", colors.Green))
+			// stderrLogger.Println(utils.FormatTerminal(" | nothing changed–waiting for changes...", colors.Green))
 		},
 		OnSuspended: func() {
 			stderrLogger.Println(utils.FormatTerminal(" | process was suspended–checking for changes...", colors.Green))

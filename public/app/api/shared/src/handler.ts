@@ -1968,9 +1968,7 @@ const apiActions: {
     ) {
       setImmediate(() => {
         handlerUpdatedGeneratedEnvkeyIds.forEach((generatedEnvkeyId) =>
-          socketServer!.sendEnvkeyUpdate(auth.org.id, generatedEnvkeyId, {
-            type: "env_updated",
-          })
+          socketServer!.sendEnvkeyUpdate(auth.org.id, generatedEnvkeyId)
         );
 
         handlerEnvkeyClearSockets.forEach(clearEnvkeySockets);

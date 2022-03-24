@@ -20,7 +20,9 @@ var watch bool
 var onChangeCmdArg string
 var watchVars []string
 var memCache bool
-var watchThrottle float64
+var watchThrottle uint32
+var rollingReload bool
+var rollingPct uint8
 
 var shellHook string
 var ignoreMissing bool
@@ -36,7 +38,10 @@ func init() {
 	RootCmd.Flags().BoolVarP(&watch, "watch", "w", false, "re-run command whenever environment is updated (default is false)")
 	RootCmd.Flags().StringVarP(&onChangeCmdArg, "on-reload", "r", "", "command to execute when environment is updated (default is none)")
 	RootCmd.Flags().StringSliceVar(&watchVars, "only", nil, "when using -w or -r, reload only when specific vars change (comma-delimited list)")
-	RootCmd.Flags().Float64Var(&watchThrottle, "throttle-ms", 5000, "min delay between restarts or reloads when using --watch/-w or --on-reload/-r")
+	RootCmd.Flags().Uint32Var(&watchThrottle, "throttle", 5000, "min delay between restarts or reloads when using --watch/-w or --on-reload/-r")
+
+	RootCmd.Flags().BoolVar(&rollingReload, "rolling", false, "apply a rolling reload across multiple connected ENVKEYs to avoid downtime when using --watch/-w or --on-reload/-r")
+	RootCmd.Flags().Uint8Var(&rollingPct, "rolling-pct", 25, "minimum percentage of connected ENVKEYs to reload in each batch when using --rolling for rolling reloads")
 
 	RootCmd.Flags().BoolVarP(&force, "force", "f", false, "overwrite existing environment variables and/or other entries in .env file")
 	RootCmd.Flags().StringVar(&envFileOverride, "env-file", "", "Explicitly set path to ENVKEY-containing .env file (optional)")

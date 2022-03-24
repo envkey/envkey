@@ -160,7 +160,7 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 		}
 	}
 
-	daemon.ListenChangeWithEnv(envkey, clientName, clientVersion, onChange)
+	daemon.ListenChangeWithEnv(envkey, clientName, clientVersion, rollingReload, rollingPct, watchThrottle, onChange)
 }
 
 func killWatchCommandIfRunning(sig syscall.Signal) {

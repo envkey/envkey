@@ -17,7 +17,7 @@ var currentEnvsByEnvkey = map[string]parser.EnvMap{}
 var previousEnvsByEnvkey = map[string]parser.EnvMap{}
 var metaByEnvkey = map[string]EnvkeyMeta{}
 
-func fetchAndConnect(envkey, clientName, clientVersion string) (buf bytes.Buffer, err error) {
+func fetchAndConnect(envkey, clientName, clientVersion string, rollingReload bool, rollingPct uint8, watchThrottle uint32) (buf bytes.Buffer, err error) {
 
 	defer func() {
 		mutex.Lock()
@@ -41,7 +41,7 @@ func fetchAndConnect(envkey, clientName, clientVersion string) (buf bytes.Buffer
 			return
 		}
 
-		go connectEnvkeyWebsocket(envkey, clientName, clientVersion)
+		go connectEnvkeyWebsocket(envkey, clientName, clientVersion, rollingReload, rollingPct, watchThrottle)
 
 	} else if socket == nil || !socket.IsConnected() {
 		_, err = fetchCurrent(envkey, clientName, clientVersion)

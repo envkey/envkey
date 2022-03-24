@@ -154,6 +154,7 @@ export const fetchEnvsForUserOrAccessParams = async (
     const envParentIds = new Set(Object.keys(state.envsFetchedAt));
 
     if (envParentIds.size > 0) {
+      log("fetching loaded envs:", { envParentIds: Array.from(envParentIds) });
       return fetchRequiredEnvs(
         state,
         envParentIds,
@@ -162,6 +163,45 @@ export const fetchEnvsForUserOrAccessParams = async (
         skipWaitForReencryption
       );
     } else {
+      return undefined;
+    }
+  },
+  fetchPendingEnvs = async (
+    state: Client.State,
+    context: Client.Context,
+    skipWaitForReencryption?: true
+  ): Promise<Client.DispatchResult | undefined> => {
+    const pendingEnvironmentIds = getPendingEnvironmentIds(state);
+
+    if (pendingEnvironmentIds.length > 0) {
+      const pendingEnvParentIds = new Set(
+        pendingEnvironmentIds.map((environmentId) => {
+          const environment = state.graph[environmentId] as
+            | Model.Environment
+            | undefined;
+
+          if (environment) {
+            return environment.envParentId;
+          } else {
+            const [envParentId] = environmentId.split("|");
+            return envParentId;
+          }
+        })
+      );
+
+      if (pendingEnvParentIds.size > 0) {
+        log("fetching envs with pending:", {
+          envParentIds: Array.from(pendingEnvParentIds),
+        });
+        return fetchRequiredEnvs(
+          state,
+          pendingEnvParentIds,
+          new Set(),
+          context,
+          skipWaitForReencryption
+        );
+      }
+
       return undefined;
     }
   };

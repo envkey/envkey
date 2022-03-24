@@ -603,10 +603,6 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
           onClick={() => {
             if (!isEditing && props.canUpdate) {
               setInputVal(val);
-              console.log({
-                showBlocks: props.ui.envManager.showBlocks,
-                userSetShowBlocks: props.ui.envManager.userSetShowBlocks,
-              });
               props.setEnvManagerState({
                 editingEntryKey: props.entryKey,
                 editingEnvParentId: props.envParentId,

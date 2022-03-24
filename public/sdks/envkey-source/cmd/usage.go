@@ -29,7 +29,13 @@ es -r ./on-reload
 
 With either -w or -r, you can reload only when specific variables change:
 
-es -w --only DATABASE_USER,DATABASE_PW -- echo '$DATABASE_USER:$DATABASE_PW' 
+es -w --only DATABASE_USER,DATABASE_PW -- echo '$DATABASE_USER:$DATABASE_PW'
+
+With either -w or -r, you can also do a rolling reload to avoid downtime when you have multiple servers/processes connected to a single ENVKEY. Just add the --rolling flag:
+
+es -w --rolling -- ./start-server
+
+By default, this will reload any connected processes in up to four batches, with a 5 second delay between batches. You can use the --rolling-pct flag to change the number of batches, and the --throttle flag to change the delay.
 
 Your EnvKey variables are available to use in shell commands. Just be sure to wrap the variables (or the whole command) in **single quotes**, otherwise variables will resolve *before* envkey-source loads your config.
 

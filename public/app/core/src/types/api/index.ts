@@ -29,7 +29,6 @@ namespace Api {
   export type ClearUserSocketParams = Socket.ClearUserSocketParams;
   export type ClearEnvkeySocketParams = Socket.ClearEnvkeySocketParams;
   export type OrgSocketUpdateMessage = Socket.OrgSocketBroadcastFn;
-  export type EnvkeySocketUpdateMessage = Socket.EnvkeySocketUpdateMessage;
   export type OrgSocketBroadcastFn = Socket.OrgSocketBroadcastFn;
   export type EnvkeySocketBroadcastFn = Socket.EnvkeySocketBroadcastFn;
   export type SocketServer = Socket.SocketServer;
@@ -229,6 +228,11 @@ namespace Api {
     }
   >;
 
+  export type EnvkeySocketBatchInfo = {
+    indexByConnectionId: Record<string, number>;
+    totalConnections: number;
+  };
+
   export type ClearEnvkeyConnectionSocketFn = (
     orgId: string,
     generatedEnvkeyId: string,
@@ -271,11 +275,6 @@ namespace Api {
     consumerIp: string
   ) => Promise<void>;
 
-  export type SyncActiveSocketsFn = (
-    connectedByDeviceId: Api.ConnectedByDeviceId,
-    connectedByConnectionId: Api.ConnectedByConnectionId
-  ) => Promise<void>;
-
   export type ClearHostActiveSocketsFn = () => Promise<void>;
 
   export type ClearActiveDeviceSocketFn = (deviceId: string) => Promise<void>;
@@ -291,6 +290,11 @@ namespace Api {
   ) => Promise<void>;
 
   export type ClearActiveOrgSocketsFn = (orgId: string) => Promise<void>;
+
+  export type EnvkeySocketBatchInfoFn = (
+    orgId: string,
+    generatedEnvkeyId: string
+  ) => Promise<EnvkeySocketBatchInfo>;
 
   export type ThrottleRequestFn = (
     orgStats: Model.OrgStats,

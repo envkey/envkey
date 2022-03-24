@@ -6,7 +6,10 @@ import (
 
 type ListenChangeProps struct {
 	Envkey                 string
+	WatchThrottle          uint32
 	OnChange               func()
+	OnStartRolling         func(batchNum, totalBatches uint16, watchThrottle uint32)
+	OnRollingComplete      func()
 	OnInvalid              func()
 	OnThrottled            func()
 	OnLostDaemonConnection func(error)

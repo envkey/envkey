@@ -25,8 +25,6 @@ let socketServer: WebSocket.Server;
 
 const HEARTBEAT_INTERVAL_MS = 30000;
 const PING_TIMEOUT = 10000;
-// const SYNC_ACTIVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-// const SYNC_ACTIVE_JITTER = 60 * 1000; // 1 minute
 
 let numDeviceConnections = 0;
 const userConnections: Api.UserSocketConnections = {};
@@ -43,7 +41,6 @@ const numConnectionsByOrg: {
 } = {};
 
 let heartbeatTimeout: NodeJS.Timeout | undefined;
-let syncActiveTimeout: NodeJS.Timeout | undefined;
 
 const pingClient = async (
   client: WebSocket,
@@ -165,16 +162,12 @@ let clusterFns:
       clearActiveOrgDeviceSockets: Api.ClearActiveOrgSocketsFn;
       clearActiveOrgEnvkeySockets: Api.ClearActiveOrgSocketsFn;
 
-      // syncActiveSockets: Api.SyncActiveSocketsFn;
+      getEnvkeyBatchInfo: Api.EnvkeySocketBatchInfoFn;
     }
   | undefined;
 
 export const registerClusterFns = (fns: Required<typeof clusterFns>) => {
   clusterFns = fns;
-  // syncActiveTimeout = setTimeout(
-  //   syncActiveLoop,
-  //   SYNC_ACTIVE_INTERVAL_MS + Math.floor(Math.random() * SYNC_ACTIVE_JITTER)
-  // );
 };
 
 export const clearAllSockets = (clearActive = false) => {
@@ -535,10 +528,6 @@ const start: Api.SocketServer["start"] = () => {
           clearTimeout(heartbeatTimeout);
           heartbeatTimeout = undefined;
         }
-        if (syncActiveTimeout) {
-          clearTimeout(syncActiveTimeout);
-          syncActiveTimeout = undefined;
-        }
       });
     });
   },
@@ -595,20 +584,30 @@ const start: Api.SocketServer["start"] = () => {
 
     log("Dispatched client socket update", { orgId, devicesPublishedTo });
   },
-  sendEnvkeyUpdate: Api.SocketServer["sendEnvkeyUpdate"] = (
+  sendEnvkeyUpdate: Api.SocketServer["sendEnvkeyUpdate"] = async (
     orgId,
-    generatedEnvkeyId,
-    msg
+    generatedEnvkeyId
   ) => {
     const byConnectionId =
       (envkeyConnections[orgId] ?? {})[generatedEnvkeyId] ?? {};
     log("Dispatching envkey socket update", { generatedEnvkeyId });
     let connectionsPublishedTo = 0;
 
+    const getBatchInfoFn =
+      clusterFns?.getEnvkeyBatchInfo ?? getLocalEnvkeyBatchInfo;
+    const { totalConnections, indexByConnectionId } = await getBatchInfoFn(
+      orgId,
+      generatedEnvkeyId
+    );
+
     for (let connectionId in byConnectionId) {
       const conn = byConnectionId[connectionId];
       if (conn.readyState == WebSocket.OPEN) {
-        conn.send(JSON.stringify(msg), (err) => {
+        const msg = `${
+          indexByConnectionId[connectionId] ?? 0
+        }|${totalConnections}`;
+
+        conn.send(msg, (err) => {
           if (err) {
             log("Error sending to socket. Closing...", {
               orgId,
@@ -859,19 +858,25 @@ const start: Api.SocketServer["start"] = () => {
         );
       }
     };
-// syncActiveLoop = async () => {
-//   if (clusterFns) {
-//     await clusterFns.syncActiveSockets(
-//       connectedByDeviceId,
-//       connectedByConnectionId
-//     );
 
-//     syncActiveTimeout = setTimeout(
-//       syncActiveLoop,
-//       SYNC_ACTIVE_INTERVAL_MS + Math.floor(Math.random() * SYNC_ACTIVE_JITTER)
-//     );
-//   }
-// };
+const getLocalEnvkeyBatchInfo: Api.EnvkeySocketBatchInfoFn = async (
+  orgId,
+  generatedEnvkeyId
+) => {
+  let i = 0;
+  const indexByConnectionId: Record<string, number> = {};
+
+  if (envkeyConnections[orgId] && envkeyConnections[orgId][generatedEnvkeyId]) {
+    const connections = envkeyConnections[orgId][generatedEnvkeyId];
+
+    for (let connectionId in connections) {
+      indexByConnectionId[connectionId] = i;
+      i++;
+    }
+  }
+
+  return { totalConnections: i, indexByConnectionId };
+};
 
 const res: Api.SocketServer = {
   start,

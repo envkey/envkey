@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
 	"github.com/envkey/envkey/public/sdks/envkey-source/version"
@@ -16,7 +17,7 @@ func startHttpServer() {
 
 	r.HandleFunc("/alive", aliveHandler).Methods("GET")
 	r.HandleFunc("/stop", stopHandler).Methods("GET")
-	r.HandleFunc("/fetch/{envkey}/{clientName}/{clientVersion}", fetchHandler).Methods("GET")
+	r.HandleFunc("/fetch/{envkey}/{clientName}/{clientVersion}/{rollingReload}/{rollingPct}/{watchThrottle}", fetchHandler).Methods("GET")
 
 	http.Handle("/", r)
 	log.Fatal(http.ListenAndServe(":19409", nil))
@@ -50,7 +51,26 @@ func fetchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := fetchAndConnect(envkey, vars["clientName"], vars["clientVersion"])
+	rollingReload := vars["rollingReload"] == "true"
+	rollingPctConv, err := strconv.ParseUint(vars["rollingPct"], 10, 8)
+
+	var watchThrottleConv uint64
+	var watchThrottle uint32
+	if err == nil {
+		watchThrottleConv, err = strconv.ParseUint(vars["watchThrottle"], 10, 32)
+		watchThrottle = uint32(watchThrottleConv)
+	}
+
+	if err != nil {
+		log.Println("fetch error:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, "Fetch error", err)
+		return
+	}
+
+	rollingPct := uint8(rollingPctConv)
+
+	buf, err := fetchAndConnect(envkey, vars["clientName"], vars["clientVersion"], rollingReload, rollingPct, watchThrottle)
 
 	if err != nil {
 		log.Println("fetch error:", err)

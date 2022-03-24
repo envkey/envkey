@@ -1,5 +1,9 @@
 import * as R from "ramda";
-import { decryptedEnvsStateProducer, fetchLoadedEnvs } from "../lib/envs";
+import {
+  decryptedEnvsStateProducer,
+  fetchLoadedEnvs,
+  fetchPendingEnvs,
+} from "../lib/envs";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
 import { pick } from "@core/lib/utils/pick";
@@ -53,7 +57,11 @@ clientAction<
       throw new Error("externalAuthSessionId required");
     }
 
-    const context = { ...contextParams, hostUrl: auth.hostUrl };
+    const context = {
+      ...contextParams,
+      hostUrl: auth.hostUrl,
+      accountIdOrCliKey: payload.accountId,
+    };
 
     const signature = naclUtil.encodeBase64(
         nacl.sign.detached(
@@ -100,12 +108,19 @@ clientAction<
         throw new Error("Couldn't verify current user");
       }
 
-      const fetchPendingRes = await fetchLoadedEnvs(verifyRes.state, context);
+      const fetchLoadedRes = await fetchLoadedEnvs(verifyRes.state, context);
+
+      if (fetchLoadedRes && !fetchLoadedRes.success) {
+        throw new Error("Error fetching latest loaded environments");
+      }
+
+      const fetchPendingRes = await fetchPendingEnvs(
+        fetchLoadedRes?.state ?? verifyRes.state,
+        context
+      );
 
       if (fetchPendingRes && !fetchPendingRes.success) {
-        throw new Error(
-          "Error fetching latest environments with pending changes"
-        );
+        throw new Error("Error fetching latest pending environments");
       }
     } catch (error) {
       return dispatchFailure({ type: "clientError", error }, context);
@@ -220,16 +235,25 @@ clientAction<
         throw new Error("Couldn't verify current user");
       }
 
-      const fetchPendingRes = await fetchLoadedEnvs(
+      const fetchLoadedRes = await fetchLoadedEnvs(
         verifyRes.state,
         context,
         action.payload?.skipWaitForReencryption
       );
 
-      if (fetchPendingRes && !fetchPendingRes.success) {
+      if (fetchLoadedRes && !fetchLoadedRes.success) {
         throw new Error(
           "Error fetching latest environments with pending changes"
         );
+      }
+
+      const fetchPendingRes = await fetchPendingEnvs(
+        fetchLoadedRes?.state ?? verifyRes.state,
+        context
+      );
+
+      if (fetchPendingRes && !fetchPendingRes.success) {
+        throw new Error("Error fetching latest pending environments");
       }
     } catch (error) {
       return dispatchFailure({ type: "clientError", error }, context);

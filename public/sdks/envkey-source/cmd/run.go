@@ -110,7 +110,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 			verboseOutput,
 			shouldCache,
 		})
-		res, _, err = daemon.FetchMap(envkey, clientName, clientVersion)
+		res, _, err = daemon.FetchMap(envkey, clientName, clientVersion, rollingReload, rollingPct, watchThrottle)
 
 		if err != nil {
 			res, err = fetch.FetchMap(envkey, fetchOpts)

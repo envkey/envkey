@@ -41,10 +41,6 @@ export type OrgSocketUpdateMessage = {
     }
 );
 
-export type EnvkeySocketUpdateMessage = {
-  type: "env_updated";
-};
-
 export type OrgSocketBroadcastFn = (
   orgId: string,
   msg: OrgSocketUpdateMessage,
@@ -57,8 +53,7 @@ export type OrgSocketBroadcastFn = (
 
 export type EnvkeySocketBroadcastFn = (
   orgId: string,
-  generatedEnvkeyId: string,
-  msg: EnvkeySocketUpdateMessage
+  generatedEnvkeyId: string
 ) => void;
 
 export interface SocketServer {

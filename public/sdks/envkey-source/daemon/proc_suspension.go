@@ -42,7 +42,7 @@ func startSuspendedWatcher() {
 
 					if err == nil {
 						if changed {
-							writeTCP(envkey, []byte(""))
+							writeTCP(envkey, []byte("env_update"))
 						} else {
 							writeTCP(envkey, []byte("suspended_no_change"))
 						}

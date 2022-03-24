@@ -23,7 +23,7 @@ export const postApiAction = async <
   hostUrlArg?: string,
   ipOverride?: string // for testing firewall
 ) => {
-  // const start = Date.now();
+  const start = Date.now();
 
   const hostUrl = "https://" + (hostUrlArg ?? getDefaultApiHostUrl());
   const actionUrl = hostUrl + "/action";
@@ -50,7 +50,9 @@ export const postApiAction = async <
         log(
           `RESPONSE to ${action.type} (${hostUrl}): status ${
             res.statusCode
-          }, ${Buffer.byteLength(res.rawBody)} bytes`
+          }, ${Buffer.byteLength(res.rawBody)} bytes, elapsed: ${
+            Date.now() - start
+          }ms`
         );
       }
 

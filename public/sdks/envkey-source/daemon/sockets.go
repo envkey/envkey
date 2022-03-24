@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 	"time"
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/fetch"
+	"github.com/envkey/envkey/public/sdks/envkey-source/parser"
+	"github.com/envkey/envkey/public/sdks/envkey-source/rolling"
 	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
 	"github.com/envkey/envkey/public/sdks/envkey-source/ws"
 	"github.com/google/uuid"
@@ -21,6 +24,8 @@ const WS_PING_INTERVAL = time.Duration(10) * time.Second
 
 var websocketsByEnvkey = map[string]*ws.ReconnectingWebsocket{}
 var tcpServerConnsByEnvkeyByConnId = map[string](map[string]net.Conn){}
+
+var isRollingByEnvkey = map[string]bool{}
 
 func startTcpServer() {
 	listener, err := net.Listen("tcp", "127.0.0.1:19410")
@@ -70,7 +75,12 @@ func handleTcpConnection(serverConn net.Conn) {
 
 		log.Printf("TCP Connection established: %s|%s", utils.IdPart(envkey), connId)
 
-		if currentEnvsByEnvkey[envkey] == nil {
+		var currentEnv parser.EnvMap
+		mutex.Lock()
+		currentEnv = currentEnvsByEnvkey[envkey]
+		mutex.Unlock()
+
+		if currentEnv == nil {
 			log.Printf("TCP Connection %s|%s: no currentEnv", utils.IdPart(envkey), connId)
 			return
 		} else {
@@ -85,7 +95,7 @@ func handleTcpConnection(serverConn net.Conn) {
 
 }
 
-func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
+func connectEnvkeyWebsocket(envkey, clientName, clientVersion string, rollingReload bool, rollingPct uint8, watchThrottle uint32) error {
 	mutex.Lock()
 	connected := websocketsByEnvkey[envkey] != nil
 	mutex.Unlock()
@@ -130,7 +140,7 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 				time.Sleep(time.Duration(5) * time.Millisecond)
 
 				if changed {
-					writeTCP(envkey, []byte(""))
+					writeTCP(envkey, []byte("env_update"))
 				} else {
 					writeTCP(envkey, []byte("reconnected_no_change"))
 				}
@@ -169,10 +179,22 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 				continue
 			}
 
-			_, message, err := socket.ReadMessage()
+			var isRolling bool
+			mutex.Lock()
+			isRolling = isRollingByEnvkey[envkey]
+			mutex.Unlock()
 
-			if message != nil {
-				log.Printf("%s websocket received message", utils.IdPart(envkey))
+			if isRolling {
+				time.Sleep(time.Duration(1) * time.Millisecond)
+				continue
+			}
+
+			_, msgBytes, err := socket.ReadMessage()
+
+			if msgBytes != nil {
+				msg := string(msgBytes)
+
+				log.Printf("%s websocket received message: %s", utils.IdPart(envkey), msg)
 
 				changed, err := fetchCurrent(envkey, clientName, clientVersion)
 				if err != nil {
@@ -182,7 +204,65 @@ func connectEnvkeyWebsocket(envkey, clientName, clientVersion string) error {
 				log.Printf("%s fetched latest env. changed: %v", utils.IdPart(envkey), changed)
 
 				if changed {
-					err = writeTCP(envkey, []byte(""))
+					if rollingReload {
+						batchNum, totalBatches, err := rolling.BatchInfo(msg, rollingPct)
+
+						if err != nil {
+							log.Printf("parse rolling reload batch info error: %s", err)
+							break
+						}
+
+						err = writeTCP(envkey, []byte(fmt.Sprintf("start_rolling|%d|%d", batchNum, totalBatches)))
+
+						if err != nil {
+							log.Printf("writeTCP error: %s", err)
+							break
+						}
+
+						mutex.Lock()
+						isRollingByEnvkey[envkey] = true
+						mutex.Unlock()
+
+						go func() {
+							defer func() {
+								mutex.Lock()
+								delete(isRollingByEnvkey, envkey)
+								mutex.Unlock()
+							}()
+
+							batchWaitMs := watchThrottle * uint32(batchNum)
+							totalWaitMs := watchThrottle * uint32(totalBatches)
+
+							if batchWaitMs > 0 {
+								time.Sleep(time.Duration(batchWaitMs) * time.Millisecond)
+							} else {
+								time.Sleep(time.Duration(1) * time.Millisecond)
+							}
+
+							err = writeTCP(envkey, []byte("env_update"))
+							if err != nil {
+								log.Printf("writeTCP error: %s", err)
+								return
+							}
+
+							delay := time.Duration(totalWaitMs-batchWaitMs) * time.Millisecond
+
+							if delay > 0 {
+								time.Sleep(delay)
+							} else {
+								time.Sleep(time.Duration(1) * time.Millisecond)
+							}
+
+							err = writeTCP(envkey, []byte("rolling_complete"))
+							if err != nil {
+								log.Printf("writeTCP error: %s", err)
+								return
+							}
+						}()
+
+					} else {
+						err = writeTCP(envkey, []byte("env_update"))
+					}
 				}
 
 				if err != nil {
