@@ -1,4 +1,4 @@
 module Envkey
-  VERSION = "2.0.5"
-  ENVKEY_SOURCE_VERSION = "2.0.20"
+  VERSION = "2.0.6"
+  ENVKEY_SOURCE_VERSION = "2.0.22"
 end
