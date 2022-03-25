@@ -27,6 +27,9 @@ $ es -- ping '$DATABASE_URL'
 $ es -w -- ./start-server
 # Your server automatically restarts when there's a change.
 
+$ es -w --rolling -- ./start-server
+# Avoid downtime with rolling reloads across all connected processes.
+
 $ es -r ./reload-env -- ./start-server
 # Run custom reload logic when there's a change.
 
