@@ -19,7 +19,7 @@ $ envkey-source -- any-shell-command
 # That's it! Your command runs with the latest environment variables.
 
 $ es -- any-shell-command
-# To type less, use the ` + "`es`" + ` alias.
+# To type less, use the `es` alias.
 
 $ es -- ping '$DATABASE_URL'
 # You can reference EnvKey variables in your shell command by wrapping them in single quotes.
