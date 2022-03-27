@@ -40,7 +40,7 @@ $ echo $'\n\neval "$(es --hook bash)"\n' >> ~/.bash_profile
 # Auto-load the latest environment in any EnvKey-enabled directory.
 ```
 
-Check out the [integration quickstart](https://docs-v2.envkey.com/integration-quickstart) for more details.
+Check out the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart) for more details.
 
 The cross-platform [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) tool works with any language and offers the most integration options.
 
@@ -64,7 +64,7 @@ That said, language-specific wrappers are also available for [Node.js](https://g
 
 You can download the latest versions of the EnvKey UI and CLI for your platform by going to [EnvKey's homepage](https://www.envkey.com) and clicking the big Download button at the top of the page. Install it when it's finished downloading.
 
-The first time you open the app, [EnvKey's CLI](https://docs-v2.envkey.com/cli-overview) and the [envkey-source](https://docs-v2.envkey.com/envkey-source) integration tool will also be installed for you. Both can also be installed individually on a server.
+The first time you open the app, [EnvKey's CLI](https://docs-v2.envkey.com/docs/cli-overview) and the [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) integration tool will also be installed for you. Both can also be installed individually on a server.
 
 You can also go to [releases](https://github.com/envkey/envkey/releases) in this repo and find the latest release of `envkey-desktop` for your platform.
 
@@ -72,15 +72,15 @@ Here's a [quick overview on verifying releases with minisign](https://docs-v2.en
 
 ## Docs
 
-Check out the [docs](https://docs-v2.envkey.com), including a brief [getting started overview](https://docs-v2.envkey.com/getting-started).
+Check out the [docs](https://docs-v2.envkey.com), including a brief [getting started overview](https://docs-v2.envkey.com/docs/getting-started).
 
 ## Coming from v1?
 
-Check out the [v1 migration overview](https://docs-v2.envkey.com/migrating-from-v1)
+Check out the [v1 migration overview](https://docs-v2.envkey.com/docs/migrating-from-v1)
 
 ## Security
 
-Read our [security overview](https://docs-v2.envkey.com/goals).
+Read our [security overview](https://docs-v2.envkey.com/docs/security).
 
 ## Status
 

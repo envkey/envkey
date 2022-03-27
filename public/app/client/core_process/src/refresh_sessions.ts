@@ -70,10 +70,11 @@ export const refreshSessions = async (
       .map(R.prop("userId"));
   }
 
-  const firstToFetch = [
-    state.uiLastSelectedAccountId,
-    state.defaultAccountId,
-  ].filter((id): id is string => Boolean(id));
+  const firstToFetch = R.uniq(
+    [state.uiLastSelectedAccountId, state.defaultAccountId].filter(
+      (id): id is string => Boolean(id)
+    )
+  );
 
   let restToFetch = R.without(firstToFetch, accountIds);
   restToFetch = R.sortBy(
