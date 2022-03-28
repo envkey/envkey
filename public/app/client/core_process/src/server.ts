@@ -31,11 +31,7 @@ import {
   stopSocketPingLoop,
 } from "./org_sockets";
 import { checkUpgradesAvailableLoop, clearUpgradesLoop } from "./upgrades";
-import {
-  checkSuspendedLoop,
-  refreshSessions,
-  clearCheckSuspendedLoop,
-} from "./refresh_sessions";
+import { refreshSessions } from "./refresh_sessions";
 import { clearCacheLoop, clearCacheLoopTimeout } from "./clear_cache";
 import { getContext } from "./default_context";
 import open from "open";
@@ -470,7 +466,6 @@ const initReduxStore = async (forceReset?: true) => {
     if (lockoutTimeout) {
       clearTimeout(lockoutTimeout);
     }
-    clearCheckSuspendedLoop();
     clearCacheLoopTimeout();
     clearUpgradesLoop();
   },
@@ -478,7 +473,6 @@ const initReduxStore = async (forceReset?: true) => {
     if (reduxStore) {
       await resolveOrgSockets(reduxStore, localSocketUpdate, true);
       socketPingLoop();
-      checkSuspendedLoop(reduxStore, localSocketUpdate);
       clearCacheLoop(reduxStore, localSocketUpdate);
     }
   },

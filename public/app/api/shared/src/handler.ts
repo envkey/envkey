@@ -405,7 +405,9 @@ export const apiAction = <
           );
         }
 
-        transactionStatements.push(res.logTransactionStatement);
+        if (res.logTransactionStatement) {
+          transactionStatements.push(res.logTransactionStatement);
+        }
 
         if (res.backgroundLogStatement) {
           backgroundStatements.push(res.backgroundLogStatement);
@@ -487,7 +489,9 @@ export const apiAction = <
         );
       }
 
-      transactionStatements.push(res.logTransactionStatement);
+      if (res.logTransactionStatement) {
+        transactionStatements.push(res.logTransactionStatement);
+      }
 
       if (res.backgroundLogStatement) {
         backgroundStatements.push(res.backgroundLogStatement);
@@ -612,12 +616,13 @@ export const apiAction = <
       });
     }
 
-    if (updateOrgStatsFn) {
+    if (updateOrgStatsFn && response.type != "notModified") {
       // update org stats in background (don't await)
       logWithElapsed("update org stats", requestStart);
 
       updateOrgStatsFn(
         auth,
+
         handlerContext,
         requestBytes,
         responseBytes ?? 0,
@@ -628,10 +633,19 @@ export const apiAction = <
       });
     }
 
+    let status: number;
+    if ("errorStatus" in response) {
+      status = response.errorStatus;
+    } else if ("status" in response) {
+      status = response.status;
+    } else {
+      status = 200;
+    }
+
     logWithElapsed(transactionId + " - response:", requestStart, {
       error: "error" in response && response.error,
       errorReason: "errorReason" in response ? response.errorReason : undefined,
-      status: "errorStatus" in response ? response.errorStatus : 200,
+      status,
       actionType: action.type,
       responseBytes,
       timestamp: actionStart,
@@ -780,7 +794,7 @@ const apiActions: {
         handlerResponseBytes ??
         Buffer.byteLength(JSON.stringify(response), "utf8");
 
-      let logTransactionStatement: Api.Db.SqlStatement;
+      let logTransactionStatement: Api.Db.SqlStatement | undefined;
       let backgroundLogStatement: Api.Db.SqlStatement | undefined;
       try {
         ({ logTransactionStatement, backgroundLogStatement } =
@@ -943,7 +957,7 @@ const apiActions: {
           : backgroundLogTargetIds?.(response);
       }
 
-      let logTransactionStatement: Api.Db.SqlStatement;
+      let logTransactionStatement: Api.Db.SqlStatement | undefined;
       let backgroundLogStatement: Api.Db.SqlStatement | undefined;
       try {
         ({ logTransactionStatement, backgroundLogStatement } =
@@ -1037,7 +1051,7 @@ const apiActions: {
             : handlerRes.backgroundLogTargetIds?.(handlerRes.response);
         }
 
-        let logTransactionStatement: Api.Db.SqlStatement;
+        let logTransactionStatement: Api.Db.SqlStatement | undefined;
         let backgroundLogStatement: Api.Db.SqlStatement | undefined;
         try {
           ({ logTransactionStatement, backgroundLogStatement } =
@@ -1809,7 +1823,7 @@ const apiActions: {
         : handlerBackgroundLogTargetIds?.(response);
     }
 
-    let logTransactionStatement: Api.Db.SqlStatement;
+    let logTransactionStatement: Api.Db.SqlStatement | undefined;
     let backgroundLogStatement: Api.Db.SqlStatement | undefined;
     try {
       ({ logTransactionStatement, backgroundLogStatement } =

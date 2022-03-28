@@ -7,15 +7,16 @@ import {
 } from "@core_proc/lib/state";
 import { v4 as uuid } from "uuid";
 import { log } from "@core/lib/utils/logger";
+import { version } from "../../client/cli/package.json";
 
 let testId: string = uuid().toLowerCase();
 let deviceContexts: { [id: string]: Client.ReduxStore } = {};
 
 let hostnameOverride: string | undefined;
 
-export const clientParams: Client.ClientParams<"cli" | "app"> = {
-    clientName: "app",
-    clientVersion: "2.0",
+export const clientParams: Client.ClientParams<"core"> = {
+    clientName: "core",
+    clientVersion: version,
   },
   resetTestId = () => {
     testId = uuid().toLowerCase();
@@ -78,12 +79,14 @@ export const clientParams: Client.ClientParams<"cli" | "app"> = {
 
     const testId = getTestId();
 
+    const hostUrl = tempHostOverride ?? hostnameOverride;
+
     return _dispatch<ActionType>(action, {
       client: clientParams,
       store,
       accountIdOrCliKey,
       clientId: testId,
-      hostUrl: tempHostOverride ?? hostnameOverride,
+      hostUrl,
       ipTestOverride: ipOverride,
     }).catch((err: Error) => {
       throw err;

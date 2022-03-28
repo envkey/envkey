@@ -455,9 +455,13 @@ export const getLogTransactionStatement = ({
   responseBytes,
   now,
 }: LogActionParams): {
-  logTransactionStatement: Api.Db.SqlStatement;
+  logTransactionStatement?: Api.Db.SqlStatement;
   backgroundLogStatement?: Api.Db.SqlStatement;
 } => {
+  if (response.type == "notModified") {
+    return {};
+  }
+
   let mainQs = "",
     mainQargs: any[] = [],
     bgQs = "",

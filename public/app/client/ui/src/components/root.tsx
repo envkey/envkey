@@ -30,6 +30,7 @@ import {
 import { SmallLoader } from "@images";
 import { ClientUpgrades } from "@ui";
 import { applyPatch } from "rfc6902";
+import { version } from "../../../electron/package.json";
 
 declare var window: ElectronWindow;
 
@@ -50,7 +51,7 @@ let fetchedInitialState = false;
 
 const clientParams: Client.ClientParams<"app"> = {
     clientName: "app",
-    clientVersion: "2.0",
+    clientVersion: version,
   },
   Root: React.FC = () => {
     const storedLocalUiStateJson = localStorage.getItem(LOCAL_UI_STATE_KEY);

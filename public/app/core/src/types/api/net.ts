@@ -287,6 +287,11 @@ export namespace Net {
     id: string;
   } & Pick<Db.OrgUser, "provider" | "externalAuthProviderId" | "uid">;
 
+  export type NotModifiedResult = {
+    type: "notModified";
+    status: 304;
+  };
+
   export type UserEnvUpdate = z.infer<typeof UserEnvUpdateSchema>;
   export const UserEnvUpdateSchema = z.object({
     env: Crypto.EncryptedDataSchema.optional(),
@@ -713,7 +718,9 @@ export namespace Net {
     }),
     [ActionType.CLEAR_ORG_TOKENS]: z.object({}),
 
-    [ActionType.GET_SESSION]: z.object({}),
+    [ActionType.GET_SESSION]: z.object({
+      graphUpdatedAt: z.number().optional(),
+    }),
 
     [ActionType.FETCH_ORG_STATS]: z.object({}),
 
@@ -1679,7 +1686,7 @@ export namespace Net {
     UpgradeSelfHosted: GraphDiffsResult;
     UpgradeSelfHostedForceClear: GraphDiffsResult;
     CreateSession: SessionResult;
-    GetSession: SessionResult;
+    GetSession: SessionResult | NotModifiedResult;
     ClearToken: OkResult;
     ForgetDevice: OkResult;
     ClearUserTokens: OkResult;

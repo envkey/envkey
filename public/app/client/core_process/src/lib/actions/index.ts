@@ -81,6 +81,13 @@ export const postApiAction = async <
         throw fetchErr;
       }
 
+      if (res.statusCode == 304) {
+        return {
+          type: "notModified",
+          status: 304,
+        } as ResponseType;
+      }
+
       return JSON.parse(res.body) as ResponseType;
     });
 };

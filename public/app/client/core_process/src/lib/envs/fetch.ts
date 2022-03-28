@@ -154,7 +154,7 @@ export const fetchEnvsForUserOrAccessParams = async (
     const envParentIds = new Set(Object.keys(state.envsFetchedAt));
 
     if (envParentIds.size > 0) {
-      log("fetching loaded envs:", { envParentIds: Array.from(envParentIds) });
+      // log("fetching loaded envs:", { envParentIds: Array.from(envParentIds) });
       return fetchRequiredEnvs(
         state,
         envParentIds,
@@ -190,9 +190,9 @@ export const fetchEnvsForUserOrAccessParams = async (
       );
 
       if (pendingEnvParentIds.size > 0) {
-        log("fetching envs with pending:", {
-          envParentIds: Array.from(pendingEnvParentIds),
-        });
+        // log("fetching envs with pending:", {
+        //   envParentIds: Array.from(pendingEnvParentIds),
+        // });
         return fetchRequiredEnvs(
           state,
           pendingEnvParentIds,

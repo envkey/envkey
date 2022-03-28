@@ -12,6 +12,8 @@ import { getOrgGraph, getApiUserGraph } from "../graph";
 import { getAuthTokenKey } from "../models/auth_tokens";
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
+import * as semver from "semver";
+import { log } from "@core/lib/utils/logger";
 
 apiAction<
   Api.Action.RequestActions["CreateSession"],
@@ -191,7 +193,31 @@ apiAction<
   type: Api.ActionType.GET_SESSION,
   graphAction: false,
   authenticated: true,
-  handler: async ({ payload }, auth, now, requestParams, transactionConn) => {
+  handler: async (
+    { payload, meta },
+    auth,
+    now,
+    requestParams,
+    transactionConn
+  ) => {
+    if (
+      (((meta.client.clientName == "core" || meta.client.clientName == "cli") &&
+        semver.gte(meta.client.clientVersion, "2.0.24")) ||
+        (meta.client.clientName == "app" &&
+          semver.gte(meta.client.clientVersion, "2.0.46"))) &&
+      payload.graphUpdatedAt &&
+      payload.graphUpdatedAt == auth.org.graphUpdatedAt
+    ) {
+      return {
+        type: "handlerResult",
+        response: {
+          type: "notModified",
+          status: 304,
+        },
+        logTargetIds: [],
+      };
+    }
+
     const graphPromise = getOrgGraph(auth.org.id, {
         transactionConn,
       }).then((orgGraph) =>

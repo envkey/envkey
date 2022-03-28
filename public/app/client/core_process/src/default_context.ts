@@ -1,4 +1,4 @@
-import { version } from "../package.json";
+import { version } from "../../cli/package.json";
 import { Client } from "@core/types";
 
 export const getContext = (

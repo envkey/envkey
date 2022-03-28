@@ -178,7 +178,8 @@ clientAction<
 clientAction<
   Client.Action.ClientActions["GetSession"],
   Partial<Pick<Client.State, "envs">> & {
-    timestamp: number;
+    timestamp?: number;
+    notModified?: true;
   }
 >({
   type: "asyncClientAction",
@@ -195,6 +196,10 @@ clientAction<
   },
   successStateProducer: decryptedEnvsStateProducer,
   successHandler: async (state, action, res, context) => {
+    if (res.notModified) {
+      return;
+    }
+
     dispatch(
       {
         type: Client.ActionType.CLEAR_ORPHANED_BLOBS,
@@ -215,13 +220,24 @@ clientAction<
     const apiRes = await dispatch(
       {
         type: Api.ActionType.GET_SESSION,
-        payload: {},
+        payload: {
+          graphUpdatedAt: state.graphUpdatedAt,
+        },
       },
       { ...context, rootClientAction: action }
     );
 
     if (!apiRes.success) {
       return dispatchFailure((apiRes.resultAction as any).payload, context);
+    }
+
+    if (
+      (
+        (apiRes.resultAction as any)
+          .payload as Api.Net.ApiResultTypes["GetSession"]
+      ).type == "notModified"
+    ) {
+      return dispatchSuccess({ notModified: true }, context);
     }
 
     const timestamp = (
@@ -451,6 +467,10 @@ clientAction<
     }
   },
   successStateProducer: (draft, { meta, payload }) => {
+    if (payload.type == "notModified") {
+      return draft;
+    }
+
     const accountId = meta.accountIdOrCliKey!,
       orgAccount = draft.orgUserAccounts[accountId]!,
       org = payload.graph[payload.orgId] as Model.Org;

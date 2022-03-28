@@ -198,14 +198,21 @@ export const decryptEnvs = async (
     draft: Draft<Client.State>,
     action: {
       payload: Partial<Pick<Client.State, "envs" | "changesets">> & {
-        timestamp: number;
+        timestamp?: number;
+        notModified?: true;
       };
     },
     fetchAction?: Client.Action.ClientActions["FetchEnvs"]
   ) => {
     const {
-      payload: { envs, changesets, timestamp },
+      payload: { envs, changesets, timestamp, notModified },
     } = action;
+
+    if (notModified) {
+      return draft;
+    } else if (!timestamp) {
+      throw new Error("request timestamp is required");
+    }
 
     if (envs) {
       const updatedEnvParentIds = new Set<string>();

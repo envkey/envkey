@@ -29,13 +29,17 @@ export const action: express.RequestHandler<
     method: <const>"post",
   })
     .then((result) => {
-      res
-        .status(
-          "error" in result && result.error
-            ? (result as { errorStatus?: number }).errorStatus ?? 500
-            : 200
-        )
-        .send(result);
+      let status: number;
+
+      if ("error" in result && result.error) {
+        status = (result as { errorStatus?: number }).errorStatus ?? 500;
+      } else if (result.type == "notModified") {
+        status = 304;
+      } else {
+        status = 200;
+      }
+
+      res.status(status).send(result);
     })
     .catch(getErrorHandler(res));
 };
