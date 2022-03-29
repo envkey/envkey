@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+  #!/usr/bin/env bash
 set -eo pipefail
 
 indent() {
@@ -23,7 +23,7 @@ if [ -f $ENV_DIR/ENVKEY ]; then
   tar -zxf minisign.tar.gz
 
   # now get envkey-source
-  ENVKEY_SOURCE_VERSION=2.0.2
+  ENVKEY_SOURCE_VERSION=2.0.22
   ENVKEY_URL="https://envkey-releases.s3.amazonaws.com/envkeysource/release_artifacts/${ENVKEY_SOURCE_VERSION}/envkey-source_${ENVKEY_SOURCE_VERSION}_linux_amd64.tar.gz"
   echo "Downloading envkey-source ${ENVKEY_SOURCE_VERSION} from ${ENVKEY_URL}..." | indent
   curl -s -o envkey-source.tar.gz $ENVKEY_URL
