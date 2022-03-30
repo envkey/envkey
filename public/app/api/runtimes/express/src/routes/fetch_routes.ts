@@ -18,13 +18,34 @@ const fetchRoute: express.RequestHandler<
   Fetch.Result,
   Api.Net.ApiParamTypes["FetchEnvkey"]
 > = (req, res) => {
-  let { ip, host } = extractIpHost(req);
-
   const query = req.query as Api.Net.ApiParamTypes["FetchEnvkey"] & {
       fetchServiceVersion: string;
       signedSourceIp?: string;
     } & Client.ClientParams,
     method = req.method.toLowerCase() as "head" | "get";
+
+  // quick 404 for plainly invalid envkeyIdPart
+  if (
+    !query.envkeyIdPart ||
+    !query.envkeyIdPart.startsWith("ek") ||
+    query.envkeyIdPart.includes("-")
+  ) {
+    if (method == "head") {
+      res.status(404).end();
+    } else {
+      ((<any>res) as express.Response).status(404).send({
+        type: "error",
+        error: {
+          name: "Not found",
+          message: "Not found",
+          code: 404,
+        },
+      });
+    }
+    return;
+  }
+
+  let { ip, host } = extractIpHost(req);
 
   if (method == "head" && !query.signedSourceIp) {
     res.status(400).send({
@@ -70,7 +91,7 @@ const fetchRoute: express.RequestHandler<
     {
       ip,
       host,
-      method: req.method.toLowerCase() as "get" | "head",
+      method,
     }
   )
     .then((result) => {

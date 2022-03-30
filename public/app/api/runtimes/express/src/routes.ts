@@ -44,39 +44,6 @@ export const action: express.RequestHandler<
     .catch(getErrorHandler(res));
 };
 
-// export const oauthCallback =
-//   (
-//     provider: Auth.OauthProviderType
-//   ): express.RequestHandler<
-//     {},
-//     Api.Net.ApiResultTypes["OauthCallback"],
-//     Api.Net.OauthCallbackQueryParams
-//   > =>
-//   (req, res) => {
-//     const { ip, host } = extractIpHost(req);
-//     handleAction(
-//       {
-//         type: Api.ActionType.OAUTH_CALLBACK,
-//         meta: {
-//           loggableType: "hostAction",
-//         },
-//         payload: {
-//           ...(req.query as Api.Net.OauthCallbackQueryParams),
-//           provider,
-//         },
-//       },
-//       {
-//         ip,
-//         host,
-//         method: <const>"get",
-//       }
-//     )
-//       .then((result) => {
-//         res.status(200).send(result as Api.Net.ApiResultTypes["OauthCallback"]);
-//       })
-//       .catch(getErrorHandler(res));
-//   };
-
 export default (app: express.Application) => {
   app.disable("x-powered-by");
 

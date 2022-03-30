@@ -41,6 +41,7 @@ import {
   getChangesetEncryptedBlobs,
 } from "./blob";
 import { pick } from "@core/lib/utils/pick";
+import { wait } from "@core/lib/utils/wait";
 import { v4 as uuid } from "uuid";
 import { PoolConnection } from "mysql2/promise";
 import produce from "immer";
@@ -591,13 +592,20 @@ export const apiAction = <
         transactionId + " - replicating if needed asynchronously",
         requestStart
       );
-      replicationFn(
-        updatedOrgGraph[auth.org.id] as Api.Db.Org,
-        updatedOrgGraph,
-        actionStart
-      ).catch((err) => {
-        logStderr("Replication error", { err, orgId: auth.org.id });
-      });
+
+      (async () => {
+        // give the database a beat to release the transaction
+        // so that replication fetches committed results
+        await wait(1000);
+
+        replicationFn(
+          updatedOrgGraph[auth.org.id] as Api.Db.Org,
+          updatedOrgGraph,
+          actionStart
+        ).catch((err) => {
+          logStderr("Replication error", { err, orgId: auth.org.id });
+        });
+      })();
     }
 
     if (backgroundStatements.length > 0) {
