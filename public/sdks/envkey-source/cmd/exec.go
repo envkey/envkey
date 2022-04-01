@@ -16,6 +16,7 @@ import (
 	"github.com/envkey/envkey/public/sdks/envkey-source/parser"
 	"github.com/envkey/envkey/public/sdks/envkey-source/shell"
 	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
+	"github.com/google/uuid"
 	"github.com/goware/prefixer"
 	colors "github.com/logrusorgru/aurora/v3"
 	"gopkg.in/yaml.v2"
@@ -37,6 +38,8 @@ var throttlingChanges = false
 var changeQueued []parser.EnvMap
 
 var watchCommand *exec.Cmd
+
+var killingWatchCommandsById = map[uuid.UUID]*exec.Cmd{}
 
 var mutex sync.Mutex
 
@@ -63,8 +66,13 @@ func execWithEnv(envkey string, env parser.EnvMap, clientName string, clientVers
 
 	execFn := func(latestEnv parser.EnvMap, previousEnv parser.EnvMap, onFinish func()) {
 		env := shell.ToPairs(latestEnv, previousEnv, true, force)
-		watchCommand = execute(execCmdArg, env, "attach", true, "")
-		watchCommand.Wait()
+		c := execute(execCmdArg, env, "attach", true, "")
+
+		mutex.Lock()
+		watchCommand = c
+		mutex.Unlock()
+
+		c.Wait()
 
 		if onFinish != nil {
 			onFinish()
@@ -173,17 +181,32 @@ func killWatchCommandIfRunning(sig syscall.Signal) {
 		return
 	}
 
+	killingId := uuid.New()
+	killingWatchCommandsById[killingId] = c
+
 	// ignore errors on Kill/Wait since process may already have finished
 	c.Process.Signal(sig)
 
 	if sig != syscall.SIGKILL {
 		go func() {
 			time.Sleep(EXIT_SIGNAL_TIMEOUT)
-			killWatchCommandIfRunning(syscall.SIGKILL)
+
+			mutex.Lock()
+			killingCmd := killingWatchCommandsById[killingId]
+			mutex.Unlock()
+
+			if killingCmd != nil && killingCmd.ProcessState != nil && !killingCmd.ProcessState.Exited() {
+				killingCmd.Process.Signal(os.Kill)
+			}
 		}()
 	}
 
 	c.Process.Wait()
+
+	mutex.Lock()
+	watchCommand = nil
+	delete(killingWatchCommandsById, killingId)
+	mutex.Unlock()
 }
 
 func execute(c string, env []string, copyOrAttach string, includeStdin bool, copyOutputPrefix string) *exec.Cmd {
@@ -283,5 +306,9 @@ func setChangeQueued(val []parser.EnvMap) {
 }
 
 func getWatchCommand() *exec.Cmd {
-	return watchCommand
+	mutex.Lock()
+	c := watchCommand
+	mutex.Unlock()
+
+	return c
 }
