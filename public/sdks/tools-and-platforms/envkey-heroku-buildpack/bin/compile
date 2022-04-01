@@ -52,7 +52,7 @@ export -p > ./envkey-runtime-env.sh
 $(cat $BP_DIR/export)
 . ./envkey-runtime-env.sh
 rm envkey-runtime-env.sh
-export PATH=$PATH:$HOME/vendor/envkey/bin
+export PATH=\$PATH:\$HOME/vendor/envkey/bin
 EOF
   echo "EnvKey variables exported to running application via .profile.d/envkey.sh" | indent
   echo "envkey-source executable is available for use" | indent
