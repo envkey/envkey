@@ -1,3 +1,3 @@
 import "envkey";
 
-console.log("TEST_VAR:", process.env.TEST_VAR);
+console.log("TEST:", process.env.TEST);
