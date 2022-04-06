@@ -1,8 +1,3 @@
-PATH
-  remote: ../../../pkg
-  specs:
-    envkey (2.0.0)
-
 GEM
   remote: https://rubygems.org/
   specs:
@@ -93,6 +88,7 @@ GEM
       irb (>= 1.3.6)
       reline (>= 0.2.7)
     digest (3.1.0)
+    envkey (2.0.8)
     erubi (1.10.0)
     globalid (1.0.0)
       activesupport (>= 5.0)
@@ -226,7 +222,7 @@ DEPENDENCIES
   bootsnap
   capybara
   debug
-  envkey!
+  envkey (~> 2.0.8)
   importmap-rails
   jbuilder
   puma (~> 5.0)
