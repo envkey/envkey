@@ -26,6 +26,8 @@ import {
   getEnvParentPermissions,
   getOrgPermissions,
   getOrg,
+  getActiveInvitesByInviteeId,
+  getActiveDeviceGrantsByGranteeId,
 } from "@core/lib/graph";
 import { v4 as uuid } from "uuid";
 import { objectDifference } from "@core/lib/utils/object";
@@ -322,6 +324,7 @@ export const getOrgGraph = async (
     );
 
     let deletedDeviceLike = 0;
+    let deletedUserOrInvite = 0;
 
     if (canImmediatelyDelete) {
       deleteIds.push(userId);
@@ -329,6 +332,8 @@ export const getOrgGraph = async (
       if (target.type == "cliUser") {
         deletedDeviceLike++;
       } else {
+        deletedUserOrInvite++;
+
         for (let { id } of orgUserDevices) {
           deleteIds.push(id);
           deletedDeviceLike++;
@@ -346,6 +351,8 @@ export const getOrgGraph = async (
           deletedDeviceLike++;
         }
       }
+
+      deletedUserOrInvite += invites.length;
     } else {
       updatedGraph = produce(updatedGraph, (draft) => {
         (draft[target.id] as Api.Db.OrgUser | Api.Db.CliUser).deactivatedAt =
@@ -385,13 +392,15 @@ export const getOrgGraph = async (
     deleteIds = deleteIds.concat(localKeyIds);
     updatedGraph = deleteGraphObjects(updatedGraph, deleteIds, now);
 
-    if (deletedDeviceLike > 0) {
+    if (deletedDeviceLike > 0 || deletedUserOrInvite > 0) {
       const org = getOrg(updatedGraph) as Api.Db.Org;
       updatedGraph = {
         ...updatedGraph,
         [org.id]: {
           ...org,
           deviceLikeCount: org.deviceLikeCount - deletedDeviceLike,
+          activeUserOrInviteCount:
+            org.activeUserOrInviteCount! - deletedUserOrInvite,
           updatedAt: now,
         },
       };

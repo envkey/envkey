@@ -537,11 +537,18 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
               (!licenseExpired &&
                 license.cloudLogRetentionDays &&
                 license.cloudLogRetentionDays > 30)
+                ? [<option value={"90.d"}>Last 90 days</option>]
+                : []),
+              ...(license.hostType != "cloud" ||
+              (!licenseExpired &&
+                license.cloudLogRetentionDays &&
+                license.cloudLogRetentionDays > 90)
                 ? [
                     <option value={"365.d"}>Last 365 days</option>,
                     <option value={"36500000.d"}>All time</option>,
                   ]
-                : [<option value={"custom"}>Custom</option>]),
+                : []),
+              <option value={"custom"}>Custom</option>,
             ]}
           </select>
 

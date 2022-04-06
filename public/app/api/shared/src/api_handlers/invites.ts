@@ -40,9 +40,20 @@ apiAction<
     requestParams,
     transactionConn
   ) => {
-    const numActive = auth.org.deviceLikeCount;
+    const numActiveDeviceLike = auth.org.deviceLikeCount;
+    const numActiveUsers = auth.org.activeUserOrInviteCount!;
 
-    if (auth.license.maxDevices != -1 && numActive >= auth.license.maxDevices) {
+    if (
+      auth.license.maxDevices != -1 &&
+      numActiveDeviceLike >= auth.license.maxDevices
+    ) {
+      return false;
+    }
+
+    if (
+      auth.license.maxUsers != -1 &&
+      numActiveUsers >= auth.license.maxUsers!
+    ) {
       return false;
     }
 
@@ -236,6 +247,7 @@ apiAction<
       draft[user.id] = user;
 
       (draft[auth.org.id] as Api.Db.Org).deviceLikeCount += 1;
+      (draft[auth.org.id] as Api.Db.Org).activeUserOrInviteCount! += 1;
       (draft[auth.org.id] as Api.Db.Org).updatedAt = now;
 
       if (payload.appUserGrants) {

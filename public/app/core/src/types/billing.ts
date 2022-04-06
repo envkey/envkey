@@ -9,6 +9,7 @@ export type License = {
 
   expiresAt: number;
 
+  maxUsers?: number; // optional for backward compatibility
   maxDevices: number;
   maxServerEnvkeys: number;
 
@@ -16,6 +17,7 @@ export type License = {
   maxCloudApiCallsPerHour?: number;
   maxCloudApiCallsPerMonth?: number;
   maxCloudDataTransferPerHourMb?: number;
+  maxCloudDataTransferPerDayMb?: number;
   maxCloudDataTransferPerMonthMb?: number;
   maxCloudActiveSocketConnections?: number;
   cloudLogRetentionDays?: number;

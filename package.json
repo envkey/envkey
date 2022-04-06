@@ -78,6 +78,7 @@
     "ramda": "^0.27.1",
     "rfc6902": "^4.0.1",
     "semver": "^7.3.2",
+    "source-map-support": "^0.5.21",
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1",
     "uuid": "^8.3.1",

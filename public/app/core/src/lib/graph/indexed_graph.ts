@@ -103,6 +103,12 @@ export const environmentCompositeId = (environment: Model.Environment) => {
       numActiveDevices + numActiveInvites + numActiveGrants + numActiveCliKeys
     );
   }),
+  getNumActiveOrInvitedUsers = memoize((graph: Graph.Graph, now: number) => {
+    const numActiveUsers = getActiveOrgUsers(graph).length;
+    const numActiveInvites = getActiveInvites(graph, now).length;
+
+    return numActiveUsers + numActiveInvites;
+  }),
   getExpiredDeviceGrants = memoize((graph: Graph.Graph, now: number) =>
     graphTypes(graph).deviceGrants.filter(
       ({ acceptedAt, expiresAt }) => !acceptedAt && now > expiresAt

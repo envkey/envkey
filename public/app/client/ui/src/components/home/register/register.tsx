@@ -47,7 +47,7 @@ export const RegisterChooseOrgType: Component = (props) => {
             <div>
               <span className="radio-circle" />
               <label>
-                Enterprise <strong>Self-Hosted</strong>
+                Business <strong>Self-Hosted</strong>
               </label>
             </div>
             <div>

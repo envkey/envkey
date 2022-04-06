@@ -95,14 +95,29 @@ export const InviteForm: OrgComponent<{
       ];
     }, [graphUpdatedAt, currentUserId]);
 
-  const [license, org, numActiveOrPending] = useMemo(() => {
+  const [
+    license,
+    org,
+    numActiveDevicesOrPendingInvites,
+    numActiveUsersOrPendingInvites,
+  ] = useMemo(() => {
     const { license, org } = g.graphTypes(graph);
 
-    const numActive = org.deviceLikeCount;
-    const numPending = props.core.pendingInvites.length;
-    const numActiveOrPending = numActive + numPending;
+    const numActiveDevices = org.deviceLikeCount;
+    const numActiveUsers = org.activeUserOrInviteCount;
+    const numPendingInvites = props.core.pendingInvites.length;
+    const numActiveDevicesOrPendingInvites =
+      numActiveDevices + numPendingInvites;
+    const numActiveUsersOrPendingInvites = numActiveUsers
+      ? numActiveUsers + numPendingInvites
+      : undefined;
 
-    return [license, org, numActiveOrPending];
+    return [
+      license,
+      org,
+      numActiveDevicesOrPendingInvites,
+      numActiveUsersOrPendingInvites,
+    ];
   }, [
     graphUpdatedAt,
     props.core.pendingInvites.length,
@@ -271,6 +286,8 @@ export const InviteForm: OrgComponent<{
       ? scimCandidatesById[scimCandidateId]
       : undefined;
 
+    const orgRole = graph[orgRoleId] as Rbac.OrgRole;
+
     return {
       user: {
         provider: provider as "saml" | "email",
@@ -282,8 +299,14 @@ export const InviteForm: OrgComponent<{
         lastName: scimCandidate?.lastName ?? lastName,
         orgRoleId,
       },
-      appUserGrants: appUserGrants.length > 0 ? appUserGrants : undefined,
-      userGroupIds: userGroupIds.length > 0 ? userGroupIds : undefined,
+      appUserGrants:
+        !orgRole.autoAppRoleId && appUserGrants.length > 0
+          ? appUserGrants
+          : undefined,
+      userGroupIds:
+        !orgRole.autoAppRoleId && userGroupIds.length > 0
+          ? userGroupIds
+          : undefined,
       scim:
         scimProviderId && scimCandidateId
           ? {
@@ -390,24 +413,44 @@ export const InviteForm: OrgComponent<{
 
   const licenseExpired =
     license.expiresAt != -1 && props.ui.now > license.expiresAt;
-  if (
-    (license.maxDevices != -1 && numActiveOrPending >= license.maxDevices) ||
-    licenseExpired
-  ) {
-    const blockStatement = licenseExpired
-      ? [
-          `Your organization's ${
-            license.provisional ? "provisional " : ""
-          }license has `,
-          <strong>expired.</strong>,
-        ]
-      : [
-          "Your organization has reached its limit of ",
-          <strong>
-            {license.maxDevices} active or pending device
-            {license.maxDevices == 1 ? "" : "s"}.
-          </strong>,
-        ];
+
+  const userLimitExceeded =
+    license.maxUsers &&
+    numActiveUsersOrPendingInvites &&
+    license.maxUsers != -1 &&
+    numActiveUsersOrPendingInvites >= license.maxUsers;
+
+  const deviceLimitExceeded =
+    license.maxDevices != -1 &&
+    numActiveDevicesOrPendingInvites >= license.maxDevices;
+
+  if (deviceLimitExceeded || userLimitExceeded || licenseExpired) {
+    let blockStatement: React.ReactNode;
+
+    if (licenseExpired) {
+      blockStatement = [
+        `Your organization's ${
+          license.provisional ? "provisional " : ""
+        }license has `,
+        <strong>expired.</strong>,
+      ];
+    } else if (deviceLimitExceeded) {
+      blockStatement = [
+        "Your organization has reached its limit of ",
+        <strong>
+          {license.maxDevices} active or pending device
+          {license.maxDevices == 1 ? "" : "s"}.
+        </strong>,
+      ];
+    } else {
+      blockStatement = [
+        "Your organization has reached its limit of ",
+        <strong>
+          {license.maxUsers!} active or pending users
+          {license.maxUsers! == 1 ? "" : "s"}.
+        </strong>,
+      ];
+    }
 
     const canManageBilling = g.authz.hasOrgPermission(
       graph,

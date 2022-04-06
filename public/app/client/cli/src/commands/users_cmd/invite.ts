@@ -107,20 +107,37 @@ export const handler = async (
   const { license, org } = graphTypes(state.graph);
 
   const licenseExpired = license.expiresAt != -1 && now > license.expiresAt;
-  if (
-    (license.maxDevices != -1 && org.deviceLikeCount >= license.maxDevices) ||
-    licenseExpired
-  ) {
-    let message =
-      chalk.red(
-        licenseExpired
-          ? `Your org's ${
-              license.provisional ? "provisional " : ""
-            }license has expired.`
-          : `Your org has reached its limit of ${license.maxDevices} device${
-              license.maxDevices == 1 ? "" : "s"
-            }.`
-      ) + "\n";
+
+  const exceededDeviceLimit =
+    license.maxDevices != -1 && org.deviceLikeCount >= license.maxDevices;
+  const exeededActiveUserLimit =
+    license.maxUsers &&
+    license.maxUsers != -1 &&
+    org.activeUserOrInviteCount &&
+    license.maxUsers != -1 &&
+    org.activeUserOrInviteCount >= license.maxUsers;
+
+  if (exceededDeviceLimit || exeededActiveUserLimit || licenseExpired) {
+    let message: string;
+
+    if (licenseExpired) {
+      message = chalk.red(
+        `Your org's ${
+          license.provisional ? "provisional " : ""
+        }license has expired.`
+      );
+    } else if (exceededDeviceLimit) {
+      message = `Your org has reached its limit of ${
+        license.maxDevices
+      } device${license.maxDevices == 1 ? "" : "s"}.`;
+    } else {
+      message = `Your org has reached its limit of ${license.maxUsers} user${
+        license.maxUsers == 1 ? "" : "s"
+      }.`;
+    }
+
+    message += "\n";
+
     if (
       authz.hasOrgPermission(state.graph, auth.userId, "org_manage_billing")
     ) {

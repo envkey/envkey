@@ -51,6 +51,7 @@ export namespace Model {
       graphUpdatedAt: z.number(),
       settings: OrgSettingsSchema,
       serverEnvkeyCount: z.number(),
+      activeUserOrInviteCount: z.number().optional(), // optional for backward compatibility
       deviceLikeCount: z.number(),
       // Self-Hosted - client only
 
@@ -85,6 +86,7 @@ export namespace Model {
     apiCallsThisHour: z.number(),
     apiCallsThisMonth: z.number(),
     dataTransferBytesThisHour: z.number(),
+    dataTransferBytesThisDay: z.number(),
     dataTransferBytesThisMonth: z.number(),
     blobStorageBytes: z.number(),
     activeSocketConnections: z.number().optional(),

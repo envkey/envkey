@@ -389,6 +389,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
     }
 
     const numActiveDevices = byType.org.deviceLikeCount;
+    const numActiveUserOrInvites = byType.org.activeUserOrInviteCount;
     const numActiveServerEnvkeys = byType.org.serverEnvkeyCount;
 
     if (
@@ -397,7 +398,11 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           license.maxDevices) ||
       (license.maxServerEnvkeys != -1 &&
         numActiveServerEnvkeys + archive.servers.length >
-          license.maxServerEnvkeys)
+          license.maxServerEnvkeys) ||
+      (license.maxUsers &&
+        license.maxUsers != -1 &&
+        numActiveUserOrInvites &&
+        numActiveUserOrInvites + archive.orgUsers.length > license.maxUsers)
     ) {
       return dispatchFailure(
         {

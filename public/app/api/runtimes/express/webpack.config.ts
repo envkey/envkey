@@ -29,7 +29,7 @@ const config: webpack.Configuration = {
     "api.community": "./src/main_api_community.ts",
   },
   target: "node",
-  devtool: "hidden-source-map",
+  devtool: "source-map",
   externals,
   stats: {
     warningsFilter: [

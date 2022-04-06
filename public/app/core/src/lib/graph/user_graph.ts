@@ -53,6 +53,7 @@ export const getUserGraph = (
             "selfHostedUpgradeStatus",
             "serverEnvkeyCount",
             "deviceLikeCount",
+            "activeUserOrInviteCount",
 
             // these may filtered out in permitted_graph.ts depending on permissions
             "localIpsAllowed",

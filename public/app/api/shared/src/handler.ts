@@ -27,6 +27,7 @@ import {
   deleteExpiredAuthObjects,
   graphTypes,
   getNumActiveDeviceLike,
+  getNumActiveOrInvitedUsers,
 } from "@core/lib/graph";
 import { keySetDifference, keySetEmpty } from "@core/lib/blob";
 import {
@@ -1379,6 +1380,9 @@ const apiActions: {
         deviceLikeCount: apiActionConfig.graphScopes
           ? toUpdateOrg.deviceLikeCount
           : getNumActiveDeviceLike(updatedOrgGraph, actionStart),
+        activeUserOrInviteCount: apiActionConfig.graphScopes
+          ? toUpdateOrg.activeUserOrInviteCount
+          : getNumActiveOrInvitedUsers(updatedOrgGraph, actionStart),
         graphUpdatedAt: actionStart,
         rbacUpdatedAt: apiActionConfig.rbacUpdate
           ? actionStart

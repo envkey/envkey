@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { OrgComponent } from "@ui_types";
 import { capitalize } from "@core/lib/utils/string";
-import { Api, Billing } from "@core/types";
+import { Api } from "@core/types";
 import moment from "moment";
 import * as g from "@core/lib/graph";
 import * as styles from "@styles";
@@ -12,7 +12,7 @@ export const BillingUI: OrgComponent = (props) => {
   const { graph, graphUpdatedAt, orgStats } = props.core;
   const currentUserId = props.ui.loadedAccountId!;
 
-  const { org, license, numPendingDevices, numActiveCliUsers } = useMemo(() => {
+  const { org, license, numPendingDevices, numActiveInvites } = useMemo(() => {
     const { org, license } = g.graphTypes(graph);
 
     const numActiveInvites = g.getActiveInvites(graph, props.ui.now).length;
@@ -23,7 +23,7 @@ export const BillingUI: OrgComponent = (props) => {
       orgStats,
       license,
       numPendingDevices: numActiveInvites + numActiveGrants,
-      numActiveCliUsers: g.getActiveCliUsers(graph).length,
+      numActiveInvites,
     };
   }, [graphUpdatedAt, currentUserId]);
 
@@ -105,66 +105,118 @@ export const BillingUI: OrgComponent = (props) => {
                 ` (${expiresMoment!.startOf("day").fromNow()})`}
           </span>
         </div>
-        <div className="field">
-          <label>Devices/CLI Keys</label>
 
-          <span>
-            using {org.deviceLikeCount}/{license.maxDevices}{" "}
-            {numPendingDevices > 0 ? (
-              <small>
-                {" "}
-                {org.deviceLikeCount - numPendingDevices} active,{" "}
-                {numPendingDevices} pending
-              </small>
-            ) : (
-              ""
-            )}
-          </span>
-        </div>
-        <div className="field">
-          <label>Server ENVKEYs</label>
-          <span>
-            using {org.serverEnvkeyCount}/{license.maxServerEnvkeys}
-          </span>
-        </div>
+        {!license.maxUsers ||
+        !org.activeUserOrInviteCount ||
+        license.maxUsers == -1 ? (
+          ""
+        ) : (
+          <div className="field">
+            <label>Users</label>
+
+            <span>
+              using {org.activeUserOrInviteCount}/{license.maxUsers}{" "}
+              {numActiveInvites > 0 ? (
+                <small>
+                  {" "}
+                  {org.activeUserOrInviteCount - numActiveInvites} active,{" "}
+                  {numActiveInvites} pending
+                </small>
+              ) : (
+                ""
+              )}
+            </span>
+          </div>
+        )}
+
+        {license.maxDevices == -1 ? (
+          ""
+        ) : (
+          <div className="field">
+            <label>Devices/CLI Keys</label>
+
+            <span>
+              using {org.deviceLikeCount}/{license.maxDevices}{" "}
+              {numPendingDevices > 0 ? (
+                <small>
+                  {" "}
+                  {org.deviceLikeCount - numPendingDevices} active,{" "}
+                  {numPendingDevices} pending
+                </small>
+              ) : (
+                ""
+              )}
+            </span>
+          </div>
+        )}
+
+        {license.maxServerEnvkeys == -1 ? (
+          ""
+        ) : (
+          <div className="field">
+            <label>Server ENVKEYs</label>
+            <span>
+              using {org.serverEnvkeyCount}/{license.maxServerEnvkeys}
+            </span>
+          </div>
+        )}
 
         {license.hostType == "cloud" && orgStats
           ? [
-              <div className="field">
-                <label>
-                  Api Calls
-                  {refreshStatsIcon}
-                </label>
-                <span>
-                  last hour: {orgStats.apiCallsThisHour}/
-                  {license.maxCloudApiCallsPerHour}
-                  <br />
-                  last 30d: {orgStats.apiCallsThisMonth}/
-                  {license.maxCloudApiCallsPerMonth}
-                </span>
-              </div>,
+              // license.maxCloudApiCallsPerHour == -1 &&
+              // license.maxCloudApiCallsPerMonth == -1 ? (
+              //   ""
+              // ) : (
+              //   <div className="field">
+              //     <label>
+              //       Api Calls
+              //       {refreshStatsIcon}
+              //     </label>
+              //     <span>
+              //       last hour: {orgStats.apiCallsThisHour}/
+              //       {license.maxCloudApiCallsPerHour}
+              //       <br />
+              //       last 30d: {orgStats.apiCallsThisMonth}/
+              //       {license.maxCloudApiCallsPerMonth}
+              //     </span>
+              //   </div>
+              // ),
+
               <div className="field">
                 <label>Data Transfer {refreshStatsIcon}</label>
                 <span>
                   last hour:{" "}
                   {(orgStats.dataTransferBytesThisHour / 1000000).toFixed(2)}mb/
                   {license.maxCloudDataTransferPerHourMb}mb
-                  <br />
-                  last 30d:{" "}
-                  {(orgStats.dataTransferBytesThisMonth / 1000000).toFixed(2)}
-                  mb/
-                  {license.maxCloudDataTransferPerMonthMb}mb
+                  {license.maxCloudDataTransferPerDayMb &&
+                  license.maxCloudDataTransferPerDayMb != -1
+                    ? [
+                        <br />,
+                        "last 24h: ",
+                        `${(
+                          orgStats.dataTransferBytesThisDay / 1000000
+                        ).toFixed(2)}mb/${
+                          license.maxCloudDataTransferPerDayMb
+                        }mb`,
+                      ]
+                    : ""}
                 </span>
               </div>,
+
+              license.maxCloudStorageMb == -1 ? (
+                ""
+              ) : (
+                <div className="field">
+                  <label>Storage {refreshStatsIcon}</label>
+                  <span>
+                    {(orgStats.blobStorageBytes / 1000000).toFixed(2)}mb/
+                    {license.maxCloudStorageMb}mb
+                  </span>
+                </div>
+              ),
+
               <div className="field">
-                <label>Storage {refreshStatsIcon}</label>
-                <span>
-                  {(orgStats.blobStorageBytes / 1000000).toFixed(2)}mb/
-                  {license.maxCloudStorageMb}mb
-                </span>
-              </div>,
-              <div className="field">
-                <label>Active Socket Connections {refreshStatsIcon}</label>
+                <label>ENVKEY watchers {refreshStatsIcon}</label>
                 <span>
                   {orgStats.activeSocketConnections}/
                   {license.maxCloudActiveSocketConnections}

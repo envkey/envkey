@@ -9,6 +9,7 @@ export const getCommunityLicense: Api.VerifyLicenseFn = () => ({
   plan: "free",
   hostType: "community",
   expiresAt: -1,
+  maxUsers: -1,
   maxDevices: -1,
   maxServerEnvkeys: -1,
   createdAt: 0,

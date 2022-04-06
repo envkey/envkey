@@ -330,6 +330,7 @@ apiAction<
         replicatedAt: -1,
         serverEnvkeyCount: 0,
         deviceLikeCount: 1,
+        activeUserOrInviteCount: 1,
         createdAt: now,
         updatedAt: now,
         creatorId: userId,
