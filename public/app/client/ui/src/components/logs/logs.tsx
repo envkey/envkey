@@ -485,7 +485,7 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
         }
       } else if (deletedGraph[id]) {
         name = `<span class="object">${
-          g.getObjectName(deletedGraph, id) + " (inactive)"
+          g.getObjectName({ ...graph, ...deletedGraph }, id) + " (inactive)"
         }</span>`;
       }
 

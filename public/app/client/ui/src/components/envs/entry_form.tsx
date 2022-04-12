@@ -19,6 +19,7 @@ export const CLEARED_EDIT_STATE: EntryFormState = {
 
 export const EntryForm: EnvManagerComponent = (props) => {
   const { showLeftNav, showRightNav } = props;
+  const { graph } = props.core;
   const currentUserId = props.ui.loadedAccountId!;
 
   const entryFormState = props.ui.envManager.entryForm;
@@ -66,6 +67,12 @@ export const EntryForm: EnvManagerComponent = (props) => {
       }
     }
 
+    const environmentIds = props.isSub
+      ? props.visibleEnvironmentIds
+      : g.authz
+          .getVisibleBaseEnvironments(graph, currentUserId, props.envParentId)
+          .map(R.prop("id"));
+
     props
       .dispatch({
         type: Client.ActionType.CREATE_ENTRY_ROW,
@@ -73,7 +80,7 @@ export const EntryForm: EnvManagerComponent = (props) => {
           envParentId: props.envParentId,
           entryKey: entryFormState.entryKey,
           vals: R.mergeAll(
-            props.visibleEnvironmentIds.map((environmentId) => ({
+            environmentIds.map((environmentId) => ({
               [environmentId]: entryFormState.vals[environmentId] ?? {
                 isUndefined: true,
               },

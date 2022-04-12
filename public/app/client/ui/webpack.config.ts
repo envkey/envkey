@@ -12,6 +12,7 @@ const plugins = [
 const config: webpack.Configuration = {
   mode: "production",
   output: { filename: "[name].js", path: path.resolve(__dirname, "dist") },
+  devtool: "source-map",
   module: {
     rules: [
       {

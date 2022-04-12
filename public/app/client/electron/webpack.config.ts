@@ -29,6 +29,7 @@ const config: webpack.Configuration = {
   mode: "production",
   entry: { bundle: "./src/main.ts" },
   target: "electron-main",
+  devtool: "hidden-source-map",
   optimization: {
     minimize: env == "production",
   },

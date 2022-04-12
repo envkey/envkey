@@ -5,6 +5,9 @@ export type License = {
 
   env: "development" | "production";
   plan: "free" | "paid";
+
+  isCloudEssentials?: boolean;
+
   hostType: "cloud" | "enterprise" | "community";
 
   expiresAt: number;

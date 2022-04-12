@@ -10,6 +10,7 @@ const config: webpack.Configuration = {
   entry: { preload: "./src/preload.ts" },
   target: "electron-preload",
   optimization: { minimize: false },
+  devtool: "hidden-source-map",
   module: {
     rules: [
       {

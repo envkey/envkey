@@ -41,6 +41,7 @@ import {
   envUpdateAction,
   envParamsForEnvironments,
   clearVoidedPendingEnvUpdatesProducer,
+  recalcReverseDiffsProducer,
   fetchRequiredEnvs,
 } from "../lib/envs";
 import { removeObjectProducers, updateSettingsProducers } from "../lib/status";
@@ -301,29 +302,7 @@ clientAction<Client.Action.ClientActions["ResetEnvs"]>({
     // clearVoidedPendingEnvUpdatesProducer(draft);
 
     // recalculate reverse diffs
-    draft.pendingEnvUpdates = draft.pendingEnvUpdates.map((action, i) => {
-      const envWithMeta = getEnvWithMeta(draft, action.meta);
-      const previousActions = draft.pendingEnvUpdates
-        .slice(0, i)
-        .filter(
-          ({ meta: { environmentId } }) =>
-            environmentId === action.meta.environmentId
-        );
-      const previousEnvWithMeta =
-          previousActions.length > 0
-            ? getEnvWithMetaForActions(previousActions, envWithMeta)
-            : envWithMeta,
-        nextEnvWithMeta = getEnvWithMetaForActions(
-          [action],
-          previousEnvWithMeta
-        ),
-        reverse = createPatch(nextEnvWithMeta, previousEnvWithMeta);
-
-      return {
-        ...action,
-        payload: { ...action.payload, reverse },
-      };
-    });
+    recalcReverseDiffsProducer(draft);
 
     draft.pendingEnvsUpdatedAt = Date.now();
   },

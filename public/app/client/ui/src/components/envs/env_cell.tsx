@@ -23,7 +23,10 @@ import * as EntryForm from "./entry_form";
 import { isMultiline } from "@core/lib/utils/string";
 import copy from "copy-text-to-clipboard";
 import { logAndAlertError } from "@ui_lib/errors";
-import { getCurrentUserEntryKeys } from "@core/lib/client";
+import {
+  getCurrentUserEntryKeys,
+  getPendingEnvWithMeta,
+} from "@core/lib/client";
 
 type Props = {
   entryKey: string;
@@ -603,6 +606,7 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
           onClick={() => {
             if (!isEditing && props.canUpdate) {
               setInputVal(val);
+
               props.setEnvManagerState({
                 editingEntryKey: props.entryKey,
                 editingEnvParentId: props.envParentId,

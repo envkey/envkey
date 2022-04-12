@@ -1,17 +1,17 @@
-version: 2.0.47
+version: 2.0.48
 files:
-  - url: EnvKey-2.0.47-mac.zip
-    sha512: nRiCS10/4f012cRemR9gl/D+nS0Po7xd3JLoJYcf/JpFy82t6uK0ggBeL4xlH31BHaj1vSFdCmj499p36hnf/A==
-    size: 82882321
-  - url: EnvKey-2.0.47-arm64-mac.zip
-    sha512: MhxHMJ4m9naI9/d15qDGhYKdr1yHVknieuuTPcj4L5TOT45CggRi+059T0YfoKREd0++s5bNYKYMX/tsS7HFqg==
-    size: 84542154
-  - url: EnvKey-2.0.47.dmg
-    sha512: KOjsp30iZTW1dXjWpjbT2wb40PXizW9vwDggV+ugRd6KgarqsTEfbPi64tpqP2E5nNj1ddW1Ps9hX9/9BNpErQ==
-    size: 85952806
-  - url: EnvKey-2.0.47-arm64.dmg
-    sha512: wpYjjrdiBMvuKpAEvvfhQSMO5ZoLxyzYVO4rWh/6yu7G61HM7eNisB7KrV8UxcdZCi8nP6GLxIl4NJv9FzrVQQ==
-    size: 87874832
-path: EnvKey-2.0.47-mac.zip
-sha512: nRiCS10/4f012cRemR9gl/D+nS0Po7xd3JLoJYcf/JpFy82t6uK0ggBeL4xlH31BHaj1vSFdCmj499p36hnf/A==
-releaseDate: '2022-04-06T15:45:30.715Z'
+  - url: EnvKey-2.0.48-mac.zip
+    sha512: Itti1324Ot8X7LsYcIgajWpBM7sP3uk5IzHGo6SGhPGBnUrFKrfo3uRJHDUDXKXl1ddtm5TUsga/lnZ5aLRSmA==
+    size: 88305661
+  - url: EnvKey-2.0.48-arm64-mac.zip
+    sha512: DlJLtsE/lZ5RJMR4dYmLnOgVQ5aHZZfpvtlaEqK2jn9y2G9Oc5zif0oachwWhBPldUZcjb1XkPIqNaeSbUtw2g==
+    size: 89965404
+  - url: EnvKey-2.0.48.dmg
+    sha512: YGAIn/MeTYf4ww3IYyd9zPT383k3SfU8nOudOF+2GjaBqQubBsEq9a2kJl1wc/WLo+IhPtKPVlC4L5GEDiPclg==
+    size: 91676555
+  - url: EnvKey-2.0.48-arm64.dmg
+    sha512: TRLkh9o8N+4mWhI0SCIBbnqWTEfUg8Q7s4Xswso8L1OyKk7J+EWFIebEET1tH+22ZQBkvN7VP47s6xrA0nTRVg==
+    size: 93602271
+path: EnvKey-2.0.48-mac.zip
+sha512: Itti1324Ot8X7LsYcIgajWpBM7sP3uk5IzHGo6SGhPGBnUrFKrfo3uRJHDUDXKXl1ddtm5TUsga/lnZ5aLRSmA==
+releaseDate: '2022-04-12T05:17:19.437Z'

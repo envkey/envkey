@@ -1,8 +1,8 @@
-version: 2.0.47
+version: 2.0.48
 files:
-  - url: EnvKey_Windows_Installer-2.0.47.exe
-    sha512: yB5GYnkT+LpMNmYWiLs7XgN1uOpAutOA6YINcFALeDfrrj9w8FVu9ZfgsmHKzLBquyJgRF7wntaY+rOrfs4M3Q==
-    size: 68700744
-path: EnvKey_Windows_Installer-2.0.47.exe
-sha512: yB5GYnkT+LpMNmYWiLs7XgN1uOpAutOA6YINcFALeDfrrj9w8FVu9ZfgsmHKzLBquyJgRF7wntaY+rOrfs4M3Q==
-releaseDate: '2022-04-06T15:46:47.960Z'
+  - url: EnvKey_Windows_Installer-2.0.48.exe
+    sha512: 5sNg7K12RuKB5ONWhDiYcagDs6oD8weAFQKwg82yteu1G9ndiA1y0AHdjftk7X/p1EPwNiEGUJzXvfRHXlk7Hw==
+    size: 73180288
+path: EnvKey_Windows_Installer-2.0.48.exe
+sha512: 5sNg7K12RuKB5ONWhDiYcagDs6oD8weAFQKwg82yteu1G9ndiA1y0AHdjftk7X/p1EPwNiEGUJzXvfRHXlk7Hw==
+releaseDate: '2022-04-12T05:18:37.843Z'

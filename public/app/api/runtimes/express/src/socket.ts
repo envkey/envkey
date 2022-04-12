@@ -218,14 +218,6 @@ const start: Api.SocketServer["start"] = () => {
             : context.generatedEnvkey.pkey;
 
         if (context.type == "tokenAuthContext") {
-          if (!userConnections[orgId]) {
-            userConnections[orgId] = {};
-          }
-
-          if (!userConnections[orgId][context.user.id]) {
-            userConnections[orgId][context.user.id] = {};
-          }
-
           clearDeviceSocket(
             orgId,
             context.user.id,
@@ -244,6 +236,13 @@ const start: Api.SocketServer["start"] = () => {
               clearDeviceSocket,
               clearEnvkeyConnectionSocket
             );
+          }
+          if (!userConnections[orgId]) {
+            userConnections[orgId] = {};
+          }
+
+          if (!userConnections[orgId][context.user.id]) {
+            userConnections[orgId][context.user.id] = {};
           }
           userConnections[orgId][context.user.id][context.orgUserDevice.id] =
             socket;
@@ -289,14 +288,6 @@ const start: Api.SocketServer["start"] = () => {
           const { generatedEnvkey, connectionId } = context;
           const generatedEnvkeyId = generatedEnvkey.id;
 
-          if (!envkeyConnections[orgId]) {
-            envkeyConnections[orgId] = {};
-          }
-
-          if (!envkeyConnections[orgId][generatedEnvkeyId]) {
-            envkeyConnections[orgId][generatedEnvkeyId] = {};
-          }
-
           clearEnvkeyConnectionSocket(
             orgId,
             generatedEnvkeyId,
@@ -316,6 +307,14 @@ const start: Api.SocketServer["start"] = () => {
               clearEnvkeyConnectionSocket
             );
           }
+          if (!envkeyConnections[orgId]) {
+            envkeyConnections[orgId] = {};
+          }
+
+          if (!envkeyConnections[orgId][generatedEnvkeyId]) {
+            envkeyConnections[orgId][generatedEnvkeyId] = {};
+          }
+
           envkeyConnections[orgId][generatedEnvkeyId][connectionId] = socket;
           numEnvkeyConnections++;
           connectedByConnectionId[connectionId] = {

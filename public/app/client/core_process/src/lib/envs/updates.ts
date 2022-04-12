@@ -11,7 +11,7 @@ import {
   getPendingEnvironmentIds,
 } from "@core/lib/client";
 import { dispatch, clientAction } from "../../handler";
-import { createPatch } from "rfc6902";
+import { createPatch, Operation } from "rfc6902";
 import { Action } from "redux";
 import stableStringify from "fast-json-stable-stringify";
 import { log } from "@core/lib/utils/logger";
@@ -44,7 +44,7 @@ export const envUpdateAction = <
           [envParentId] = environmentId.split("|");
         }
 
-        const envWithMeta = getPendingEnvWithMeta(
+        let envWithMeta = getPendingEnvWithMeta(
           draft,
           R.pick(["envParentId", "environmentId"], action.payload)
         );
@@ -56,7 +56,7 @@ export const envUpdateAction = <
           inherits: getEnvInheritsForVariables(updated.variables),
         };
 
-        const diffs = createPatch(envWithMeta, updated);
+        let diffs = createPatch(envWithMeta, updated);
 
         // don't queue update if nothing changed
         if (diffs.length == 0) {
@@ -71,6 +71,27 @@ export const envUpdateAction = <
             entryKeys.push(k);
           }
         }
+
+        clearOverwrittenActionsProducer(draft, {
+          type: action.type,
+          environmentId: action.payload.environmentId,
+          entryKeys,
+        });
+
+        // after clearing any actions that were overwritten, recalc diffs again
+        envWithMeta = getPendingEnvWithMeta(
+          draft,
+          R.pick(["envParentId", "environmentId"], action.payload)
+        );
+
+        updated = updateFn(draft, envWithMeta, action);
+
+        updated = {
+          ...updated,
+          inherits: getEnvInheritsForVariables(updated.variables),
+        };
+
+        diffs = createPatch(envWithMeta, updated);
 
         const reverse = createPatch(updated, envWithMeta);
 
@@ -89,9 +110,9 @@ export const envUpdateAction = <
             },
           };
 
-        clearOverwrittenActionsProducer(draft, pendingAction);
         draft.pendingEnvUpdates.push(pendingAction);
         clearVoidedPendingEnvUpdatesProducer(draft);
+        recalcReverseDiffsProducer(draft);
 
         draft.pendingEnvsUpdatedAt = Date.now();
       },
@@ -127,20 +148,25 @@ export const envUpdateAction = <
       // },
     });
   },
+  // this function can mutate newPending action in addition to draft
   clearOverwrittenActionsProducer = (
     draft: Draft<Client.State>,
-    newPending: Client.Action.PendingEnvUpdateAction
+    newPending: {
+      type: Client.ActionType;
+      environmentId: string;
+      entryKeys: string[];
+    }
   ) => {
     draft.pendingEnvUpdates = draft.pendingEnvUpdates.filter((pending) => {
       if (
-        pending.meta.environmentId != newPending.meta.environmentId ||
+        pending.meta.environmentId != newPending.environmentId ||
         newPending.type == Client.ActionType.CREATE_ENTRY ||
         pending.type == Client.ActionType.CREATE_ENTRY
       ) {
         return true;
       }
 
-      const newPendingEntryKeys = new Set(newPending.meta.entryKeys);
+      const newPendingEntryKeys = new Set(newPending.entryKeys);
       if (pending.meta.entryKeys.every((k) => newPendingEntryKeys.has(k))) {
         return false;
       }
@@ -247,4 +273,29 @@ export const envUpdateAction = <
     //     return;
     //   }
     // }
+  },
+  recalcReverseDiffsProducer = (draft: Draft<Client.State>) => {
+    draft.pendingEnvUpdates = draft.pendingEnvUpdates.map((action, i) => {
+      const envWithMeta = getEnvWithMeta(draft, action.meta);
+      const previousActions = draft.pendingEnvUpdates
+        .slice(0, i)
+        .filter(
+          ({ meta: { environmentId } }) =>
+            environmentId === action.meta.environmentId
+        );
+      const previousEnvWithMeta =
+          previousActions.length > 0
+            ? getEnvWithMetaForActions(previousActions, envWithMeta)
+            : envWithMeta,
+        nextEnvWithMeta = getEnvWithMetaForActions(
+          [action],
+          previousEnvWithMeta
+        ),
+        reverse = createPatch(nextEnvWithMeta, previousEnvWithMeta);
+
+      return {
+        ...action,
+        payload: { ...action.payload, reverse },
+      };
+    });
   };

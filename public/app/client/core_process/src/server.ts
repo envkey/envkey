@@ -251,14 +251,25 @@ export const start = async (port = 19047, wsport = 19048) => {
 
       await resolveLockoutTimer();
 
+      const finalDiffs = createPatch(
+        actionParams.type == "clientAction" || !shouldSendSocketUpdate
+          ? initialClientState
+          : afterDispatchClientState,
+        dispatchRes.state
+      );
+
+      if (
+        shouldSendSocketUpdate &&
+        context.client.clientName == "cli" &&
+        (actionParams.type == "asyncClientAction" ||
+          actionParams.type == "apiRequestAction")
+      ) {
+        localSocketUpdate("diffs", finalDiffs);
+      }
+
       res.status(200).json({
         ...R.omit(["state"], dispatchRes),
-        diffs: createPatch(
-          actionParams.type == "clientAction" || !shouldSendSocketUpdate
-            ? initialClientState
-            : afterDispatchClientState,
-          dispatchRes.state
-        ),
+        diffs: finalDiffs,
       });
     })
   );
