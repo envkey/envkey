@@ -104,7 +104,7 @@ Business plans include priority support.
 
 All the code in this repo is free and open source under the MIT License.
 
-EnvKey's Cloud and Enterprise Self-Hosted products include commercially licensed server-side extensions for battle-ready infrastructure and advanced user management.
+EnvKey's Cloud and Business Self-Hosted products include commercially licensed server-side extensions for battle-ready infrastructure and advanced user management.
 
 ## Contributing
 
