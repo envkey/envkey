@@ -45,7 +45,7 @@ elif [[ "$(uname -m)" == armv6* ]]; then
   ARCH="armv6"
 elif [[ "$(uname -m)" == armv7* ]]; then
   ARCH="armv7"
-elif [[ "$(uname -m)" == 'arm64' ]]; then
+elif [[ "$(uname -m)" == 'arm64' || "$(uname -m)" == 'aarch64' ]]; then
   ARCH="arm64"
 else
   ARCH="386"
@@ -108,7 +108,7 @@ download_envkey () {
   if [ "$PLATFORM" == "darwin" ] || $IS_DOCKER ; then
     if [[ -d /usr/local/bin ]]; then
       mv -f ./envkey /usr/local/bin/
-      mv -f ./envkey-keytar.node /usr/local/bin/
+      mv -f ./envkey-keytar.node /usr/local/bin/ 2> /dev/null
       echo "EnvKey CLI is installed in /usr/local/bin"
     else
       echo >&2 'Error: /usr/local/bin does not exist. Create this directory with appropriate permissions, then re-install.'
@@ -125,10 +125,10 @@ download_envkey () {
     CAN_I_RUN_SUDO=$(sudo -n uptime 2>&1|grep "load"|wc -l)
     if [ "${CAN_I_RUN_SUDO}" -gt 0 ]; then
       sudo mv ./envkey /usr/local/bin/
-      sudo mv ./envkey-keytar.node /usr/local/bin/
+      sudo mv ./envkey-keytar.node /usr/local/bin/ 2> /dev/null
     else
       mv ./envkey /usr/local/bin/
-      mv ./envkey/envkey-keytar.node /usr/local/bin/
+      mv ./envkey/envkey-keytar.node /usr/local/bin/ 2> /dev/null
     fi
     echo "EnvKey CLI is installed in /usr/local/bin"
   fi
