@@ -1,7 +1,7 @@
 import { getState } from "./lib/state";
 import { Client, Model } from "@core/types";
 import { log } from "@core/lib/utils/logger";
-import { version } from "../package.json";
+import { version } from "../../cli/package.json";
 import { dispatch } from "./handler";
 import { getPendingUpdateDetails } from "@core/lib/client";
 import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";

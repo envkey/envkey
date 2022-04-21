@@ -17,7 +17,7 @@ import { version as cliVersion } from "../../package.json";
 
 const clientParams: Client.ClientParams<"cli"> = {
   clientName: "cli",
-  clientVersion: "2.0",
+  clientVersion: cliVersion,
 };
 
 let state: Client.State,
@@ -61,7 +61,7 @@ export const getState = () => state,
   startCore = async (inline = false) => {
     const alive = await isAlive();
     if (typeof alive == "string") {
-      if (semver.valid(alive) && semver.gt(alive, cliVersion)) {
+      if (semver.valid(alive) && semver.gt(cliVersion, alive)) {
         const res = await stop();
         if (!res) {
           return exit(

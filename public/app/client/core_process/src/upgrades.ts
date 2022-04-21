@@ -3,7 +3,7 @@ import { log } from "@core/lib/utils/logger";
 import { dispatch } from "./handler";
 import * as g from "@core/lib/graph";
 import * as semver from "semver";
-import { version } from "../package.json";
+import { version } from "../../cli/package.json";
 import {
   queuePersistState,
   processPersistStateQueue,

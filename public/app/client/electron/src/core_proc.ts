@@ -43,7 +43,11 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
 
     log("", { cliBinPath, cliCurrent, cliVersion });
 
-    if (cliBinPath && cliCurrent != false && cliCurrent == cliVersion) {
+    if (
+      cliBinPath &&
+      cliCurrent != false &&
+      semver.gte(cliCurrent, cliVersion)
+    ) {
       log("Starting core process daemon via CLI");
 
       await new Promise<void>((resolve, reject) => {

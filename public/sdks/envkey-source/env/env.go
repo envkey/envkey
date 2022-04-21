@@ -33,7 +33,7 @@ func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localD
 	/*
 	* ENVKEY lookup order:
 	*		1 - ENVKEY environment variable is set
-	*		2 - .env file in current directory
+	*		2 - .env file in current directory (or --env-file override)
 	*		3 - .envkey config file in current directory {appId: string, orgId: string}
 	*				+ file at ~/.envkey/apps/[appId].env (for local keys mainly)
 	*	  4 - .env file at ~/.env
