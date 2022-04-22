@@ -13,7 +13,6 @@ import (
 	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
-	"github.com/mitchellh/go-homedir"
 )
 
 type AppConfig struct {
@@ -78,8 +77,8 @@ func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localD
 	}
 
 	if envkey == "" && envFileOverride == "" {
-		home, err := homedir.Dir()
-		if err != nil {
+		home, err := os.UserHomeDir()
+		if err == nil {
 			godotenv.Load(filepath.Join(home, ".env"))
 			envkey = os.Getenv("ENVKEY")
 		}
@@ -232,7 +231,7 @@ func genLocalKey(orgId string, appId string, verboseOutput bool, localDevHost bo
 }
 
 func appEnvkeyDir() (string, error) {
-	home, err := homedir.Dir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}

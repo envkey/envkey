@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mitchellh/go-homedir"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -20,7 +19,7 @@ var shouldCache bool
 func InlineStart(shouldCacheArg bool) {
 	shouldCache = shouldCacheArg
 
-	home, err := homedir.Dir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}

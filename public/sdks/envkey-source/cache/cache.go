@@ -14,7 +14,7 @@ type Cache struct {
 }
 
 func DefaultPath() (string, error) {
-	home, err := homedir.Dir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}

@@ -18,7 +18,7 @@ var testPathExpanded, _ = homedir.Expand(testPath)
 
 func TestNewCache(t *testing.T) {
 	var c *cache.Cache
-	home, _ := homedir.Dir()
+	home, _ := os.UserHomeDir()
 
 	// with no dir (default to homedir/.envkey/cache)
 	c, _ = cache.NewCache("")

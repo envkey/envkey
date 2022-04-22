@@ -16,7 +16,6 @@ import (
 	"github.com/envkey/envkey/public/sdks/envkey-source/shell"
 	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
 	"github.com/envkey/envkey/public/sdks/envkey-source/version"
-	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -148,7 +147,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 }
 
 func initClientLogging() {
-	home, err := homedir.Dir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return
 	}
