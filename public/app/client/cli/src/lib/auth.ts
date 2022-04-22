@@ -37,8 +37,10 @@ export const authenticate = async <
 
     if (argv["cli-envkey"] ?? process.env.CLI_ENVKEY) {
       accountIdOrCliKey = (argv["cli-envkey"] ?? process.env.CLI_ENVKEY)!;
+
       const hash = sha256(accountIdOrCliKey),
         cliAuth = state.cliKeyAccounts[hash];
+
       if (cliAuth) {
         auth = cliAuth;
       } else {

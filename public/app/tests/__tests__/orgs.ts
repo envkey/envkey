@@ -12,7 +12,7 @@ import { query, getDb } from "@api_shared/db";
 import * as R from "ramda";
 import { getAuth, getEnvWithMeta } from "@core/lib/client";
 import { registerWithEmail, loadAccount } from "./helpers/auth_helper";
-import { acceptInvite } from "./helpers/invites_helper";
+import { acceptInvite, inviteAdminUser } from "./helpers/invites_helper";
 import { Client, Api, Model, Rbac } from "@core/types";
 import { connectBlocks, createBlock } from "./helpers/blocks_helper";
 import {
@@ -1371,6 +1371,27 @@ describe("orgs", () => {
     await updateEnvs(ownerId, block4Id);
     await updateLocals(ownerId, block4Id);
 
+    const environments = getEnvironments(ownerId, app1Id),
+      [app1Development, app1Staging, app1Production] = environments;
+
+    dispatch(
+      {
+        type: Client.ActionType.CREATE_ENTRY_ROW,
+        payload: {
+          envParentId: app1Id,
+          entryKey: "DEV_INHERITS_KEY",
+          vals: {
+            [app1Development.id]: { inheritsEnvironmentId: app1Production.id },
+            [app1Staging.id]: { isUndefined: true },
+            [app1Production.id]: {
+              val: "prod-val",
+            },
+          },
+        },
+      },
+      ownerId
+    );
+
     await dispatch(
       {
         type: Api.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
@@ -1426,7 +1447,6 @@ describe("orgs", () => {
       R.sortBy(R.prop("createdAt"), graphTypes(state.graph).environments)
     )!;
 
-    const [app1Dev] = getEnvironments(ownerId, app1Id);
     const [block1Dev] = getEnvironments(ownerId, block1Id);
 
     await dispatch(
@@ -1434,9 +1454,9 @@ describe("orgs", () => {
         type: Api.ActionType.CREATE_ENVIRONMENT,
         payload: {
           isSub: true,
-          environmentRoleId: app1Dev.environmentRoleId,
+          environmentRoleId: app1Development.environmentRoleId,
           envParentId: app1Id,
-          parentEnvironmentId: app1Dev.id,
+          parentEnvironmentId: app1Development.id,
           subName: "dev-sub",
         },
       },
@@ -1586,7 +1606,7 @@ describe("orgs", () => {
         payload: {
           appId: app1Id,
           name: "Development Server",
-          environmentId: app1Dev.id,
+          environmentId: app1Development.id,
         },
       },
       ownerId
@@ -1823,12 +1843,22 @@ describe("orgs", () => {
           environmentId: development.id,
         })
       ).toEqual({
-        inherits: {},
+        inherits: {
+          ...(envParent.name == "App 1"
+            ? {
+                [production.id]: ["DEV_INHERITS_KEY"],
+              }
+            : {}),
+        },
         variables: {
           KEY2: { isUndefined: true },
           KEY3: { val: "key3-val" },
           IMPORTED_KEY1: { val: "imported-val" },
           IMPORTED_KEY2: { val: "imported-val" },
+
+          ...(envParent.name == "App 1"
+            ? { DEV_INHERITS_KEY: { inheritsEnvironmentId: production.id } }
+            : {}),
         },
       });
 
@@ -1842,6 +1872,10 @@ describe("orgs", () => {
         variables: {
           KEY2: { isEmpty: true, val: "" },
           KEY3: { val: "key3-val" },
+
+          ...(envParent.name == "App 1"
+            ? { DEV_INHERITS_KEY: { isUndefined: true } }
+            : {}),
         },
       });
 
@@ -1852,7 +1886,18 @@ describe("orgs", () => {
         })
       ).toEqual({
         inherits: {},
-        variables: { KEY2: { val: "val3" }, KEY3: { val: "key3-val" } },
+        variables: {
+          KEY2: { val: "val3" },
+          KEY3: { val: "key3-val" },
+
+          ...(envParent.name == "App 1"
+            ? {
+                DEV_INHERITS_KEY: {
+                  val: "prod-val",
+                },
+              }
+            : {}),
+        },
       });
 
       expect(
@@ -1907,6 +1952,74 @@ describe("orgs", () => {
       IMPORTED_APP1_SUB_KEY1: "imported-val",
       IMPORTED_APP1_SUB_KEY2: "imported-val",
     });
+
+    // console.log("import finished");
+    // console.log("invite a new user, accept, make an update");
+    const invite = await inviteAdminUser(ownerId);
+    await acceptInvite(invite);
+    await loadAccount(invite.user.id);
+
+    await dispatch(
+      {
+        type: Client.ActionType.UPDATE_ENTRY_VAL,
+        payload: {
+          envParentId: app1Id,
+          environmentId: app1Development.id,
+          entryKey: "KEY1",
+          update: { val: "val1-updated" },
+        },
+      },
+      invite.user.id
+    );
+    await dispatch(
+      {
+        type: Client.ActionType.COMMIT_ENVS,
+        payload: {},
+      },
+      invite.user.id
+    );
+
+    // console.log("generate a new CLI key, authenticate, make an update");
+    await loadAccount(ownerId);
+    const orgAdminRole = R.indexBy(R.prop("name"), orgRoles)["Org Admin"];
+    await dispatch(
+      {
+        type: Client.ActionType.CREATE_CLI_USER,
+        payload: {
+          name: "cli-user",
+          orgRoleId: orgAdminRole.id,
+        },
+      },
+      ownerId
+    );
+    const { cliKey } = state.generatedCliUsers[0];
+    await dispatch(
+      {
+        type: Client.ActionType.AUTHENTICATE_CLI_KEY,
+        payload: { cliKey },
+      },
+      cliKey
+    );
+
+    await dispatch(
+      {
+        type: Client.ActionType.UPDATE_ENTRY_VAL,
+        payload: {
+          envParentId: app1Id,
+          environmentId: app1Development.id,
+          entryKey: "KEY1",
+          update: { val: "val1-updated-by-cli-key" },
+        },
+      },
+      cliKey
+    );
+    await dispatch(
+      {
+        type: Client.ActionType.COMMIT_ENVS,
+        payload: {},
+      },
+      cliKey
+    );
 
     fs.unlinkSync(filePath); // delete archive file
   });

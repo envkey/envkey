@@ -87,16 +87,26 @@ export const decryptEnvs = async (
           return decryptSymmetricWithKey({
             encrypted: encryptedBlob.data,
             encryptionKey: decryptedKey,
-          }).then((decryptedBlob) => {
-            const env = JSON.parse(decryptedBlob);
+          })
+            .then((decryptedBlob) => {
+              const env = JSON.parse(decryptedBlob);
 
-            return {
-              [compositeId]: {
-                key: decryptedKey,
-                env,
-              },
-            };
-          });
+              return {
+                [compositeId]: {
+                  key: decryptedKey,
+                  env,
+                },
+              };
+            })
+            .catch((err) => {
+              log("decryption failed", {
+                compositeId,
+                encryptedBlob,
+                err,
+              });
+
+              throw err;
+            });
         })
       )
     );

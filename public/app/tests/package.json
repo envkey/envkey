@@ -6,7 +6,7 @@
     "check-watch": "tsc --watch --noEmit -p tsconfig.json",
     "test": "NODE_OPTIONS='--stack-trace-limit=100' NODE_TLS_REJECT_UNAUTHORIZED=0 REENCRYPTION_MIN_DELAY=200 REENCRYPTION_JITTER=0 ../../../node_modules/.bin/jest --notify --no-watchman --runInBand --forceExit",
     "test-ci": "NODE_TLS_REJECT_UNAUTHORIZED=0 REENCRYPTION_MIN_DELAY=200 REENCRYPTION_JITTER=0 ../../../node_modules/.bin/jest --reporters=default --reporters=jest-junit --runInBand --forceExit --detectOpenHandles",
-    "test-inspect": "NODE_TLS_REJECT_UNAUTHORIZED=0 REENCRYPTION_MIN_DELAY=200 REENCRYPTION_JITTER=0 node --inspect=9229 ../../node_modules/jest/bin/jest.js --notify --runInBand --no-watchman"
+    "test-inspect": "NODE_TLS_REJECT_UNAUTHORIZED=0 REENCRYPTION_MIN_DELAY=200 REENCRYPTION_JITTER=0 node --inspect=9229 ../../../node_modules/.bin/jest --notify --runInBand --no-watchman"
   },
   "devDependencies": {}
 }

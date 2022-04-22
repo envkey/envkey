@@ -31,6 +31,7 @@ import {
   getDeleteEnvironmentProducer,
   getEnvironmentOrLocalsAutoCommitEnabled,
   getConnectedBlockEnvironmentsForApp,
+  getSubEnvironmentsByParentEnvironmentId,
 } from "@core/lib/graph";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -560,7 +561,7 @@ clientAction<
         };
 
         if (environment && !environment.isSub) {
-          const inheritingEnvironmentIds = getInheritingEnvironmentIds(
+          let inheritingEnvironmentIds = getInheritingEnvironmentIds(
             state,
             {
               envParentId: environment.envParentId,
@@ -569,13 +570,29 @@ clientAction<
             true
           );
 
+          let subEnvironmentIds: string[] = [];
+          for (const id of inheritingEnvironmentIds) {
+            const subEnvironments =
+              getSubEnvironmentsByParentEnvironmentId(state.graph)[id] ?? [];
+            subEnvironmentIds = subEnvironmentIds.concat(
+              subEnvironments.map(R.prop("id"))
+            );
+          }
+          inheritingEnvironmentIds = new Set(
+            Array.from(inheritingEnvironmentIds).concat(subEnvironmentIds)
+          );
+
           for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
+            const inheritingEnvironment = state.graph[
+              inheritingEnvironmentId
+            ] as Model.Environment;
+
             const composite = getUserEncryptedKeyOrBlobComposite({
               environmentId: inheritingEnvironmentId,
               inheritsEnvironmentId: environment.id,
             });
 
-            const overrides = getInheritanceOverrides(
+            let overrides = getInheritanceOverrides(
               state,
               {
                 envParentId: environment.envParentId,
@@ -584,6 +601,23 @@ clientAction<
               },
               true
             )[environmentId];
+
+            if (inheritingEnvironment.isSub) {
+              const parentOverrides = getInheritanceOverrides(
+                state,
+                {
+                  envParentId: environment.envParentId,
+                  environmentId: inheritingEnvironment.parentEnvironmentId,
+                  forInheritsEnvironmentId: environmentId,
+                },
+                true
+              )[environmentId];
+
+              overrides = {
+                ...parentOverrides,
+                ...overrides,
+              };
+            }
 
             if (overrides) {
               const key = environmentKeysByComposite[composite];

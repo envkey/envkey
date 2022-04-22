@@ -608,13 +608,12 @@ export const getEnvWithMeta = memoize(
       ).filter(({ id }) => id != params.environmentId);
 
     for (let sibling of siblings) {
-      const envWithMeta = (pending ? getPendingEnvWithMeta : getEnvWithMeta)(
-        state,
-        {
-          ...params,
-          environmentId: sibling.id,
-        }
-      );
+      const siblingEnvWithMeta = (
+        pending ? getPendingEnvWithMeta : getEnvWithMeta
+      )(state, {
+        ...params,
+        environmentId: sibling.id,
+      });
 
       if ("newEntryVals" in params) {
         const chain = getInheritanceChain(
@@ -632,7 +631,7 @@ export const getEnvWithMeta = memoize(
         const keys =
           "entryKey" in params && params.entryKey
             ? [params.entryKey]
-            : Object.keys(envWithMeta.variables);
+            : Object.keys(siblingEnvWithMeta.variables);
 
         for (let key of keys) {
           const chain = getInheritanceChain(

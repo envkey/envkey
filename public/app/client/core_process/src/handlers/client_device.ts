@@ -1,12 +1,11 @@
 import { Client, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
-import { spawn } from "child_process";
 import os from "os";
 import { initDeviceKey } from "@core/lib/client_store/key_store";
 import * as R from "ramda";
 import { getPendingUpdateDetails } from "@core/lib/client";
 import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
-import * as semver from "semver";
+import { sha256 } from "@core/lib/crypto/utils";
 import { log } from "@core/lib/utils/logger";
 
 clientAction<Client.Action.ClientActions["InitDevice"]>({
@@ -25,8 +24,15 @@ clientAction<Client.Action.ClientActions["DisconnectClient"]>({
   type: "clientAction",
   actionType: Client.ActionType.DISCONNECT_CLIENT,
   skipLocalSocketUpdate: true,
-  procStateProducer: (draft, { meta: { clientId } }) => {
+  procStateProducer: (draft, { meta: { clientId, accountIdOrCliKey } }) => {
     delete draft.clientStates[clientId];
+
+    if (accountIdOrCliKey) {
+      const hash = sha256(accountIdOrCliKey);
+      if (draft.cliKeyAccounts[hash]) {
+        delete draft.cliKeyAccounts[hash];
+      }
+    }
   },
 });
 

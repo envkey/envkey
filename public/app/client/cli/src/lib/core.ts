@@ -155,20 +155,37 @@ export const getState = () => state,
 
     let fetchedSession = false;
     if (auth && auth.privkey && !state.graphUpdatedAt) {
-      const res = await dispatch({
-        type: Client.ActionType.GET_SESSION,
-      });
+      if (auth.type == "clientUserAuth") {
+        const res = await dispatch({
+          type: Client.ActionType.GET_SESSION,
+        });
 
-      if (!res.success) {
-        return exit(
-          1,
-          chalk.bold.red("EnvKey CLI initialization error: ") +
-            JSON.stringify(res.state.fetchSessionError)
-        );
+        if (!res.success) {
+          return exit(
+            1,
+            chalk.bold.red("EnvKey CLI initialization error: ") +
+              JSON.stringify(res.state.fetchSessionError)
+          );
+        }
+
+        state = res.state;
+        fetchedSession = true;
+      } else if (auth.type == "clientCliAuth") {
+        const res = await dispatch({
+          type: Client.ActionType.AUTHENTICATE_CLI_KEY,
+          payload: { cliKey: accountIdOrCliKey! },
+        });
+
+        if (!res.success) {
+          return exit(
+            1,
+            chalk.bold.red("EnvKey CLI initialization error: ") +
+              JSON.stringify((res.resultAction as any).payload)
+          );
+        }
+
+        state = res.state;
       }
-
-      state = res.state;
-      fetchedSession = true;
     }
 
     if (auth && state.graph && state.graph[auth.orgId]) {
