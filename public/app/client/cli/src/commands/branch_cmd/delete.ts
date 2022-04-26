@@ -16,7 +16,7 @@ import * as R from "ramda";
 import { getPrompt, isAutoMode } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
-export const command = "delete [app-or-block] [branch]";
+export const command = "delete [app-or-block] [parent-environment] [branch]";
 export const desc = "Delete a branch for an app or block.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
@@ -24,14 +24,15 @@ export const builder = (yargs: Argv<BaseArgs>) =>
       type: "string",
       describe: "app or block name",
     })
+    .positional("parent-environment", {
+      type: "string",
+      describe: "parent-environment name",
+    })
     .positional("branch", {
       type: "string",
       describe: "branch name",
-    })
-    .option("parent-environment", {
-      type: "string",
-      describe: "parent-environment name",
     });
+
 export const handler = async (
   argv: BaseArgs & {
     "app-or-block"?: string;
@@ -46,15 +47,13 @@ export const handler = async (
 
   let parentEnvironmentArg: string | undefined;
   let branchArg: string | undefined;
+
   if (argv["app-or-block"] && argv["parent-environment"] && !argv["branch"]) {
     parentEnvironmentArg = argv["app-or-block"];
     branchArg = argv["parent-environment"];
-  } else if (
-    argv["app-or-block"] &&
-    !argv["parent-environment"] &&
-    !argv["branch"]
-  ) {
-    branchArg = argv["app-or-block"];
+  } else {
+    parentEnvironmentArg = argv["parent-environment"];
+    branchArg = argv["branch"];
   }
 
   if (argv["app-or-block"]) {
@@ -146,7 +145,7 @@ export const handler = async (
     );
   }
 
-  if (!argv.force) {
+  if (!argv.force && !isAutoMode()) {
     const { confirm } = await prompt<{ confirm: boolean }>({
       type: "confirm",
       name: "confirm",

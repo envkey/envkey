@@ -36,11 +36,13 @@ export const handler = async (
   }
 ): Promise<void> => {
   const prompt = getPrompt();
+
   let { state, auth } = await initCore(argv, true);
   let envParent: Model.EnvParent | undefined;
 
   let parentEnvironmentArg: string | undefined;
   let nameArg: string | undefined;
+
   if (argv["app-or-block"] && argv["parent-environment"] && !argv["name"]) {
     parentEnvironmentArg = argv["app-or-block"];
     nameArg = argv["parent-environment"];
@@ -50,6 +52,9 @@ export const handler = async (
     !argv["name"]
   ) {
     nameArg = argv["app-or-block"];
+  } else {
+    parentEnvironmentArg = argv["parent-environment"];
+    nameArg = argv["name"];
   }
 
   if (argv["app-or-block"]) {

@@ -42,7 +42,7 @@ export const handler = async (
     return exit(
       1,
       chalk.red.bold(
-        "This command can only be run an envkey-enabled directory with a .envkey file (in the current directory or a parent directory). You can use `envkey init` to generate a .envkey file."
+        "This command can only be run in an envkey-enabled directory with a .envkey file (in the current directory or a parent directory). You can use `envkey init` to generate a .envkey file."
       )
     );
   }

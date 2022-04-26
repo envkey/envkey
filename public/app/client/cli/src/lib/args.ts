@@ -484,6 +484,7 @@ export const mustSelectSubEnvironmentForDeletion = async (
   } else {
     allSubEnvs = allEnvs.filter((e) => e.isSub);
   }
+
   if (!allSubEnvs.length) {
     return exit(
       1,
@@ -518,6 +519,7 @@ export const mustSelectSubEnvironmentForDeletion = async (
     }).then(R.prop("environment"));
 
   const subEnvNameOrId = initialSubName ?? (await promptEnvironment());
+
   // sub env names can repeat under other parents
   const subEnvsChosen = allSubEnvs.filter(
     (env) =>
@@ -526,6 +528,7 @@ export const mustSelectSubEnvironmentForDeletion = async (
       (env.id === subEnvNameOrId ||
         env.subName.toLowerCase() === subEnvNameOrId.toLowerCase())
   ) as Model.Environment[];
+
   if (!subEnvsChosen.length) {
     return exit(
       1,
