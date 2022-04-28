@@ -43,6 +43,8 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
 
     log("", { cliBinPath, cliCurrent, cliVersion });
 
+    let startedCore = false;
+
     if (
       cliBinPath &&
       cliCurrent != false &&
@@ -67,22 +69,18 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
           }
         );
         child.unref();
+        startedCore = true;
       }).catch((err) => {
         log("Error starting core process daemon from CLI");
         error = true;
       });
-    } else if (cliCurrent === false || cliCurrent != cliVersion) {
-      log("CLI is outdated for this version of UI");
     } else if (!cliBinPath) {
       log("Couldn't find CLI");
+    } else {
+      log("CLI is outdated for this version of UI");
     }
 
-    if (
-      error ||
-      !cliBinPath ||
-      cliCurrent === false ||
-      cliCurrent != cliVersion
-    ) {
+    if (!startedCore) {
       log("Starting core process inline");
       process.env.LOG_REQUESTS = "1";
       ({ gracefulShutdown } = await start(19047, 19048));
@@ -128,7 +126,7 @@ const keepAliveLoop = async () => {
   } else if (
     typeof alive == "string" &&
     semver.valid(alive) &&
-    semver.gt(alive, cliVersion)
+    semver.gt(cliVersion, alive)
   ) {
     log("Core process is outdated. Restarting now...");
     const res = await stop();
