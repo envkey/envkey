@@ -63,6 +63,9 @@ const config: webpack.Configuration = {
     },
   },
   plugins: [
+    new webpack.EnvironmentPlugin({
+      NODE_ENV: "production",
+    }),
     new WebpackBuildNotifierPlugin({
       title: "EnvKey Api Webpack Build",
       sound: false,
