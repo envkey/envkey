@@ -36,6 +36,8 @@ const DEFAULT_REENCRYPTION_MIN_DELAY = 500;
 const DEFAULT_REENCRYPTION_JITTER = 500;
 const DEFAULT_REENCRYPTION_BATCH_SIZE = 5;
 
+const REENCRYPTION_MAX_FETCH_ENVS_ATTEMPTS = 5;
+
 clientAction<Client.Action.ClientActions["AddTrustedSessionPubkey"]>({
   type: "clientAction",
   actionType: Client.ActionType.ADD_TRUSTED_SESSION_PUBKEY,
@@ -553,50 +555,115 @@ clientAction<
       envParentIds.add(envParentId);
     }
 
-    const requiredEnvIds = new Set<string>();
-    const requiredChangesetIds = new Set<string>();
-    for (let envParentId of envParentIds) {
-      if (envsNeedFetch(state, envParentId)) {
-        requiredEnvIds.add(envParentId);
+    const fetchOutdatedEnvs = async () => {
+      const requiredEnvIds = new Set<string>();
+      const requiredChangesetIds = new Set<string>();
+      for (let envParentId of envParentIds) {
+        if (envsNeedFetch(state, envParentId)) {
+          requiredEnvIds.add(envParentId);
+        }
+        if (changesetsNeedFetch(state, envParentId)) {
+          requiredChangesetIds.add(envParentId);
+        }
       }
-      if (changesetsNeedFetch(state, envParentId)) {
-        requiredChangesetIds.add(envParentId);
-      }
-    }
 
-    if (requiredEnvIds.size > 0 || requiredChangesetIds.size > 0) {
-      const fetchRequiredEnvsRes = await fetchRequiredEnvs(
+      if (requiredEnvIds.size > 0 || requiredChangesetIds.size > 0) {
+        const fetchRequiredEnvsRes = await fetchRequiredEnvs(
+          state,
+          requiredEnvIds,
+          requiredChangesetIds,
+          { ...context, skipProcessRevocationRequests: true },
+          true
+        );
+
+        if (fetchRequiredEnvsRes) {
+          if (!fetchRequiredEnvsRes.success) {
+            return dispatchFailure(
+              (fetchRequiredEnvsRes.resultAction as Client.Action.FailureAction)
+                .payload as Api.Net.ErrorResult,
+              { ...context }
+            );
+          }
+          state = fetchRequiredEnvsRes.state;
+        }
+      }
+    };
+
+    await fetchOutdatedEnvs();
+
+    let keys: Api.Net.EnvParams["keys"] | undefined;
+    let blobs: Api.Net.EnvParams["blobs"] | undefined;
+    let environmentKeysByComposite: Record<string, string> | undefined;
+    let changesetKeysByEnvironmentId: Record<string, string> | undefined;
+
+    const setEnvParams = async () => {
+      ({
+        keys,
+        blobs,
+        environmentKeysByComposite,
+        changesetKeysByEnvironmentId,
+      } = await envParamsForEnvironments({
         state,
-        requiredEnvIds,
-        requiredChangesetIds,
-        { ...context, skipProcessRevocationRequests: true },
-        true
-      );
+        environmentIds: reencryptEnvironmentIds,
+        rotateKeys: true,
+        reencryptChangesets: true,
+        context,
+      }));
+    };
 
-      if (fetchRequiredEnvsRes) {
-        if (!fetchRequiredEnvsRes.success) {
+    let numRetries = 0;
+    while (
+      !(
+        keys &&
+        blobs &&
+        environmentKeysByComposite &&
+        changesetKeysByEnvironmentId
+      )
+    ) {
+      try {
+        await setEnvParams();
+        break;
+      } catch (err) {
+        if (
+          (err as Error).message.includes("latest envs not fetched") ||
+          (err as Error).message.includes("latest changesets not fetched")
+        ) {
+          await fetchOutdatedEnvs();
+          numRetries++;
+
+          if (numRetries >= REENCRYPTION_MAX_FETCH_ENVS_ATTEMPTS) {
+            break;
+          }
+        } else {
           return dispatchFailure(
-            (fetchRequiredEnvsRes.resultAction as Client.Action.FailureAction)
-              .payload as Api.Net.ErrorResult,
+            {
+              type: "clientError",
+              error: err,
+            },
             { ...context }
           );
         }
-        state = fetchRequiredEnvsRes.state;
       }
     }
 
-    const {
-      keys,
-      blobs,
-      environmentKeysByComposite,
-      changesetKeysByEnvironmentId,
-    } = await envParamsForEnvironments({
-      state,
-      environmentIds: reencryptEnvironmentIds,
-      rotateKeys: true,
-      reencryptChangesets: true,
-      context,
-    });
+    if (
+      !(
+        keys &&
+        blobs &&
+        environmentKeysByComposite &&
+        changesetKeysByEnvironmentId
+      )
+    ) {
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: new Error(
+            `Could not fetch latest envs and changesets for re-encryption after ${numRetries} attempts`
+          ),
+        },
+        { ...context }
+      );
+    }
 
     let encryptedByTrustChain: string | undefined;
     const hasKeyables =
@@ -663,7 +730,7 @@ clientAction<
           ? {
               [metaComposite]: {
                 env: metaState.env,
-                key: environmentKeysByComposite[metaComposite],
+                key: environmentKeysByComposite![metaComposite],
               },
             }
           : {}),
@@ -672,7 +739,7 @@ clientAction<
           ? {
               [envComposite]: {
                 env: envState.env,
-                key: environmentKeysByComposite[envComposite],
+                key: environmentKeysByComposite![envComposite],
               },
             }
           : {}),
@@ -681,7 +748,7 @@ clientAction<
           ? {
               [inheritsComposite]: {
                 env: inheritsState.env,
-                key: environmentKeysByComposite[inheritsComposite],
+                key: environmentKeysByComposite![inheritsComposite],
               },
             }
           : {}),
@@ -704,7 +771,7 @@ clientAction<
           });
 
           if (state.envs[composite]) {
-            const key = environmentKeysByComposite[composite];
+            const key = environmentKeysByComposite![composite];
             if (!key) {
               throw new Error("Missing inheritanceOverrides key");
             }
@@ -720,7 +787,7 @@ clientAction<
       (agg, environmentId) => ({
         ...agg,
         [environmentId]: {
-          key: changesetKeysByEnvironmentId[environmentId],
+          key: changesetKeysByEnvironmentId![environmentId],
           changesets: state.changesets[environmentId]?.changesets ?? [],
         },
       }),

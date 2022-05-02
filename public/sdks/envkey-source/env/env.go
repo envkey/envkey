@@ -132,7 +132,7 @@ func genLocalKey(orgId string, appId string, verboseOutput bool, localDevHost bo
 	cliPath, err := exec.LookPath("envkey")
 
 	if err != nil {
-		return "", errors.New("EnvKey CLI isn't installed or isn't in PATH")
+		return "", nil
 	}
 
 	if verboseOutput {

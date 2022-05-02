@@ -71,9 +71,16 @@ const clientParams: Client.ClientParams<"app"> = {
 
     const [coreState, _setCoreState] = useState<Client.State>(),
       coreStateRef = useRef(coreState),
-      setCoreState = (state: Client.State) => {
-        coreStateRef.current = state;
-        _setCoreState(state);
+      setCoreStateIfLatest = (state: Client.State) => {
+        if (
+          // ensure state updates aren't applied out-of-order (can cause rare race conditions)
+          !coreStateRef.current?.accountLastActiveAt ||
+          !state.accountLastActiveAt ||
+          state.accountLastActiveAt > coreStateRef.current.accountLastActiveAt
+        ) {
+          coreStateRef.current = state;
+          _setCoreState(state);
+        }
       },
       [uiState, _setLocalUiState] = useState(defaultLocalState),
       uiStateRef = useRef(uiState),
@@ -105,7 +112,7 @@ const clientParams: Client.ClientParams<"app"> = {
       fetchingStateRef = useRef(false),
       queueFetchStateRef = useRef(false),
       updateState = (state: Client.State) => {
-        setCoreState(state);
+        setCoreStateIfLatest(state);
         const accountId = uiStateRef.current.accountId;
         const loadedAccountId = uiStateRef.current.loadedAccountId;
         if (accountId != loadedAccountId) {
@@ -137,7 +144,9 @@ const clientParams: Client.ClientParams<"app"> = {
         const accountId = uiStateRef.current.accountId;
 
         await fetchState(accountId)
-          .then(updateState)
+          .then(async (state) => {
+            return updateState(state);
+          })
           .catch((err) => {
             console.error("fetchCoreState -> fetchState error", err);
             throw err;
@@ -177,7 +186,7 @@ const clientParams: Client.ClientParams<"app"> = {
         if (!skipStateUpdate && res.diffs && res.diffs.length > 0) {
           newState = R.clone(coreStateRef.current!);
           applyPatch(newState, res.diffs);
-          setCoreState(newState);
+          setCoreStateIfLatest(newState);
         }
 
         // give state a chance to update
@@ -204,20 +213,22 @@ const clientParams: Client.ClientParams<"app"> = {
       const client = new ReconnectingWebSocket("ws://localhost:19048");
       client.addEventListener("open", onSocketUpdate);
       client.addEventListener("message", (e) => {
-        const msg = JSON.parse(e.data) as Client.LocalSocketMessage;
+        (async () => {
+          const msg = JSON.parse(e.data) as Client.LocalSocketMessage;
 
-        if (msg.type == "update") {
-          onSocketUpdate(e);
-        } else if (msg.type == "diffs") {
-          const newState = R.clone(coreStateRef.current!);
-          applyPatch(newState, msg.diffs);
-          setCoreState(newState);
-        } else {
-          console.log(
-            "Received unknown socket message for core proc: ",
-            e.data
-          );
-        }
+          if (msg.type == "update") {
+            onSocketUpdate(e);
+          } else if (msg.type == "diffs") {
+            const newState = R.clone(coreStateRef.current!);
+            applyPatch(newState, msg.diffs);
+            setCoreStateIfLatest(newState);
+          } else {
+            console.log(
+              "Received unknown socket message for core proc: ",
+              e.data
+            );
+          }
+        })();
       });
 
       fetchCoreState();

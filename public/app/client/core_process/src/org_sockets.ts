@@ -100,6 +100,7 @@ export const resolveOrgSockets = async (
               log(`Socket ping timed out. closing...`, { userId });
               const store = storeByUserId[userId];
               socket.close();
+              delete receivedPong[userId];
               if (store) {
                 refreshSessions(store.getState(), _localSocketUpdate, [userId]);
               }
@@ -141,7 +142,9 @@ const connectSocket = async (
     });
 
     socket.on("pong", () => {
-      receivedPong[userId] = true;
+      if (receivedPong[userId] === false) {
+        receivedPong[userId] = true;
+      }
     });
 
     // getReconnectAttempt allows event listeners, defined below, to access the

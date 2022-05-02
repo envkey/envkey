@@ -444,6 +444,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         numPendingConflicts,
       };
     }, [
+      props.core.graphUpdatedAt,
       props.core.pendingEnvsUpdatedAt,
       JSON.stringify(props.core.envsFetchedAt),
     ]);
