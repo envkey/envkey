@@ -1,5 +1,3 @@
-Welcome to the [EnvKey](https://www.envkey.com) v2 monorepo! All EnvKey's open source code lives here.
-
 ## Magical secure app config
 
 - End-to-end encryption for API keys and other secrets.
