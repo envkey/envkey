@@ -1,12 +1,14 @@
 Welcome to the [EnvKey](https://www.envkey.com) v2 monorepo! All EnvKey's open source code lives here.
 
-## End-To-End Encrypted Environments
+## Magical secure app config
+
+- End-to-end encryption for API keys and other secrets.
+
+- Live reload for environment variables.
 
 - Fixes configuration sprawl and sloppy secrets management.
 
-- Prevents breaches and outages.
-
-- Saves countless engineer-hours.
+- Prevents config bugs and saves countless engineer-hours.
 
 ![EnvKey UI](https://user-images.githubusercontent.com/545350/150350438-44ff380c-c346-41d0-8e39-f41e9ad73110.png)
 
