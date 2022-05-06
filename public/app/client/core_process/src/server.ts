@@ -274,19 +274,23 @@ export const start = async (port = 19047, wsport = 19048) => {
     })
   );
 
-  app.use(function neverShouldGetHere(
+  // uncaught error handling
+  app.use(function (
     error: Error,
     req: Request,
     res: Response,
     next: NextFunction
   ) {
-    logStderr("Express Core Process Caught Unhandled Error!", { err: error });
+    logStderr("Core Process Unhandled Error", { err: error });
+
     res.status(500).send({
       type: "error",
       error: true,
       errorStatus: 500,
       errorReason: error.message,
     });
+
+    gracefulShutdown(undefined, 1);
   });
 
   let server: ReturnType<typeof app.listen>;
@@ -353,7 +357,7 @@ export const start = async (port = 19047, wsport = 19048) => {
     server.close();
   };
 
-  const gracefulShutdown = (onShutdown?: () => void) => {
+  const gracefulShutdown = (onShutdown?: () => void, code?: number) => {
     log(`Shutting down gracefully...`);
     clearTimers();
     shutdownNetworking();
@@ -364,10 +368,10 @@ export const start = async (port = 19047, wsport = 19048) => {
       log(`Persisting final state before shutdown...`);
       processPersistStateQueue().then(() => {
         log(`Finished persisting state. Shutting down.`);
-        onShutdown ? onShutdown() : process.exit(0);
+        onShutdown ? onShutdown() : process.exit(code ?? 0);
       });
     } else {
-      onShutdown ? onShutdown() : process.exit(0);
+      onShutdown ? onShutdown() : process.exit(code ?? 0);
     }
   };
 
@@ -389,15 +393,14 @@ export const start = async (port = 19047, wsport = 19048) => {
           "Workerpool Worker terminated Unexpectedly"
         )
       ) {
-        log(`Exiting due to uncaught workerpool error.`);
-        gracefulShutdown();
+        log(`Uncaught workerpool error.`);
+        gracefulShutdown(undefined, 1);
       }
     });
 
     process.on("uncaughtException", (err) => {
       log(`Core process uncaughtException.`, { err });
-      // log(`Exiting due to uncaughtException.`);
-      // gracefulShutdown();
+      gracefulShutdown(undefined, 1);
     });
   }
 

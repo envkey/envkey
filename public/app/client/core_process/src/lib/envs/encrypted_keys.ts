@@ -19,7 +19,7 @@ import {
 } from "@core/lib/graph";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import { encrypt } from "@core/lib/crypto/proxy";
-import { secureRandomAlphanumeric } from "@core/lib/crypto/utils";
+import { symmetricEncryptionKey } from "@core/lib/crypto/utils";
 import { verifyOrgKeyable } from "../trust";
 import {
   getAuth,
@@ -123,18 +123,18 @@ export const encryptedKeyParamsForEnvironments = async (params: {
     if (!(newKeysOnly && existingEnvSymmetricKey)) {
       envSymmetricKey =
         environmentKeysByComposite[envComposite] ?? // in case it's already been set via a sub-environment
-        getNewSymmetricEncryptionKey();
+        symmetricEncryptionKey();
       environmentKeysByComposite[envComposite] = envSymmetricKey;
     }
 
     if (!(newKeysOnly && existingMetaSymmetricKey)) {
-      metaSymmetricKey = getNewSymmetricEncryptionKey();
+      metaSymmetricKey = symmetricEncryptionKey();
       environmentKeysByComposite[metaComposite] = metaSymmetricKey;
     }
 
     if (!localsUserId) {
       if (!(newKeysOnly && existingInheritsSymmetricKey)) {
-        inheritsSymmetricKey = getNewSymmetricEncryptionKey();
+        inheritsSymmetricKey = symmetricEncryptionKey();
         environmentKeysByComposite[inheritsComposite] = inheritsSymmetricKey;
       }
     }
@@ -148,7 +148,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
       if (!(newKeysOnly && existingParentSymmetricKey)) {
         parentEnvSymmetricKey =
           environmentKeysByComposite[parentEnvComposite] ?? // in case it's already been set via parent environment
-          getNewSymmetricEncryptionKey();
+          symmetricEncryptionKey();
         environmentKeysByComposite[parentEnvComposite] = parentEnvSymmetricKey;
       }
     }
@@ -156,13 +156,13 @@ export const encryptedKeyParamsForEnvironments = async (params: {
     let changesetsToReencrypt: Client.Env.Changeset[] | undefined;
     if (pending && !reencryptChangesets) {
       changesetsSymmetricKey =
-        state.changesets[environmentId]?.key ?? getNewSymmetricEncryptionKey();
+        state.changesets[environmentId]?.key ?? symmetricEncryptionKey();
     } else if (reencryptChangesets) {
       ensureChangesetsFetched(state, envParentId);
 
       changesetsToReencrypt = state.changesets[environmentId]?.changesets;
       if (changesetsToReencrypt) {
-        changesetsSymmetricKey = getNewSymmetricEncryptionKey();
+        changesetsSymmetricKey = symmetricEncryptionKey();
       }
     }
 
@@ -674,8 +674,6 @@ export const encryptedKeyParamsForEnvironments = async (params: {
   };
 };
 
-const getNewSymmetricEncryptionKey = () => secureRandomAlphanumeric(22);
-
 const getInheritingKeyableParents = (params: {
   state: Client.State;
   baseEnvironment: Model.Environment;
@@ -753,6 +751,10 @@ const addUserInheritanceOverrides = (params: {
   } = params;
 
   for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
+    const inheritingEnvironment = state.graph[
+      inheritingEnvironmentId
+    ] as Model.Environment;
+
     if (
       !(
         environmentIdsSet.has(inheritingEnvironmentId) ||
@@ -761,10 +763,6 @@ const addUserInheritanceOverrides = (params: {
     ) {
       continue;
     }
-
-    const inheritingEnvironment = state.graph[
-      inheritingEnvironmentId
-    ] as Model.Environment;
 
     const composite = getUserEncryptedKeyOrBlobComposite({
       environmentId: inheritingEnvironmentId,
@@ -804,7 +802,7 @@ const addUserInheritanceOverrides = (params: {
       };
 
       if (!(newKeysOnly && existing)) {
-        const inheritanceOverridesKey = getNewSymmetricEncryptionKey();
+        const inheritanceOverridesKey = symmetricEncryptionKey();
         environmentKeysByComposite[composite] = inheritanceOverridesKey;
       }
 
@@ -950,8 +948,7 @@ const addKeyableParentInheritanceOverrides = (params: {
 
         if (!(newKeysOnly && existing)) {
           const key =
-            environmentKeysByComposite[composite] ??
-            getNewSymmetricEncryptionKey();
+            environmentKeysByComposite[composite] ?? symmetricEncryptionKey();
           environmentKeysByComposite[composite] = key;
           toEncrypt.push([
             [

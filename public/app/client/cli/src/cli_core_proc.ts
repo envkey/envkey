@@ -1,3 +1,4 @@
+import "source-map-support/register";
 // @ts-nocheck
 import yargsParser from "yargs-parser";
 import { stopCore } from "./lib/core";

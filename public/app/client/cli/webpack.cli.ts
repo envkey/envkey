@@ -31,7 +31,7 @@ module.exports = {
     "envkey-cli": "./src/index.ts",
     "envkey-core": "./src/cli_core_proc.ts",
   },
-  devtool: "hidden-source-map",
+  devtool: "source-map",
   target: "node",
   optimization: {
     // since final tar.gz isn't different with terser enabled, we're disabling it due to out-of-memory error in Terser.

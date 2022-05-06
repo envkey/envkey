@@ -9,6 +9,7 @@ export const sha256 = (s: string) => codec.hex.fromBits(hash.sha256.hash(s)),
     const bytes = randomBytes(Math.ceil(len * 0.75));
     return encodeBase58(Buffer.from(bytes)).slice(0, len);
   },
+  symmetricEncryptionKey = () => secureRandomAlphanumeric(22),
   validatePassphrase = (val: string, inputs: string[] = []): true | string => {
     if (val.length < 10) {
       return "Must be at least 10 characters.";
@@ -49,7 +50,7 @@ export const sha256 = (s: string) => codec.hex.fromBits(hash.sha256.hash(s)),
     }
   },
   // Outputs a hash of the cert only, separated every two chars by a colon for readability.
-// This is the standard way SAML providers display cert fingerprints.
+  // This is the standard way SAML providers display cert fingerprints.
   samlFingerprint = (
     pem: string,
     algo: "sha1" | "sha256",

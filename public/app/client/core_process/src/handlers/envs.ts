@@ -1091,7 +1091,7 @@ clientAction<
     return {
       userIds: "all",
       envParentIds: new Set(scopeEnvironments.map(R.prop("envParentId"))),
-      environmentIds: new Set(scopeEnvironments.map(R.prop("id"))),
+      keyableParentIds: "all",
     };
   },
 });
@@ -1128,7 +1128,7 @@ clientAction<
     return {
       userIds: "all",
       envParentIds: new Set(scopeEnvironments.map(R.prop("envParentId"))),
-      environmentIds: new Set(scopeEnvironments.map(R.prop("id"))),
+      keyableParentIds: "all",
     };
   },
 });
