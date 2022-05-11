@@ -1,9 +1,9 @@
-version: 2.0.54
+version: 2.0.55
 files:
-  - url: EnvKey-2.0.54.AppImage
-    sha512: prvvhrTHbsGOh4GKOVNiacDU3ci9217IIM3smQ9gIrskqaY19r1rbMgUADHxvzLtKH+S7eOPUPCyAdvd/1/HAQ==
-    size: 89693572
-    blockMapSize: 93592
-path: EnvKey-2.0.54.AppImage
-sha512: prvvhrTHbsGOh4GKOVNiacDU3ci9217IIM3smQ9gIrskqaY19r1rbMgUADHxvzLtKH+S7eOPUPCyAdvd/1/HAQ==
-releaseDate: '2022-05-06T00:29:46.447Z'
+  - url: EnvKey-2.0.55.AppImage
+    sha512: M0G0hP0jhGoru9JS5h0cTMRFWbMMwOX4y2k+SLbB8SneMDMRnF9zYsWTPt7o5iizMKdGM4L9WU3N9+j9FG4GlA==
+    size: 89693851
+    blockMapSize: 93871
+path: EnvKey-2.0.55.AppImage
+sha512: M0G0hP0jhGoru9JS5h0cTMRFWbMMwOX4y2k+SLbB8SneMDMRnF9zYsWTPt7o5iizMKdGM4L9WU3N9+j9FG4GlA==
+releaseDate: '2022-05-11T22:17:15.522Z'

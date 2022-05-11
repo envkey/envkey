@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Component } from "@ui_types";
 import { wait } from "@core/lib/utils/wait";
-import { Client } from "@core/types";
-import copy from "copy-text-to-clipboard";
+import copyToClipboard from "copy-text-to-clipboard";
 
 export const CopyableDisplay: Component<
   {},
@@ -14,7 +13,7 @@ export const CopyableDisplay: Component<
 > = ({ label, value, className, dispatch }) => {
   const [copied, setCopied] = useState(false);
   const copy = async (value: string) => {
-    copy(value);
+    copyToClipboard(value);
 
     setCopied(true);
     wait(2000).then(() => setCopied(false));

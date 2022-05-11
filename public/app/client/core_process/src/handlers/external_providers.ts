@@ -1,9 +1,11 @@
 import { clientAction, dispatch } from "../handler";
 import { Api, Client } from "@core/types";
-import { statusProducers, updateSettingsProducers } from "../lib/status";
+import { statusProducers } from "../lib/status";
 import open from "open";
 import { wait } from "@core/lib/utils/wait";
 import { log } from "@core/lib/utils/logger";
+import { decode as decodeBase58 } from "bs58";
+import naclUtil from "tweetnacl-util";
 
 clientAction<Api.Action.RequestActions["CreateOrgSamlProvider"]>({
   type: "apiRequestAction",
@@ -587,10 +589,9 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForInvite"]>(
         provider,
       } = payload;
       let externalAuthSessionId: string | undefined;
-      const hostUrlEncoded = emailToken.split("_")[2];
-      const hostUrl = hostUrlEncoded
-        ? Buffer.from(hostUrlEncoded, "base64").toString("utf8")
-        : undefined;
+      const hostUrl = naclUtil.encodeUTF8(
+        decodeBase58(emailToken.split("_")[2])
+      );
       const reqContext = { ...context, hostUrl };
 
       const sessionPayload: Api.Net.CreateExternalAuthSession = {
