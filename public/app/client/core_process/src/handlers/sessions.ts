@@ -186,7 +186,6 @@ clientAction<
   actionType: Client.ActionType.GET_SESSION,
   stateProducer: (draft) => {
     draft.isFetchingSession = true;
-    delete draft.fetchSessionError;
   },
   failureStateProducer: (draft, { payload }) => {
     draft.fetchSessionError = payload;
@@ -194,7 +193,10 @@ clientAction<
   endStateProducer: (draft) => {
     delete draft.isFetchingSession;
   },
-  successStateProducer: decryptedEnvsStateProducer,
+  successStateProducer: (draft, action) => {
+    delete draft.fetchSessionError;
+    return decryptedEnvsStateProducer(draft, action);
+  },
   successHandler: async (state, action, res, context) => {
     if (res.notModified) {
       return;
@@ -332,7 +334,7 @@ clientAction<Client.Action.ClientActions["SignOut"]>({
           type: Api.ActionType.CLEAR_TOKEN,
           payload: {},
         },
-        { ...context, rootClientAction: action }
+        { ...context, rootClientAction: action, accountIdOrCliKey: accountId }
       );
     } catch (err) {}
 

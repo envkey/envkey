@@ -946,6 +946,14 @@ const fetchActionProps = (
           auth.type == "tokenAuthContext" ? auth.orgUserDevice.id : undefined,
         actorId: auth.user.id,
       };
+    } else if (
+      action.type == Api.ActionType.UNSUBSCRIBE_CLOUD_LIFECYCLE_EMAILS
+    ) {
+      return {
+        orgId: action.payload.orgId,
+        deviceId: undefined,
+        actorId: action.payload.orgUserId,
+      };
     } else if (auth) {
       return {
         orgId: auth.org.id,
@@ -1763,6 +1771,15 @@ const getSummary = (
 
     case Api.ActionType.SET_APP_ALLOWED_IPS:
       return `+update+ trusted IPs for app %${action.payload.id}%`;
+
+    case Api.ActionType.UNSUBSCRIBE_CLOUD_LIFECYCLE_EMAILS:
+      return `+unsubscribe+ from cloud lifecycle emails`;
+
+    case Api.ActionType.STARTED_ORG_IMPORT:
+      return `+start+ org import`;
+
+    case Api.ActionType.FINISHED_ORG_IMPORT:
+      return `+finish+ org import`;
 
     case Api.ActionType.UPDATE_ENVS:
       return null; // handled by LogEnvsUpdated component

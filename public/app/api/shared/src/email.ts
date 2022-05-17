@@ -8,8 +8,11 @@ import { newMemoryQueue } from "./memory_queue";
 import { marked as markedImport } from "marked";
 const marked = require("marked") as typeof markedImport;
 
+export const LIFECYCLE_EMAILS_ENABLED = "lifecycle-emails-enabled";
+
 type CustomEmail = {
   to: string;
+  from?: string;
   subject: string;
   bodyMarkdown: string;
 };
@@ -83,9 +86,9 @@ export const getCommunityTransporter = () => {
 // sendEmail will immediately attempt to send the mail, then queue retries if it fails
 export const sendEmail = async (email: CustomEmail) => {
   const { to, subject, bodyMarkdown } = email;
-  const emailData = {
+  const emailData: Mail.Options = {
     to,
-    from: `EnvKey <${process.env.SENDER_EMAIL}>`,
+    from: email.from ?? `EnvKey <${process.env.SENDER_EMAIL}>`,
     subject,
     text: marked(bodyMarkdown, { renderer: plainTextRenderer }),
     html: marked(bodyMarkdown),

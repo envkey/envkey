@@ -25,6 +25,7 @@ import { getOrg } from "../models/orgs";
 import produce, { Draft } from "immer";
 import { isValidIPOrCIDR, ipMatchesAny } from "@core/lib/utils/ip";
 import { log } from "@core/lib/utils/logger";
+import { env } from "../env";
 
 apiAction<
   Api.Action.RequestActions["UpdateOrgSettings"],
@@ -68,6 +69,73 @@ apiAction<
         [auth.org.id]: {
           ...auth.org,
           name: payload.name,
+          updatedAt: now,
+        },
+      },
+      logTargetIds: [],
+    };
+  },
+});
+
+apiAction<
+  Api.Action.RequestActions["StartedOrgImport"],
+  Api.Net.ApiResultTypes["StartedOrgImport"]
+>({
+  type: Api.ActionType.STARTED_ORG_IMPORT,
+  graphAction: true,
+  authenticated: true,
+  graphScopes: [(auth) => () => [auth.user.skey + "$"]],
+  graphAuthorizer: async (action, orgGraph, userGraph, auth) =>
+    authz.canRenameOrg(userGraph, auth.user.id),
+  graphHandler: async ({ payload }, orgGraph, auth, now) => {
+    let updatedGraph = orgGraph;
+
+    if (env.IS_CLOUD) {
+      // on cloud, don't send lifecycle emails if it's an imported org
+      const { orgUsers } = graphTypes(orgGraph);
+
+      updatedGraph = produce(updatedGraph, (graphDraft) => {
+        for (let { id } of orgUsers) {
+          (graphDraft[id] as Draft<Api.Db.OrgUser>).tertiaryIndex = undefined;
+          (graphDraft[id] as Draft<Api.Db.OrgUser>).updatedAt = now;
+        }
+      });
+    }
+
+    return {
+      type: "graphHandlerResult",
+      graph: {
+        ...updatedGraph,
+        [auth.org.id]: {
+          ...(updatedGraph[auth.org.id] as Api.Db.Org),
+          startedOrgImportAt: now,
+          finishedOrgImportAt: undefined,
+          updatedAt: now,
+        },
+      },
+      logTargetIds: [],
+    };
+  },
+});
+
+apiAction<
+  Api.Action.RequestActions["FinishedOrgImport"],
+  Api.Net.ApiResultTypes["FinishedOrgImport"]
+>({
+  type: Api.ActionType.FINISHED_ORG_IMPORT,
+  graphAction: true,
+  authenticated: true,
+  graphScopes: [(auth) => () => [auth.user.skey + "$"]],
+  graphAuthorizer: async (action, orgGraph, userGraph, auth) =>
+    authz.canRenameOrg(userGraph, auth.user.id),
+  graphHandler: async ({ payload }, orgGraph, auth, now) => {
+    return {
+      type: "graphHandlerResult",
+      graph: {
+        ...orgGraph,
+        [auth.org.id]: {
+          ...(orgGraph[auth.org.id] as Api.Db.Org),
+          finishedOrgImportAt: now,
           updatedAt: now,
         },
       },
@@ -388,6 +456,7 @@ apiAction<
         softDeleteKeys: Object.values(orgGraph).map(pick(["pkey", "skey"])),
         hardDeleteEncryptedKeyParams,
         hardDeleteEncryptedBlobParams: [{ orgId: auth.org.id }],
+        puts: [{ ...auth.org, deletedAt: now }],
       },
       logTargetIds: [],
       clearUserSockets: [{ orgId: auth.org.id }],

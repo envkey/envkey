@@ -102,6 +102,9 @@ export namespace Db {
       replicatedAt: z.number(),
       signedLicense: z.string().optional(),
       selfHostedFailoverRegion: z.string().optional(),
+      generatedAnyEnvkey: z.boolean().optional(),
+      startedOrgImportAt: z.number().optional(),
+      finishedOrgImportAt: z.number().optional(),
     })
     .merge(Model.OrgSchema)
     .merge(DbObjectSchema);

@@ -8,7 +8,12 @@ import {
   hostUrl,
 } from "./helpers/test_helper";
 import { getUserEncryptedKeys } from "@api_shared/blob";
-import { query, getDb } from "@api_shared/db";
+import {
+  query,
+  getDb,
+  getNewTransactionConn,
+  releaseTransaction,
+} from "@api_shared/db";
 import * as R from "ramda";
 import { getAuth, getEnvWithMeta } from "@core/lib/client";
 import { registerWithEmail, loadAccount } from "./helpers/auth_helper";
@@ -1777,7 +1782,7 @@ describe("orgs", () => {
     // register a new org to import into
     resetTestId(); // otherwise creating a second org causes device context issues
 
-    const { userId: owner2Id } = await registerWithEmail(email);
+    const { userId: owner2Id, orgId: org2Id } = await registerWithEmail(email);
 
     const importPromise = dispatch(
       {
@@ -1806,6 +1811,10 @@ describe("orgs", () => {
     state = getState(owner2Id);
     expect(state.isImportingOrg).toBeUndefined();
     expect(state.importOrgStatus).toBeUndefined();
+
+    let dbOrg = await getOrg(org2Id, undefined);
+    expect(dbOrg?.startedOrgImportAt).toBeNumber();
+    expect(dbOrg?.finishedOrgImportAt).toBeNumber();
 
     const byType = graphTypes(state.graph);
 
@@ -1954,6 +1963,7 @@ describe("orgs", () => {
     });
 
     // console.log("import finished");
+
     // console.log("invite a new user, accept, make an update");
     const invite = await inviteAdminUser(ownerId);
     await acceptInvite(invite);

@@ -1,10 +1,8 @@
-import { env } from "../../../shared/src/env";
-import { Api, Auth } from "@core/types";
+import { Api } from "@core/types";
 import { handleAction } from "../../../shared/src/handler";
 import * as express from "express";
 import { errorFallbackMiddleware, getErrorHandler } from "./errors";
 import { extractIpHost, okResult } from "./routes/route_helpers";
-
 import { bindFetchRoutes } from "./routes/fetch_routes";
 import { log } from "@core/lib/utils/logger";
 

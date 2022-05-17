@@ -23,6 +23,8 @@ import { encode as encodeBase58 } from "bs58";
 import { getFetchActionLogTargetIdsFn } from "../models/logs";
 import { scimCandidateDbKey } from "../models/provisioning";
 import { getDeleteUsersWithTransactionItems } from "../blob";
+import { env } from "../env";
+import { LIFECYCLE_EMAILS_ENABLED } from "../email";
 
 apiAction<
   Api.Action.RequestActions["CreateInvite"],
@@ -569,6 +571,14 @@ apiAction<
         deviceIds: [deviceId],
         inviteAcceptedAt: now,
         updatedAt: now,
+
+        ...(env.IS_CLOUD &&
+        (auth.org as any).lifecycleEmailsEnabled &&
+        !auth.org.startedOrgImportAt
+          ? {
+              tertiaryIndex: LIFECYCLE_EMAILS_ENABLED,
+            }
+          : {}),
       };
 
       const replacementDrafts = graphTypes(draft)

@@ -1,4 +1,10 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import { Link } from "react-router-dom";
 import { Component } from "@ui_types";
 import { Client, Model, Rbac } from "@core/types";
@@ -20,11 +26,14 @@ import { wait } from "@core/lib/utils/wait";
 // controls rate off firing off ACCOUNT_ACTIVE events to prevent core proc from clearing cache when ui is active
 // refer to core proc IDLE_ACCOUNT_CACHE_EXPIRATION
 const ACCOUNT_ACTIVE_BUFFER = 1000 * 60 * 10; // 10 minutes
+const SESSION_ERROR_RETRY_DELAY = 7000;
 
 let initialOrgRoleId: string | undefined;
 let initialOrgPermissionsJson: string | undefined;
 
 let lastUserInteraction = Date.now();
+
+let sessionRetryTimeout: ReturnType<typeof setTimeout> | undefined;
 
 export const SignedInAccountContainer: Component<{ orgId: string }> = (
   props
@@ -56,13 +65,19 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     }
   }
 
-  // clear selected account on unmount
   useEffect(
     () => () => {
+      // clear selected account on unmount
       props.setUiState({
         accountId: undefined,
         loadedAccountId: undefined,
       });
+
+      // also clear session retry loop if active
+      if (sessionRetryTimeout) {
+        clearTimeout(sessionRetryTimeout);
+        sessionRetryTimeout = undefined;
+      }
     },
     []
   );
@@ -183,13 +198,6 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     }
   }, [props.core.throttleError]);
 
-  const [numFetchedSessionsForAccountId, setNumFetchedSessionsForAccountId] =
-    useState<[string, number]>([props.ui.loadedAccountId ?? "", 0]);
-
-  useEffect(() => {
-    setNumFetchedSessionsForAccountId([props.ui.loadedAccountId ?? "", 0]);
-  }, [props.ui.loadedAccountId]);
-
   const shouldFetchSession = Boolean(
     props.ui.loadedAccountId &&
       auth &&
@@ -198,10 +206,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       (!props.core.graphUpdatedAt ||
         !props.core.graph[props.ui.loadedAccountId]) &&
       !props.core.isFetchingSession &&
-      !props.core.fetchSessionError &&
-      (!numFetchedSessionsForAccountId ||
-        numFetchedSessionsForAccountId[0] != props.ui.loadedAccountId ||
-        numFetchedSessionsForAccountId[1] < 3)
+      !props.core.fetchSessionError
   );
 
   useLayoutEffect(() => {
@@ -210,13 +215,11 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         if (document.documentElement.classList.contains("loaded")) {
           document.documentElement.classList.remove("loaded");
         }
-
-        const numFetches = numFetchedSessionsForAccountId[1];
-        if (numFetches > 0) {
-          await wait(numFetches * 1000);
-        }
-
-        props.dispatch({ type: Client.ActionType.GET_SESSION });
+        console.log("fetching session");
+        const res = await props.dispatch({
+          type: Client.ActionType.GET_SESSION,
+        });
+        console.log(res);
       }
     })();
   }, [props.ui.loadedAccountId, shouldFetchSession]);
@@ -500,13 +503,42 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     initialOrgPermissionsJson = orgPermissionsJson;
   }, [auth?.userId, orgRole?.id, orgPermissionsJson]);
 
+  const sessionRetry = useCallback(() => {
+    (async () => {
+      if (auth && props.core.fetchSessionError) {
+        console.log("Retry GET_SESSION");
+        const res = await props.dispatch({
+          type: Client.ActionType.GET_SESSION,
+        });
+        if (!res.success) {
+          if (sessionRetryTimeout) {
+            clearTimeout(sessionRetryTimeout);
+          }
+          sessionRetryTimeout = setTimeout(
+            sessionRetry,
+            SESSION_ERROR_RETRY_DELAY
+          );
+        }
+      }
+    })();
+  }, [auth?.userId, Boolean(props.core.fetchSessionError)]);
+
   useEffect(() => {
     if (auth && props.core.fetchSessionError) {
-      console.log("fetchSessionErr", {
+      console.log("GET_SESSION error", {
         err: props.core.fetchSessionError,
       });
+
+      if (sessionRetryTimeout) {
+        clearTimeout(sessionRetryTimeout);
+      }
+      console.log("start GET_SESSION retry loop");
+      sessionRetry();
+    } else if (sessionRetryTimeout) {
+      clearTimeout(sessionRetryTimeout);
+      sessionRetryTimeout = undefined;
     }
-  }, [auth?.userId, JSON.stringify(props.core.fetchSessionError)]);
+  }, [auth?.userId, Boolean(props.core.fetchSessionError)]);
 
   const shouldRender =
     (auth && props.core.fetchSessionError) ||

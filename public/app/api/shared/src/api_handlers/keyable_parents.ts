@@ -458,6 +458,7 @@ const generateKey = (
         ? {
             ...org,
             serverEnvkeyCount: org.serverEnvkeyCount + 1,
+            generatedAnyEnvkey: true,
             updatedAt: now,
           }
         : org,

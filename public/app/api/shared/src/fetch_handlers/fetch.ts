@@ -118,7 +118,7 @@ apiAction<
       license = verifyLicenseFn(orgId, org.signedLicense, now);
 
       // FETCH_ENVKEY requests are tiny so we don't need to throttle based on requestBytes
-      await throttleRequestFn(orgStats, license, 0, false);
+      await throttleRequestFn(org, orgStats, license, 0, false);
     }
 
     const response = getFetchResponse(
@@ -145,7 +145,7 @@ apiAction<
       if (!org || !orgStats || !license) {
         throw new Api.ApiError("org, orgStats, and license required", 500);
       }
-      await throttleResponseFn(orgStats, license, responseBytes);
+      await throttleResponseFn(org, orgStats, license, responseBytes);
     }
 
     return {

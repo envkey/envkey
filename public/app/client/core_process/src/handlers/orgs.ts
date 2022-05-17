@@ -304,6 +304,30 @@ clientAction<
   },
 });
 
+clientAction<
+  Api.Action.RequestActions["StartedOrgImport"],
+  Api.Net.ApiResultTypes["StartedOrgImport"]
+>({
+  type: "apiRequestAction",
+  actionType: Api.ActionType.STARTED_ORG_IMPORT,
+  loggableType: "orgAction",
+  authenticated: true,
+  graphAction: true,
+  serialAction: true,
+});
+
+clientAction<
+  Api.Action.RequestActions["FinishedOrgImport"],
+  Api.Net.ApiResultTypes["FinishedOrgImport"]
+>({
+  type: "apiRequestAction",
+  actionType: Api.ActionType.FINISHED_ORG_IMPORT,
+  loggableType: "orgAction",
+  authenticated: true,
+  graphAction: true,
+  serialAction: true,
+});
+
 clientAction<Client.Action.ClientActions["ImportOrg"]>({
   type: "asyncClientAction",
   actionType: Client.ActionType.IMPORT_ORG,
@@ -470,6 +494,17 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           }
         }
       }
+    }
+
+    let res = await dispatch(
+      {
+        type: Api.ActionType.STARTED_ORG_IMPORT,
+        payload: {},
+      },
+      context
+    );
+    if (!res.success) {
+      return dispatchFailure((res.resultAction as any)?.payload, context);
     }
 
     const orgNameNeedsUpdate = archive.org.name != byType.org.name;
@@ -984,6 +1019,17 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
+    }
+
+    res = await dispatch(
+      {
+        type: Api.ActionType.FINISHED_ORG_IMPORT,
+        payload: {},
+      },
+      context
+    );
+    if (!res.success) {
+      return dispatchFailure((res.resultAction as any)?.payload, context);
     }
 
     await wait(1000);

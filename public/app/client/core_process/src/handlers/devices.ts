@@ -570,7 +570,11 @@ clientAction<Client.Action.ClientActions["ForgetDevice"]>({
             type: Api.ActionType.FORGET_DEVICE,
             payload: {},
           },
-          { ...context, rootClientAction: action }
+          {
+            ...context,
+            rootClientAction: action,
+            accountIdOrCliKey: action.payload.accountId,
+          }
         );
       } catch (err) {}
     }

@@ -1362,6 +1362,15 @@ export namespace Net {
       environmentRoleIpsAllowed: true,
     }).merge(IdParamsSchema),
 
+    [ActionType.UNSUBSCRIBE_CLOUD_LIFECYCLE_EMAILS]: z.object({
+      orgId: z.string(),
+      orgUserId: z.string(),
+      unsubscribeToken: z.string(),
+    }),
+
+    [ActionType.STARTED_ORG_IMPORT]: z.object({}),
+    [ActionType.FINISHED_ORG_IMPORT]: z.object({}),
+
     // BULK_GRAPH_ACTION schema isn't used anywhere as bulk actions are validated individually,
     // but it makes this object exhaustive so the compiler's happy
     [ActionType.BULK_GRAPH_ACTION]: z.any(),
@@ -1678,6 +1687,17 @@ export namespace Net {
     SetAppAllowedIps: z.infer<
       typeof ApiParamSchemas[ActionType.SET_APP_ALLOWED_IPS]
     >;
+
+    UnsubscribeCloudLifecycleEmails: z.infer<
+      typeof ApiParamSchemas[ActionType.UNSUBSCRIBE_CLOUD_LIFECYCLE_EMAILS]
+    >;
+
+    StartedOrgImport: z.infer<
+      typeof ApiParamSchemas[ActionType.STARTED_ORG_IMPORT]
+    >;
+    FinishedOrgImport: z.infer<
+      typeof ApiParamSchemas[ActionType.FINISHED_ORG_IMPORT]
+    >;
   };
 
   export type ApiResultTypes = {
@@ -1896,6 +1916,9 @@ export namespace Net {
     SelfHostedResyncFailover: OkResult;
     SetOrgAllowedIps: GraphDiffsResult;
     SetAppAllowedIps: GraphDiffsResult;
+    UnsubscribeCloudLifecycleEmails: OkResult;
+    StartedOrgImport: OkResult;
+    FinishedOrgImport: OkResult;
   };
 
   export type ApiParams = ApiParamTypes[keyof ApiParamTypes];

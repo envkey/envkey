@@ -71,12 +71,13 @@ const clientParams: Client.ClientParams<"app"> = {
 
     const [coreState, _setCoreState] = useState<Client.State>(),
       coreStateRef = useRef(coreState),
-      setCoreStateIfLatest = (state: Client.State) => {
+      setCoreStateIfLatest = (state: Client.State, forceUpdate = false) => {
         if (
           // ensure state updates aren't applied out-of-order (can cause rare race conditions)
-          !coreStateRef.current?.accountLastActiveAt ||
-          !state.accountLastActiveAt ||
-          state.accountLastActiveAt > coreStateRef.current.accountLastActiveAt
+          forceUpdate ||
+          !coreStateRef.current?.lastActiveAt ||
+          !state.lastActiveAt ||
+          state.lastActiveAt > coreStateRef.current.lastActiveAt
         ) {
           coreStateRef.current = state;
           _setCoreState(state);
@@ -111,8 +112,8 @@ const clientParams: Client.ClientParams<"app"> = {
       [winWidth, winHeight] = useWindowSize(uiState),
       fetchingStateRef = useRef(false),
       queueFetchStateRef = useRef(false),
-      updateState = (state: Client.State) => {
-        setCoreStateIfLatest(state);
+      updateState = (state: Client.State, forceUpdate = false) => {
+        setCoreStateIfLatest(state, forceUpdate);
         const accountId = uiStateRef.current.accountId;
         const loadedAccountId = uiStateRef.current.loadedAccountId;
         if (accountId != loadedAccountId) {
@@ -139,13 +140,13 @@ const clientParams: Client.ClientParams<"app"> = {
           fetchCoreState();
         }
       },
-      fetchCoreState = async () => {
+      fetchCoreState = async (forceUpdate = false) => {
         fetchingStateRef.current = true;
         const accountId = uiStateRef.current.accountId;
 
         await fetchState(accountId)
           .then(async (state) => {
-            return updateState(state);
+            return updateState(state, forceUpdate);
           })
           .catch((err) => {
             console.error("fetchCoreState -> fetchState error", err);
@@ -231,7 +232,7 @@ const clientParams: Client.ClientParams<"app"> = {
         })();
       });
 
-      fetchCoreState();
+      fetchCoreState(true);
     }, [navigator.userAgent]);
 
     useLayoutEffect(() => {
@@ -243,7 +244,7 @@ const clientParams: Client.ClientParams<"app"> = {
         uiStateRef.current.accountId &&
         uiStateRef.current.accountId != uiStateRef.current.loadedAccountId
       ) {
-        fetchCoreState();
+        fetchCoreState(true);
       }
     }, [uiStateRef.current.accountId, uiStateRef.current.loadedAccountId]);
 

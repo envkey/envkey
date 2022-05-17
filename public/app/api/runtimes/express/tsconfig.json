@@ -9,7 +9,7 @@
     }
   },
   "extends": "../../../tsconfig.json",
-  "include": ["src" ],
+  "include": ["src", "../../../../../private/app/api/cloud/src/routes/cloud_lifecycle_email_routes.ts" ],
   "exclude": [
     "node_modules"
   ]

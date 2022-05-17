@@ -702,6 +702,7 @@ const apiActions: {
       )
     ) {
       await throttleRequestFn(
+        auth.org,
         auth.orgStats,
         auth.license,
         requestBytes,
@@ -1819,7 +1820,12 @@ const apiActions: {
           auth.orgPermissions.has("org_manage_billing"))
       )
     ) {
-      await throttleResponseFn(auth.orgStats, auth.license, responseBytes);
+      await throttleResponseFn(
+        auth.org,
+        auth.orgStats,
+        auth.license,
+        responseBytes
+      );
     }
 
     logWithElapsed(transactionId + " - got access updated", requestStart);

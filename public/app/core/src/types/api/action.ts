@@ -214,6 +214,14 @@ export namespace Action {
       },
       Net.ApiParamTypes["FetchOrgStats"]
     >;
+
+    UnsubscribeCloudLifecycleEmails: RequestActionType<
+      ActionType.UNSUBSCRIBE_CLOUD_LIFECYCLE_EMAILS,
+      {
+        loggableType: "authAction";
+      },
+      Net.ApiParamTypes["UnsubscribeCloudLifecycleEmails"]
+    >;
   };
 
   export type ScimProvisioningActions = {
@@ -1235,6 +1243,24 @@ export namespace Action {
         auth: Auth.DefaultAuthParams;
       },
       Net.ApiParamTypes["SetAppAllowedIps"]
+    >;
+
+    StartedOrgImport: RequestActionType<
+      ActionType.STARTED_ORG_IMPORT,
+      {
+        loggableType: "orgAction";
+        auth: Auth.DefaultAuthParams;
+      },
+      Net.ApiParamTypes["StartedOrgImport"]
+    >;
+
+    FinishedOrgImport: RequestActionType<
+      ActionType.FINISHED_ORG_IMPORT,
+      {
+        loggableType: "orgAction";
+        auth: Auth.DefaultAuthParams;
+      },
+      Net.ApiParamTypes["FinishedOrgImport"]
     >;
   };
 

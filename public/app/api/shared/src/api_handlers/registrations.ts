@@ -1,3 +1,4 @@
+import { LIFECYCLE_EMAILS_ENABLED } from "../email";
 import { env } from "../env";
 import { apiAction } from "../handler";
 import { Api, Rbac } from "@core/types";
@@ -338,6 +339,7 @@ apiAction<
           payload.hostType == "self-hosted"
             ? payload.selfHostedFailoverRegion
             : undefined,
+        // ...(env.IS_CLOUD ? { lifecycleEmailsEnabled: true } : {}),
       },
       orgUserDevice: Api.Db.OrgUserDevice = {
         type: "orgUserDevice",
@@ -377,6 +379,12 @@ apiAction<
         orgRoleUpdatedAt: now,
         createdAt: now,
         updatedAt: now,
+        ...(env.IS_CLOUD
+          ? {
+              // allows efficient processing of lifecycle emails in EnvKey Cloud
+              tertiaryIndex: LIFECYCLE_EMAILS_ENABLED,
+            }
+          : {}),
       },
       authTokenProvider = externalAuthSession
         ? externalAuthSession.provider

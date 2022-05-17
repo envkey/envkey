@@ -297,6 +297,7 @@ namespace Api {
   ) => Promise<EnvkeySocketBatchInfo>;
 
   export type ThrottleRequestFn = (
+    org: Api.Db.Org,
     orgStats: Model.OrgStats,
     license: Billing.License,
     requestBytes: number,
@@ -304,6 +305,7 @@ namespace Api {
   ) => void;
 
   export type ThrottleResponseFn = (
+    org: Api.Db.Org,
     orgStats: Model.OrgStats,
     license: Billing.License,
     responseBytes: number

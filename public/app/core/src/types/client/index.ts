@@ -94,7 +94,10 @@ namespace Client {
   export const ClientNameSchema = z.union([
     ApiClientNameSchema,
     FetchClientNameSchema,
-    z.enum(["core"]), // for actions initiated by the core itself
+    z.enum([
+      "core", // for actions initiated by the core itself
+      "none",
+    ]),
   ]);
   export type ClientName = z.infer<typeof ClientNameSchema>;
 
