@@ -4,6 +4,7 @@ import { Client, Api, Model, Blob, Crypto, Graph, Rbac } from "@core/types";
 import {
   getCurrentEncryptedKeys,
   getConnectedBlockEnvironmentsForApp,
+  getEnvironmentName,
 } from "@core/lib/graph";
 import {
   keySetDifference,
@@ -23,6 +24,8 @@ import {
   getInheritanceOverrides,
 } from "@core/lib/client";
 import set from "lodash.set";
+import { dispatch } from "../../handler";
+import { log } from "@core/lib/utils/logger";
 
 export const keySetForGraphProposal = (
     graph: Client.Graph.UserGraph,
@@ -121,7 +124,9 @@ export const keySetForGraphProposal = (
     context: Client.Context;
     toSet: Blob.KeySet;
   }) => {
-    const { state, context, toSet } = params,
+    let state = params.state;
+
+    const { context, toSet } = params,
       currentAuth = getAuth(state, context.accountIdOrCliKey);
     if (!currentAuth || !currentAuth.privkey) {
       throw new Error("Action requires authentication and decrypted privkey");
@@ -130,10 +135,6 @@ export const keySetForGraphProposal = (
     const privkey = currentAuth.privkey,
       toVerifyKeyableIds = new Set<string>(),
       toEncryptKeys: [string[], Parameters<typeof encrypt>[0]][] = [],
-      toEncryptBlobs: [
-        string[],
-        Parameters<typeof encryptSymmetricWithKey>[0]
-      ][] = [],
       inheritanceOverridesByEnvironmentId = R.groupBy(
         ([composite]) =>
           parseUserEncryptedKeyOrBlobComposite(composite).environmentId,
@@ -145,7 +146,352 @@ export const keySetForGraphProposal = (
       );
 
     let keys = {} as Api.Net.EnvParams["keys"];
-    let blobs = {} as Api.Net.EnvParams["blobs"];
+
+    if (toSet.keyableParents) {
+      for (let keyableParentId in toSet.keyableParents) {
+        toVerifyKeyableIds.add(keyableParentId);
+
+        const keyableParent = state.graph[
+            keyableParentId
+          ] as Model.KeyableParent,
+          environment = state.graph[
+            keyableParent.environmentId
+          ] as Model.Environment;
+
+        let inheritanceOverrides = getInheritanceOverrides(state, {
+          envParentId: keyableParent.appId,
+          environmentId: environment.id,
+        });
+        // for sub-environment, also include parent environment overrides
+        if (environment.isSub) {
+          inheritanceOverrides = R.mergeDeepRight(
+            getInheritanceOverrides(state, {
+              envParentId: keyableParent.appId,
+              environmentId: environment.parentEnvironmentId,
+            }),
+            inheritanceOverrides
+          ) as typeof inheritanceOverrides;
+        }
+
+        const generatedEnvkeyId = Object.keys(
+            toSet.keyableParents[keyableParentId]
+          )[0],
+          generatedEnvkey = state.graph[
+            generatedEnvkeyId
+          ] as Model.GeneratedEnvkey,
+          envkeyToSet =
+            toSet.keyableParents[keyableParentId][generatedEnvkeyId];
+
+        if (envkeyToSet.env) {
+          const composite = getUserEncryptedKeyOrBlobComposite({
+            environmentId: environment.isSub
+              ? environment.parentEnvironmentId
+              : environment.id,
+          });
+          const key = state.envs[composite]?.key;
+
+          if (key) {
+            toEncryptKeys.push([
+              [
+                "keyableParents",
+                keyableParent.id,
+                generatedEnvkey.id,
+                "env",
+                "data",
+              ],
+              {
+                data: key,
+                pubkey: generatedEnvkey.pubkey,
+                privkey,
+              },
+            ]);
+          }
+        }
+
+        if (envkeyToSet.subEnv) {
+          const key =
+            state.envs[
+              getUserEncryptedKeyOrBlobComposite({
+                environmentId: environment.id,
+              })
+            ]?.key;
+          if (key) {
+            toEncryptKeys.push([
+              [
+                "keyableParents",
+                keyableParent.id,
+                generatedEnvkey.id,
+                "subEnv",
+                "data",
+              ],
+              {
+                data: key,
+                pubkey: generatedEnvkey.pubkey,
+                privkey,
+              },
+            ]);
+          }
+        }
+
+        if (envkeyToSet.localOverrides && keyableParent.type == "localKey") {
+          const key =
+            state.envs[
+              getUserEncryptedKeyOrBlobComposite({
+                environmentId: keyableParent.appId + "|" + keyableParent.userId,
+              })
+            ]?.key;
+
+          if (key) {
+            toEncryptKeys.push([
+              [
+                "keyableParents",
+                keyableParent.id,
+                generatedEnvkey.id,
+                "localOverrides",
+                "data",
+              ],
+              {
+                data: key,
+
+                pubkey: generatedEnvkey.pubkey,
+                privkey,
+              },
+            ]);
+          }
+        }
+
+        // inheritance overrides
+        if (!R.isEmpty(inheritanceOverrides)) {
+          for (let inheritanceOverridesEnvironmentId in inheritanceOverrides) {
+            const composite = getUserEncryptedKeyOrBlobComposite({
+              environmentId: keyableParent.environmentId,
+              inheritsEnvironmentId: inheritanceOverridesEnvironmentId,
+            });
+
+            const environment = state.graph[
+              keyableParent.environmentId
+            ] as Model.Environment;
+
+            let key = state.envs[composite]?.key;
+
+            if (!key) {
+              log("missing state.envs[composite]?.key", {
+                composite,
+                environmentId: environment.id,
+                environment: getEnvironmentName(state.graph, environment.id),
+                envParentId: environment.envParentId,
+                envParent: (
+                  state.graph[environment.envParentId] as Model.EnvParent
+                ).name,
+                inheritanceOverridesEnvironmentId,
+                inheritanceOverridesEnvironment: getEnvironmentName(
+                  state.graph,
+                  inheritanceOverridesEnvironmentId
+                ),
+              });
+
+              throw new Error("Missing symmetric key for blob");
+            }
+
+            toEncryptKeys.push([
+              [
+                "keyableParents",
+                keyableParent.id,
+                generatedEnvkey.id,
+                "inheritanceOverrides",
+                inheritanceOverridesEnvironmentId,
+                "data",
+              ],
+              {
+                data: key,
+                pubkey: generatedEnvkey.pubkey,
+                privkey,
+              },
+            ]);
+          }
+        }
+      }
+    }
+
+    if (toSet.blockKeyableParents) {
+      for (let blockId in toSet.blockKeyableParents) {
+        for (let keyableParentId in toSet.blockKeyableParents[blockId]) {
+          toVerifyKeyableIds.add(keyableParentId);
+
+          const keyableParent = state.graph[
+              keyableParentId
+            ] as Model.KeyableParent,
+            appEnvironment = state.graph[
+              keyableParent.environmentId
+            ] as Model.Environment,
+            blockEnvironment = getConnectedBlockEnvironmentsForApp(
+              state.graph,
+              keyableParent.appId,
+              blockId,
+              appEnvironment.id
+            )[0];
+
+          let inheritanceOverrides = getInheritanceOverrides(state, {
+            envParentId: blockId,
+            environmentId: blockEnvironment.id,
+          });
+          // for sub-environment, also include parent environment overrides
+          if (blockEnvironment.isSub) {
+            inheritanceOverrides = R.mergeDeepRight(
+              getInheritanceOverrides(state, {
+                envParentId: blockId,
+                environmentId: blockEnvironment.parentEnvironmentId,
+              }),
+              inheritanceOverrides
+            ) as typeof inheritanceOverrides;
+          }
+
+          const generatedEnvkeyId = Object.keys(
+              toSet.blockKeyableParents[blockId][keyableParentId]
+            )[0],
+            generatedEnvkey = state.graph[
+              generatedEnvkeyId
+            ] as Model.GeneratedEnvkey,
+            envkeyToSet =
+              toSet.blockKeyableParents[blockId][keyableParentId][
+                generatedEnvkeyId
+              ];
+
+          if (envkeyToSet.env) {
+            const key =
+              state.envs[
+                getUserEncryptedKeyOrBlobComposite({
+                  environmentId: blockEnvironment.isSub
+                    ? blockEnvironment.parentEnvironmentId
+                    : blockEnvironment.id,
+                })
+              ]?.key;
+
+            if (key) {
+              toEncryptKeys.push([
+                [
+                  "blockKeyableParents",
+                  blockId,
+                  keyableParent.id,
+                  generatedEnvkey.id,
+                  "env",
+                  "data",
+                ],
+                {
+                  data: key,
+                  pubkey: generatedEnvkey.pubkey,
+                  privkey,
+                },
+              ]);
+            }
+          }
+
+          if (envkeyToSet.subEnv && blockEnvironment.isSub) {
+            const key =
+              state.envs[
+                getUserEncryptedKeyOrBlobComposite({
+                  environmentId: blockEnvironment.id,
+                })
+              ]?.key;
+            if (key) {
+              toEncryptKeys.push([
+                [
+                  "blockKeyableParents",
+                  blockId,
+                  keyableParent.id,
+                  generatedEnvkey.id,
+                  "subEnv",
+                  "data",
+                ],
+                {
+                  data: key,
+                  pubkey: generatedEnvkey.pubkey,
+                  privkey,
+                },
+              ]);
+            }
+          }
+
+          if (envkeyToSet.localOverrides && keyableParent.type == "localKey") {
+            const key =
+              state.envs[
+                getUserEncryptedKeyOrBlobComposite({
+                  environmentId: blockId + "|" + keyableParent.userId,
+                })
+              ]?.key;
+
+            if (key) {
+              toEncryptKeys.push([
+                [
+                  "blockKeyableParents",
+                  blockId,
+                  keyableParent.id,
+                  generatedEnvkey.id,
+                  "localOverrides",
+                  "data",
+                ],
+                {
+                  data: key,
+                  pubkey: generatedEnvkey.pubkey,
+                  privkey,
+                },
+              ]);
+            }
+          }
+
+          // inheritance overrides
+          if (!R.isEmpty(inheritanceOverrides)) {
+            for (let inheritanceOverridesEnvironmentId in inheritanceOverrides) {
+              const composite = getUserEncryptedKeyOrBlobComposite({
+                environmentId: blockEnvironment.id,
+                inheritsEnvironmentId: inheritanceOverridesEnvironmentId,
+              });
+
+              let key = state.envs[composite]?.key;
+
+              if (!key) {
+                log("missing state.envs[composite]?.key", {
+                  composite,
+                  environmentId: blockEnvironment.id,
+                  environment: getEnvironmentName(
+                    state.graph,
+                    blockEnvironment.id
+                  ),
+                  envParentId: blockEnvironment.envParentId,
+                  envParent: (
+                    state.graph[blockEnvironment.envParentId] as Model.EnvParent
+                  ).name,
+                  inheritanceOverridesEnvironmentId,
+                  inheritanceOverridesEnvironment: getEnvironmentName(
+                    state.graph,
+                    inheritanceOverridesEnvironmentId
+                  ),
+                });
+
+                throw new Error("Missing symmetric key for blob");
+              }
+
+              toEncryptKeys.push([
+                [
+                  "blockKeyableParents",
+                  blockId,
+                  keyableParent.id,
+                  generatedEnvkey.id,
+                  "inheritanceOverrides",
+                  inheritanceOverridesEnvironmentId,
+                  "data",
+                ],
+                {
+                  data: key,
+                  pubkey: generatedEnvkey.pubkey,
+                  privkey,
+                },
+              ]);
+            }
+          }
+        }
+      }
+    }
 
     if (toSet.users) {
       for (let userId in toSet.users) {
@@ -411,353 +757,6 @@ export const keySetForGraphProposal = (
       }
     }
 
-    if (toSet.keyableParents) {
-      for (let keyableParentId in toSet.keyableParents) {
-        toVerifyKeyableIds.add(keyableParentId);
-
-        const keyableParent = state.graph[
-            keyableParentId
-          ] as Model.KeyableParent,
-          environment = state.graph[
-            keyableParent.environmentId
-          ] as Model.Environment;
-
-        let inheritanceOverrides = getInheritanceOverrides(state, {
-          envParentId: keyableParent.appId,
-          environmentId: environment.id,
-        });
-        // for sub-environment, also include parent environment overrides
-        if (environment.isSub) {
-          inheritanceOverrides = R.mergeDeepRight(
-            getInheritanceOverrides(state, {
-              envParentId: keyableParent.appId,
-              environmentId: environment.parentEnvironmentId,
-            }),
-            inheritanceOverrides
-          ) as typeof inheritanceOverrides;
-        }
-
-        const generatedEnvkeyId = Object.keys(
-            toSet.keyableParents[keyableParentId]
-          )[0],
-          generatedEnvkey = state.graph[
-            generatedEnvkeyId
-          ] as Model.GeneratedEnvkey,
-          envkeyToSet =
-            toSet.keyableParents[keyableParentId][generatedEnvkeyId];
-
-        if (envkeyToSet.env) {
-          const composite = getUserEncryptedKeyOrBlobComposite({
-            environmentId: environment.isSub
-              ? environment.parentEnvironmentId
-              : environment.id,
-          });
-          const key = state.envs[composite]?.key;
-
-          if (key) {
-            toEncryptKeys.push([
-              [
-                "keyableParents",
-                keyableParent.id,
-                generatedEnvkey.id,
-                "env",
-                "data",
-              ],
-              {
-                data: key,
-                pubkey: generatedEnvkey.pubkey,
-                privkey,
-              },
-            ]);
-          }
-        }
-
-        if (envkeyToSet.subEnv) {
-          const key =
-            state.envs[
-              getUserEncryptedKeyOrBlobComposite({
-                environmentId: environment.id,
-              })
-            ]?.key;
-          if (key) {
-            toEncryptKeys.push([
-              [
-                "keyableParents",
-                keyableParent.id,
-                generatedEnvkey.id,
-                "subEnv",
-                "data",
-              ],
-              {
-                data: key,
-                pubkey: generatedEnvkey.pubkey,
-                privkey,
-              },
-            ]);
-          }
-        }
-
-        if (envkeyToSet.localOverrides && keyableParent.type == "localKey") {
-          const key =
-            state.envs[
-              getUserEncryptedKeyOrBlobComposite({
-                environmentId: keyableParent.appId + "|" + keyableParent.userId,
-              })
-            ]?.key;
-
-          if (key) {
-            toEncryptKeys.push([
-              [
-                "keyableParents",
-                keyableParent.id,
-                generatedEnvkey.id,
-                "localOverrides",
-                "data",
-              ],
-              {
-                data: key,
-
-                pubkey: generatedEnvkey.pubkey,
-                privkey,
-              },
-            ]);
-          }
-        }
-
-        // inheritance overrides
-        if (!R.isEmpty(inheritanceOverrides)) {
-          for (let inheritanceOverridesEnvironmentId in inheritanceOverrides) {
-            const composite = getUserEncryptedKeyOrBlobComposite({
-              environmentId: keyableParent.environmentId,
-              inheritsEnvironmentId: inheritanceOverridesEnvironmentId,
-            });
-
-            const environment = state.graph[
-              keyableParent.environmentId
-            ] as Model.Environment;
-
-            let key = state.envs[composite]?.key;
-
-            if (!key) {
-              key = symmetricEncryptionKey();
-
-              const blobData = JSON.stringify(
-                inheritanceOverrides[inheritanceOverridesEnvironmentId]
-              );
-
-              toEncryptBlobs.push([
-                [
-                  environment.envParentId,
-                  "environments",
-                  environment.id,
-                  "inheritanceOverrides",
-                  inheritanceOverridesEnvironmentId,
-                ],
-                {
-                  data: blobData,
-                  encryptionKey: key,
-                },
-              ]);
-            }
-
-            toEncryptKeys.push([
-              [
-                "keyableParents",
-                keyableParent.id,
-                generatedEnvkey.id,
-                "inheritanceOverrides",
-                inheritanceOverridesEnvironmentId,
-                "data",
-              ],
-              {
-                data: key,
-                pubkey: generatedEnvkey.pubkey,
-                privkey,
-              },
-            ]);
-          }
-        }
-      }
-    }
-
-    if (toSet.blockKeyableParents) {
-      for (let blockId in toSet.blockKeyableParents) {
-        for (let keyableParentId in toSet.blockKeyableParents[blockId]) {
-          toVerifyKeyableIds.add(keyableParentId);
-
-          const keyableParent = state.graph[
-              keyableParentId
-            ] as Model.KeyableParent,
-            appEnvironment = state.graph[
-              keyableParent.environmentId
-            ] as Model.Environment,
-            blockEnvironment = getConnectedBlockEnvironmentsForApp(
-              state.graph,
-              keyableParent.appId,
-              blockId,
-              appEnvironment.id
-            )[0];
-
-          let inheritanceOverrides = getInheritanceOverrides(state, {
-            envParentId: blockId,
-            environmentId: blockEnvironment.id,
-          });
-          // for sub-environment, also include parent environment overrides
-          if (blockEnvironment.isSub) {
-            inheritanceOverrides = R.mergeDeepRight(
-              getInheritanceOverrides(state, {
-                envParentId: blockId,
-                environmentId: blockEnvironment.parentEnvironmentId,
-              }),
-              inheritanceOverrides
-            ) as typeof inheritanceOverrides;
-          }
-
-          const generatedEnvkeyId = Object.keys(
-              toSet.blockKeyableParents[blockId][keyableParentId]
-            )[0],
-            generatedEnvkey = state.graph[
-              generatedEnvkeyId
-            ] as Model.GeneratedEnvkey,
-            envkeyToSet =
-              toSet.blockKeyableParents[blockId][keyableParentId][
-                generatedEnvkeyId
-              ];
-
-          if (envkeyToSet.env) {
-            const key =
-              state.envs[
-                getUserEncryptedKeyOrBlobComposite({
-                  environmentId: blockEnvironment.isSub
-                    ? blockEnvironment.parentEnvironmentId
-                    : blockEnvironment.id,
-                })
-              ]?.key;
-
-            if (key) {
-              toEncryptKeys.push([
-                [
-                  "blockKeyableParents",
-                  blockId,
-                  keyableParent.id,
-                  generatedEnvkey.id,
-                  "env",
-                  "data",
-                ],
-                {
-                  data: key,
-                  pubkey: generatedEnvkey.pubkey,
-                  privkey,
-                },
-              ]);
-            }
-          }
-
-          if (envkeyToSet.subEnv && blockEnvironment.isSub) {
-            const key =
-              state.envs[
-                getUserEncryptedKeyOrBlobComposite({
-                  environmentId: blockEnvironment.id,
-                })
-              ]?.key;
-            if (key) {
-              toEncryptKeys.push([
-                [
-                  "blockKeyableParents",
-                  blockId,
-                  keyableParent.id,
-                  generatedEnvkey.id,
-                  "subEnv",
-                  "data",
-                ],
-                {
-                  data: key,
-                  pubkey: generatedEnvkey.pubkey,
-                  privkey,
-                },
-              ]);
-            }
-          }
-
-          if (envkeyToSet.localOverrides && keyableParent.type == "localKey") {
-            const key =
-              state.envs[
-                getUserEncryptedKeyOrBlobComposite({
-                  environmentId: blockId + "|" + keyableParent.userId,
-                })
-              ]?.key;
-
-            if (key) {
-              toEncryptKeys.push([
-                [
-                  "blockKeyableParents",
-                  blockId,
-                  keyableParent.id,
-                  generatedEnvkey.id,
-                  "localOverrides",
-                  "data",
-                ],
-                {
-                  data: key,
-                  pubkey: generatedEnvkey.pubkey,
-                  privkey,
-                },
-              ]);
-            }
-          }
-
-          // inheritance overrides
-          if (!R.isEmpty(inheritanceOverrides)) {
-            for (let inheritanceOverridesEnvironmentId in inheritanceOverrides) {
-              const composite = getUserEncryptedKeyOrBlobComposite({
-                environmentId: blockEnvironment.id,
-                inheritsEnvironmentId: inheritanceOverridesEnvironmentId,
-              });
-
-              let key = state.envs[composite]?.key;
-
-              if (!key) {
-                key = symmetricEncryptionKey();
-
-                toEncryptBlobs.push([
-                  [
-                    blockEnvironment.envParentId,
-                    "environments",
-                    blockEnvironment.id,
-                    "inheritanceOverrides",
-                    inheritanceOverridesEnvironmentId,
-                  ],
-                  {
-                    data: JSON.stringify(
-                      inheritanceOverrides[inheritanceOverridesEnvironmentId]
-                    ),
-                    encryptionKey: key,
-                  },
-                ]);
-              }
-
-              toEncryptKeys.push([
-                [
-                  "blockKeyableParents",
-                  blockId,
-                  keyableParent.id,
-                  generatedEnvkey.id,
-                  "inheritanceOverrides",
-                  inheritanceOverridesEnvironmentId,
-                  "data",
-                ],
-                {
-                  data: key,
-                  pubkey: generatedEnvkey.pubkey,
-                  privkey,
-                },
-              ]);
-            }
-          }
-        }
-      }
-    }
-
     // verify all keyables
     await Promise.all(
       Array.from(toVerifyKeyableIds).map((keyableId) =>
@@ -768,20 +767,10 @@ export const keySetForGraphProposal = (
     const keyPromises = toEncryptKeys.map(([path, params]) =>
         encrypt(params).then((encrypted) => [path, encrypted])
       ) as Promise<[string[], Crypto.EncryptedData]>[],
-      blobPromises = toEncryptBlobs.map(([path, params]) =>
-        encryptSymmetricWithKey(params).then((encrypted) => [path, encrypted])
-      ) as Promise<[string[], Crypto.EncryptedData]>[],
-      [keyPathResults, blobPathResults] = await Promise.all([
-        Promise.all(keyPromises),
-        Promise.all(blobPromises),
-      ]);
+      keyPathResults = await Promise.all(keyPromises);
 
     for (let [path, data] of keyPathResults) {
       set(keys, path, data);
-    }
-
-    for (let [path, data] of blobPathResults) {
-      set(blobs, path, data);
     }
 
     let encryptedByTrustChain: string | undefined;
@@ -799,7 +788,7 @@ export const keySetForGraphProposal = (
 
     return {
       keys,
-      blobs,
+      blobs: {},
       encryptedByTrustChain: encryptedByTrustChain
         ? { data: encryptedByTrustChain }
         : undefined,

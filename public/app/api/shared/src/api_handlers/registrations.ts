@@ -339,7 +339,7 @@ apiAction<
           payload.hostType == "self-hosted"
             ? payload.selfHostedFailoverRegion
             : undefined,
-        // ...(env.IS_CLOUD ? { lifecycleEmailsEnabled: true } : {}),
+        ...(env.IS_CLOUD ? { lifecycleEmailsEnabled: true } : {}),
       },
       orgUserDevice: Api.Db.OrgUserDevice = {
         type: "orgUserDevice",

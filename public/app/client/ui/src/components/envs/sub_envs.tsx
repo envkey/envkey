@@ -9,6 +9,7 @@ import * as styles from "@styles";
 import { SvgImage } from "@images";
 import { Link } from "react-router-dom";
 import { logAndAlertError } from "@ui_lib/errors";
+import * as R from "ramda";
 
 export const SubEnvs: EnvManagerComponent = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -146,11 +147,12 @@ export const SubEnvs: EnvManagerComponent = (props) => {
         return res;
       });
     if (res.success) {
-      const created = g
-        .graphTypes(res.state.graph)
-        .environments.find(
-          ({ createdAt }) => createdAt === res.state.graphUpdatedAt
-        );
+      const created = R.last(
+        R.sortBy(
+          R.prop("createdAt"),
+          g.graphTypes(res.state.graph).environments
+        )
+      )!;
       if (created) {
         setCreatedId(created.id);
       }

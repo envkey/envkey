@@ -131,10 +131,10 @@ export const getNewEnvParentComponent = (
 
       const type = {
         app: Client.ActionType.CREATE_APP,
-        block: Api.ActionType.CREATE_BLOCK,
+        block: Client.ActionType.CREATE_BLOCK,
       }[envParentType] as
         | Client.ActionType.CREATE_APP
-        | Api.ActionType.CREATE_BLOCK;
+        | Client.ActionType.CREATE_BLOCK;
       const payload = {
         name,
         settings: { autoCaps: undefined },
@@ -150,9 +150,8 @@ export const getNewEnvParentComponent = (
           blocks: byType.blocks,
         }[(envParentType + "s") as "apps" | "blocks"] as Model.EnvParent[];
 
-        const created = scope.find(
-          ({ createdAt }) => createdAt === res.state.graphUpdatedAt
-        );
+        const created = R.last(R.sortBy(R.prop("createdAt"), scope))!;
+
         if (created) {
           if (willImport) {
             const environmentIds: string[] = [];

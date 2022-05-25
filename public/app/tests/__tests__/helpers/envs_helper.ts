@@ -531,9 +531,12 @@ export const getEnvironments = (accountId: string, envParentId: string) => {
     state = getState(accountId);
 
     expect(state.isFetchingEnvs[envParentId]).toBeUndefined();
-    expect(state.envsFetchedAt).toEqual({
-      [envParentId]: expect.toBeNumber(),
-    });
+
+    expect(state.envsFetchedAt).toEqual(
+      expect.objectContaining({
+        [envParentId]: expect.toBeNumber(),
+      })
+    );
     expect(
       (state.graph[envParentId] as Model.EnvParent).envsUpdatedAt
     ).toBeNumber();

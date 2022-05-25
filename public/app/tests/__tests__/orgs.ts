@@ -1806,6 +1806,10 @@ describe("orgs", () => {
 
     res = await importPromise;
 
+    if (!res.success) {
+      log("", res.resultAction);
+    }
+
     expect(res.success).toBe(true);
 
     state = getState(owner2Id);

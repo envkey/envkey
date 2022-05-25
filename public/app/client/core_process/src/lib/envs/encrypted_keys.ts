@@ -45,6 +45,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
   pending?: true;
   newKeysOnly?: boolean; // will only generate keys if they aren't set yet in state for a given path
   reencryptChangesets?: boolean;
+  initEnvs?: true;
   context: Client.Context;
 }): Promise<{
   environmentKeysByComposite: Record<string, string>;
@@ -62,6 +63,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
     pending,
     newKeysOnly,
     reencryptChangesets,
+    initEnvs,
     context,
   } = params;
 
@@ -154,7 +156,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
     }
 
     let changesetsToReencrypt: Client.Env.Changeset[] | undefined;
-    if (pending && !reencryptChangesets) {
+    if ((pending || initEnvs) && !reencryptChangesets) {
       changesetsSymmetricKey =
         state.changesets[environmentId]?.key ?? symmetricEncryptionKey();
     } else if (reencryptChangesets) {
@@ -252,7 +254,11 @@ export const encryptedKeyParamsForEnvironments = async (params: {
                 targetUserOrgPermissions.has("blocks_read_all")) ||
               targetUserEnvParentPermissions.has("app_read_user_locals_history")
             ) {
-              if (pending && !reencryptChangesets && changesetsSymmetricKey) {
+              if (
+                (pending || initEnvs) &&
+                !reencryptChangesets &&
+                changesetsSymmetricKey
+              ) {
                 toEncrypt.push([
                   [
                     "users",
@@ -344,7 +350,11 @@ export const encryptedKeyParamsForEnvironments = async (params: {
             targetUserPermissions.has("read") &&
             targetUserPermissions.has("read_history")
           ) {
-            if (pending && !reencryptChangesets && changesetsSymmetricKey) {
+            if (
+              (pending || initEnvs) &&
+              !reencryptChangesets &&
+              changesetsSymmetricKey
+            ) {
               toEncrypt.push([
                 [
                   "users",

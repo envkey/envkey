@@ -1,3 +1,4 @@
+import { log } from "@core/lib/utils/logger";
 import * as R from "ramda";
 import { Client, Api, Model, Crypto } from "@core/types";
 import { encryptSymmetricWithKey } from "@core/lib/crypto/proxy";
@@ -21,8 +22,10 @@ export const envParamsForEnvironments = async (params: {
   pending?: true;
   rotateKeys?: true;
   reencryptChangesets?: true;
+  initEnvs?: true;
 }) => {
-  const { state, pending, message, rotateKeys, reencryptChangesets } = params;
+  const { state, pending, message, rotateKeys, reencryptChangesets, initEnvs } =
+    params;
 
   let environmentIds = params.environmentIds;
 
@@ -160,10 +163,14 @@ export const envParamsForEnvironments = async (params: {
       ]);
     }
 
-    if (reencryptChangesets) {
-      ensureChangesetsFetched(state, envParentId);
+    if (reencryptChangesets || initEnvs) {
+      if (!initEnvs) {
+        ensureChangesetsFetched(state, envParentId);
+      }
 
-      const changesets = state.changesets[environmentId]?.changesets ?? [];
+      const changesets = initEnvs
+        ? []
+        : state.changesets[environmentId]?.changesets ?? [];
 
       if (
         changesets.length > 0 &&

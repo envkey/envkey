@@ -20,6 +20,7 @@ enum ActionType {
   PROCESS_ROOT_PUBKEY_REPLACEMENTS = "envkey/client/PROCESS_ROOT_PUBKEY_REPLACEMENTS",
 
   CREATE_APP = "envkey/client/CREATE_APP",
+  CREATE_BLOCK = "envkey/client/CREATE_BLOCK",
 
   CREATE_ENTRY_ROW = "envkey/client/CREATE_ENTRY_ROW",
   UPDATE_ENTRY_ROW = "envkey/client/UPDATE_ENTRY_ROW",
@@ -146,6 +147,8 @@ enum ActionType {
   CLEAR_THROTTLE_ERROR = "envkey/client/CLEAR_THROTTLE_ERROR",
 
   CLEAR_ORPHANED_BLOBS = "envkey/client/CLEAR_ORPHANED_BLOBS",
+
+  SET_MISSING_ENVS = "envkey/client/SET_MISSING_ENVS",
 }
 
 export default ActionType;

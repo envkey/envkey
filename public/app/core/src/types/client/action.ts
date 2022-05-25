@@ -224,6 +224,11 @@ export namespace Action {
       };
     };
 
+    CreateBlock: {
+      type: ActionType.CREATE_BLOCK;
+      payload: Api.Net.ApiParamTypes["CreateBlock"];
+    };
+
     CreateEntryRow: {
       type: ActionType.CREATE_ENTRY_ROW;
       payload: {
@@ -255,6 +260,7 @@ export namespace Action {
         pendingEnvironmentIds?: string[];
         message?: string;
         autoCommit?: true;
+        initEnvs?: true;
       };
     };
 
@@ -770,6 +776,11 @@ export namespace Action {
 
     ClearOrphanedBlobs: {
       type: ActionType.CLEAR_ORPHANED_BLOBS;
+    };
+
+    SetMissingEnvs: {
+      type: ActionType.SET_MISSING_ENVS;
+      payload: State["envs"];
     };
   };
 

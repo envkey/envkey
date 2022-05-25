@@ -440,6 +440,8 @@ export const getEnvWithMeta = memoize(
     let res: { [environmentId: string]: Client.Env.KeyableEnv } = {};
     const keyableEnv = getKeyableEnv(state, params, pending);
 
+    const environment = state.graph[params.environmentId] as Model.Environment;
+
     for (let k in keyableEnv) {
       let { inheritsEnvironmentId: currentInheritsEnvironmentId } =
         keyableEnv[k];
@@ -471,6 +473,13 @@ export const getEnvWithMeta = memoize(
           if (inheritanceOverrides) {
             inheritsKeyableVal = inheritanceOverrides[k];
           }
+        }
+
+        if (
+          (!inheritsKeyableVal || R.isEmpty(inheritsKeyableVal)) &&
+          environment.isSub
+        ) {
+          inheritsKeyableVal = { isUndefined: true };
         }
 
         if (inheritsKeyableVal) {

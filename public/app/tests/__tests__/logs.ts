@@ -261,9 +261,9 @@ describe("fetching logs", () => {
       Api.ActionType.LOAD_DEVICE_GRANT,
       Api.ActionType.ACCEPT_DEVICE_GRANT,
       Api.ActionType.CREATE_APP,
+      Api.ActionType.UPDATE_ENVS,
       Api.ActionType.DELETE_APP,
       Api.ActionType.CREATE_APP,
-      Api.ActionType.CREATE_BLOCK,
       Api.ActionType.UPDATE_ENVS,
     ]);
 
@@ -300,9 +300,9 @@ describe("fetching logs", () => {
       Api.ActionType.LOAD_DEVICE_GRANT,
       Api.ActionType.ACCEPT_DEVICE_GRANT,
       Api.ActionType.CREATE_APP,
+      Api.ActionType.UPDATE_ENVS,
       Api.ActionType.DELETE_APP,
       Api.ActionType.CREATE_APP,
-      Api.ActionType.CREATE_BLOCK,
       Api.ActionType.UPDATE_ENVS,
     ]);
 
@@ -323,9 +323,12 @@ describe("fetching logs", () => {
       Api.ActionType.LOAD_DEVICE_GRANT,
       Api.ActionType.ACCEPT_DEVICE_GRANT,
       Api.ActionType.CREATE_APP,
+      Api.ActionType.UPDATE_ENVS,
       Api.ActionType.DELETE_APP,
       Api.ActionType.CREATE_APP,
+      Api.ActionType.UPDATE_ENVS,
       Api.ActionType.CREATE_BLOCK,
+      Api.ActionType.UPDATE_ENVS,
       Api.ActionType.UPDATE_ENVS,
       Api.ActionType.UPDATE_ENVS,
       Api.ActionType.UPDATE_ENVS,
@@ -333,9 +336,6 @@ describe("fetching logs", () => {
       Api.ActionType.FETCH_ENVS,
       Api.ActionType.CREATE_INVITE,
       Api.ActionType.LOAD_INVITE,
-      Api.ActionType.ACCEPT_INVITE,
-      Api.ActionType.CREATE_LOCAL_KEY,
-      Api.ActionType.GENERATE_KEY,
     ]);
 
     // update filters - ensure that logs get cleared

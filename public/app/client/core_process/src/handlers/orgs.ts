@@ -550,7 +550,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       for (let archiveApp of archive.apps) {
         const res = await dispatch(
           {
-            type: Api.ActionType.CREATE_APP,
+            type: Client.ActionType.CREATE_APP,
             payload: { name: archiveApp.name, settings: archiveApp.settings },
           },
           context
@@ -559,9 +559,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
 
-          const createdApp = g
-            .graphTypes(res.state.graph)
-            .apps.find(R.propEq("createdAt", res.state.graphUpdatedAt))!;
+          const createdApp = R.last(
+            R.sortBy(R.prop("createdAt"), g.graphTypes(res.state.graph).apps)
+          )!;
 
           idMap[archiveApp.id] = createdApp.id;
         } else {
@@ -575,7 +575,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       for (let archiveBlock of archive.blocks) {
         const res = await dispatch(
           {
-            type: Api.ActionType.CREATE_BLOCK,
+            type: Client.ActionType.CREATE_BLOCK,
             payload: {
               name: archiveBlock.name,
               settings: archiveBlock.settings,
@@ -587,9 +587,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
 
-          const createdBlock = g
-            .graphTypes(res.state.graph)
-            .blocks.find(R.propEq("createdAt", res.state.graphUpdatedAt))!;
+          const createdBlock = R.last(
+            R.sortBy(R.prop("createdAt"), g.graphTypes(res.state.graph).blocks)
+          )!;
 
           idMap[archiveBlock.id] = createdBlock.id;
         } else {
@@ -732,11 +732,12 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           if (res.success) {
             state = res.state;
 
-            const createdEnvironment = g
-              .graphTypes(res.state.graph)
-              .environments.find(
-                R.propEq("createdAt", res.state.graphUpdatedAt)
-              ) as Model.Environment & { isSub: false };
+            const createdEnvironment = R.last(
+              R.sortBy(
+                R.prop("createdAt"),
+                g.graphTypes(res.state.graph).environments
+              )
+            ) as Model.Environment & { isSub: false };
 
             idMap[archiveEnvironment.id] = createdEnvironment.id;
 
@@ -792,11 +793,12 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
 
-          const createdEnvironment = g
-            .graphTypes(res.state.graph)
-            .environments.find(
-              R.propEq("createdAt", res.state.graphUpdatedAt)
-            )!;
+          const createdEnvironment = R.last(
+            R.sortBy(
+              R.prop("createdAt"),
+              g.graphTypes(res.state.graph).environments
+            )
+          )!;
 
           idMap[archiveEnvironment.id] = createdEnvironment.id;
         } else {

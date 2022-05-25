@@ -317,7 +317,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                       if (!res.success) {
                         logAndAlertError(
                           `There was a problem updating the ${
-                            { orgUser: "user", cliUser: "CLI key" }[userId]
+                            { orgUser: "user", cliUser: "CLI key" }[user.type]
                           } role.`,
                           (res.resultAction as any)?.payload
                         );

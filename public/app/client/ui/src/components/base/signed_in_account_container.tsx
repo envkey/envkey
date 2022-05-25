@@ -219,7 +219,6 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         const res = await props.dispatch({
           type: Client.ActionType.GET_SESSION,
         });
-        console.log(res);
       }
     })();
   }, [props.ui.loadedAccountId, shouldFetchSession]);

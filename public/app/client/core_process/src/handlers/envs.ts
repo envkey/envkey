@@ -32,6 +32,8 @@ import {
   getEnvironmentOrLocalsAutoCommitEnabled,
   getConnectedBlockEnvironmentsForApp,
   getSubEnvironmentsByParentEnvironmentId,
+  graphTypes,
+  getEnvironmentName,
 } from "@core/lib/graph";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -336,10 +338,12 @@ clientAction<
     let pendingIds: string[];
 
     if (payload.pendingEnvironmentIds) {
-      pendingIds = R.intersection(
-        payload.pendingEnvironmentIds,
-        getPendingEnvironmentIds(draft)
-      );
+      pendingIds = payload.initEnvs
+        ? payload.pendingEnvironmentIds
+        : R.intersection(
+            payload.pendingEnvironmentIds,
+            getPendingEnvironmentIds(draft)
+          );
     } else {
       pendingIds = getPendingEnvironmentIds(draft);
     }
@@ -410,10 +414,12 @@ clientAction<
     let pendingEnvironmentIds: string[];
 
     if (payload.pendingEnvironmentIds) {
-      pendingEnvironmentIds = R.intersection(
-        payload.pendingEnvironmentIds,
-        getPendingEnvironmentIds(state)
-      );
+      pendingEnvironmentIds = payload.initEnvs
+        ? payload.pendingEnvironmentIds
+        : R.intersection(
+            payload.pendingEnvironmentIds,
+            getPendingEnvironmentIds(state)
+          );
     } else {
       pendingEnvironmentIds = getPendingEnvironmentIds(state);
     }
@@ -456,9 +462,11 @@ clientAction<
 
     const pendingEnvironmentIdsSet = new Set(pendingEnvironmentIds);
 
-    const pendingEnvUpdates = R.clone(state.pendingEnvUpdates).filter(
-      ({ meta }) => pendingEnvironmentIdsSet.has(meta.environmentId)
-    );
+    const pendingEnvUpdates = payload.initEnvs
+      ? []
+      : R.clone(state.pendingEnvUpdates).filter(({ meta }) =>
+          pendingEnvironmentIdsSet.has(meta.environmentId)
+        );
 
     // const start = Date.now();
     // log("getting envParamsForEnvironments");
@@ -472,7 +480,8 @@ clientAction<
       state,
       environmentIds: pendingEnvironmentIds,
       context,
-      pending: true,
+      pending: payload.initEnvs ? undefined : true,
+      initEnvs: payload.initEnvs,
       message,
     });
 
@@ -620,8 +629,16 @@ clientAction<
             }
 
             if (overrides) {
-              const key = environmentKeysByComposite[composite];
+              let key = environmentKeysByComposite[composite];
               if (!key) {
+                log("Missing inheritanceOverrides key", {
+                  composite,
+                  environment: getEnvironmentName(state.graph, environment.id),
+                  inheritingEnvironment: getEnvironmentName(
+                    state.graph,
+                    inheritingEnvironment.id
+                  ),
+                });
                 throw new Error("Missing inheritanceOverrides key");
               }
               res[composite] = { env: overrides, key };
@@ -631,16 +648,18 @@ clientAction<
 
         return res;
       }, {} as Client.State["envs"]),
-      changesets: pendingEnvironmentIds.reduce(
-        (agg, environmentId) => ({
-          ...agg,
-          [environmentId]: {
-            key: changesetKeysByEnvironmentId[environmentId],
-            changesets: state.changesets[environmentId]?.changesets ?? [],
-          },
-        }),
-        {} as Client.State["changesets"]
-      ),
+      changesets: payload.initEnvs
+        ? ({} as Client.State["changesets"])
+        : pendingEnvironmentIds.reduce(
+            (agg, environmentId) => ({
+              ...agg,
+              [environmentId]: {
+                key: changesetKeysByEnvironmentId[environmentId],
+                changesets: state.changesets[environmentId]?.changesets ?? [],
+              },
+            }),
+            {} as Client.State["changesets"]
+          ),
     };
 
     // log("got dispatchContext: " + (Date.now() - start).toString());
@@ -1094,6 +1113,23 @@ clientAction<
       keyableParentIds: "all",
     };
   },
+
+  successHandler: async (state, action, res, context) => {
+    const environment = R.last(
+      R.sortBy(R.prop("createdAt"), graphTypes(state.graph).environments)
+    )!;
+
+    await dispatch<Client.Action.ClientActions["CommitEnvs"]>(
+      {
+        type: Client.ActionType.COMMIT_ENVS,
+        payload: {
+          pendingEnvironmentIds: [environment.id],
+          initEnvs: true,
+        },
+      },
+      context
+    );
+  },
 });
 
 clientAction<
@@ -1184,6 +1220,16 @@ clientAction<
       );
     } catch (err) {
       return dispatchFailure(err, context);
+    }
+  },
+});
+
+clientAction<Client.Action.ClientActions["SetMissingEnvs"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.SET_MISSING_ENVS,
+  stateProducer: (draft, { payload }) => {
+    for (let composite in payload) {
+      draft.envs[composite] = payload[composite];
     }
   },
 });

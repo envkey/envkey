@@ -1,8 +1,9 @@
 import { deleteProposer } from "../lib/graph";
 import * as R from "ramda";
 import { Client, Api, Model } from "@core/types";
-import { clientAction } from "../handler";
+import { clientAction, dispatch } from "../handler";
 import { stripEmptyRecursive, pickDefined } from "@core/lib/utils/object";
+import { getAuth } from "@core/lib/client";
 import {
   statusProducers,
   renameObjectProducers,
@@ -14,7 +15,61 @@ import { log } from "@core/lib/utils/logger";
 import {
   getOrgAccessScopeForGroupMembers,
   mergeAccessScopes,
+  graphTypes,
+  getEnvironmentsByEnvParentId,
 } from "@core/lib/graph";
+
+clientAction<Client.Action.ClientActions["CreateBlock"]>({
+  type: "asyncClientAction",
+  actionType: Client.ActionType.CREATE_BLOCK,
+  serialAction: true,
+  ...statusProducers("isCreatingBlock", "createBlockError"),
+  handler: async (
+    state,
+    action,
+    { context, dispatchSuccess, dispatchFailure }
+  ) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    const res = await dispatch<Api.Action.RequestActions["CreateBlock"]>(
+      {
+        type: Api.ActionType.CREATE_BLOCK,
+        payload: action.payload,
+      },
+      context
+    );
+
+    if (res.success) {
+      return dispatchSuccess(null, context);
+    } else {
+      return dispatchFailure((res.resultAction as any)?.payload, context);
+    }
+  },
+
+  successHandler: async (state, action, res, context) => {
+    const block = R.last(
+      R.sortBy(R.prop("createdAt"), graphTypes(state.graph).blocks)
+    )!;
+
+    const environmentIds = (
+      getEnvironmentsByEnvParentId(state.graph)[block.id] ?? []
+    ).map(R.prop("id"));
+
+    await dispatch<Client.Action.ClientActions["CommitEnvs"]>(
+      {
+        type: Client.ActionType.COMMIT_ENVS,
+        payload: {
+          pendingEnvironmentIds: environmentIds,
+          initEnvs: true,
+        },
+      },
+      context
+    );
+  },
+});
 
 clientAction<
   Api.Action.RequestActions["CreateBlock"],
@@ -25,8 +80,6 @@ clientAction<
   loggableType: "orgAction",
   authenticated: true,
   graphAction: true,
-  serialAction: true,
-  ...statusProducers("isCreatingBlock", "createBlockError"),
 });
 
 clientAction<

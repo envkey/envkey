@@ -11,9 +11,9 @@ export const createBlock = async (
   ) => {
     let state = getState(accountId);
 
-    const promise = dispatch<Api.Action.RequestActions["CreateBlock"]>(
+    const promise = dispatch<Client.Action.ClientActions["CreateBlock"]>(
       {
-        type: Api.ActionType.CREATE_BLOCK,
+        type: Client.ActionType.CREATE_BLOCK,
         payload: {
           name,
           settings: {

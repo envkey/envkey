@@ -18,6 +18,7 @@ import {
   mergeAccessScopes,
   getOrgAccessScopeForGroupMembers,
   graphTypes,
+  getEnvironmentsByEnvParentId,
 } from "@core/lib/graph";
 import { log } from "@core/lib/utils/logger";
 import fs from "fs";
@@ -77,6 +78,32 @@ clientAction<Client.Action.ClientActions["CreateApp"]>({
     } else {
       return dispatchFailure((res.resultAction as any)?.payload, context);
     }
+  },
+
+  successHandler: async (state, action, res, context) => {
+    const app = R.last(
+      R.sortBy(R.prop("createdAt"), graphTypes(state.graph).apps)
+    )!;
+
+    log("", {
+      app,
+      "graphTypes(state.graph).apps": graphTypes(state.graph).apps,
+    });
+
+    const environmentIds = (
+      getEnvironmentsByEnvParentId(state.graph)[app.id] ?? []
+    ).map(R.prop("id"));
+
+    await dispatch<Client.Action.ClientActions["CommitEnvs"]>(
+      {
+        type: Client.ActionType.COMMIT_ENVS,
+        payload: {
+          pendingEnvironmentIds: environmentIds,
+          initEnvs: true,
+        },
+      },
+      context
+    );
   },
 });
 

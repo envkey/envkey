@@ -5,12 +5,12 @@ import * as graphKey from "../graph_key";
 import * as R from "ramda";
 import { wait } from "@core/lib/utils/wait";
 
-export const getOrg = async (
+export const getOrg = async <T extends Api.Db.Org>(
   id: string,
   transactionConn: PoolConnection | undefined,
   forUpdate = false
 ) =>
-  getDb<Api.Db.Org>(graphKey.org(id), {
+  getDb<T>(graphKey.org(id), {
     transactionConn,
     lockType: forUpdate ? "FOR UPDATE" : undefined,
   });

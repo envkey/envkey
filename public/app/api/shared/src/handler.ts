@@ -631,7 +631,6 @@ export const apiAction = <
 
       updateOrgStatsFn(
         auth,
-
         handlerContext,
         requestBytes,
         responseBytes ?? 0,

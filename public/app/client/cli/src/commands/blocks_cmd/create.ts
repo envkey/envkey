@@ -43,7 +43,7 @@ export const handler = async (
     ).name;
 
   const res = await dispatch({
-    type: Api.ActionType.CREATE_BLOCK,
+    type: Client.ActionType.CREATE_BLOCK,
     payload: {
       name,
       settings: {
