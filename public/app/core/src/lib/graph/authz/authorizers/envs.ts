@@ -61,6 +61,25 @@ export const canUpdateEnv = (
     getEnvironmentPermissions(graph, environmentId, currentUserId).has(
       "read_inherits"
     ),
+  canReadAllEnvInherits = (
+    graph: Graph.Graph,
+    currentUserId: string,
+    envParentId: string
+  ) => {
+    const environments = getEnvironmentsByEnvParentId(graph)[envParentId] ?? [];
+
+    for (let environment of environments) {
+      if (
+        !getEnvironmentPermissions(graph, environment.id, currentUserId).has(
+          "read_inherits"
+        )
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  },
   canReadVersions = (
     graph: Graph.Graph,
     currentUserId: string,
@@ -122,7 +141,10 @@ export const canUpdateEnv = (
       graph[environmentId] as Model.Environment,
       "environment"
     );
-    if (!environment) {
+    if (
+      !environment ||
+      !canReadAllEnvInherits(graph, currentUserId, environment.envParentId)
+    ) {
       return false;
     }
 

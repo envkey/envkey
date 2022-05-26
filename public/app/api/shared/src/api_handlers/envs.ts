@@ -180,29 +180,29 @@ apiAction<
   type: Api.ActionType.FETCH_ENVS,
   graphAction: true,
   authenticated: true,
-  graphScopes: [
-    (auth, { payload: { byEnvParentId } }) =>
-      () =>
-        [
-          auth.user.skey + "$",
-          "g|block|",
-          "g|environment|",
-          "g|group|",
-          "g|groupMembership|",
-          "g|appGroupBlockGroup|",
-          "g|appGroupBlock|",
-          "g|appGroupUserGroup|",
-          "g|appGroupUser|",
+  // graphScopes: [
+  //   (auth, { payload: { byEnvParentId } }) =>
+  //     () =>
+  //       [
+  //         auth.user.skey + "$",
+  //         "g|block|",
+  //         "g|environment|",
+  //         "g|group|",
+  //         "g|groupMembership|",
+  //         "g|appGroupBlockGroup|",
+  //         "g|appGroupBlock|",
+  //         "g|appGroupUserGroup|",
+  //         "g|appGroupUser|",
 
-          ...Object.keys(byEnvParentId).flatMap((envParentId) => [
-            graphKey.app(auth.org.id, envParentId).skey + "$",
-            `g|appBlock|${envParentId}`,
-            `g|appBlockGroup|${envParentId}`,
-            `g|appUserGrant|${envParentId}`,
-            `g|appUserGroup|${envParentId}`,
-          ]),
-        ],
-  ],
+  //         ...Object.keys(byEnvParentId).flatMap((envParentId) => [
+  //           graphKey.app(auth.org.id, envParentId).skey + "$",
+  //           `g|appBlock|${envParentId}`,
+  //           `g|appBlockGroup|${envParentId}`,
+  //           `g|appUserGrant|${envParentId}`,
+  //           `g|appUserGroup|${envParentId}`,
+  //         ]),
+  //       ],
+  // ],
   graphResponse: "envsAndOrChangesets",
   graphAuthorizer: async (action, orgGraph, userGraph, auth) => {
     for (let envParentId in action.payload.byEnvParentId) {

@@ -213,8 +213,17 @@ export const apiAction = <
       logWithElapsed(`api error: ${msg}`, requestStart, {
         status,
         stack: err.stack,
-        transactionConn: Boolean(transactionConn),
       });
+
+      if (status == 500) {
+        logStderr("api error 500", {
+          msg,
+          status,
+          stack: err.stack,
+          requestStart,
+        });
+      }
+
       try {
         await transactionConn.query("ROLLBACK;");
         logWithElapsed("rolled back transaction", requestStart);

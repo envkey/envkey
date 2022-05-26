@@ -5,10 +5,12 @@ import { Link } from "react-router-dom";
 import * as g from "@core/lib/graph";
 import * as R from "ramda";
 import { stripUndefinedRecursive } from "@core/lib/utils/object";
-import { SvgImage, SmallLoader } from "@images";
+import { SmallLoader } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import { logAndAlertError } from "@ui_lib/errors";
+import { fetchEnvsIfNeeded } from "@ui_lib/envs";
+import { getInheritingEnvironmentIds } from "@core/lib/client";
 
 export const ManageEnvParentEnvironments: OrgComponent<
   { appId: string } | { blockId: string }
@@ -214,6 +216,24 @@ export const ManageEnvParentEnvironments: OrgComponent<
       autoCommitOption = autoCommit ? "overrideTrue" : "overrideFalse";
     }
 
+    const canAddOrRemove =
+      !(
+        included &&
+        includedEnvironment &&
+        !g.authz.canDeleteEnvironment(
+          graph,
+          currentUserId,
+          includedEnvironment.id
+        )
+      ) ||
+      (!included &&
+        !g.authz.canCreateBaseEnvironment(
+          graph,
+          currentUserId,
+          envParentId,
+          role.id
+        ));
+
     return (
       <div>
         <h4>
@@ -223,10 +243,10 @@ export const ManageEnvParentEnvironments: OrgComponent<
           className={
             "field checkbox" +
             (included ? " selected" : "") +
-            (updating ? " disabled" : "")
+            (updating || !canAddOrRemove ? " disabled" : "")
           }
-          onClick={() => {
-            if (updating) {
+          onClick={async () => {
+            if (updating || !canAddOrRemove) {
               return;
             }
 
@@ -235,12 +255,12 @@ export const ManageEnvParentEnvironments: OrgComponent<
                 ...awaitingMinDelayByRoleId,
                 [role.id]: true,
               });
-              wait(MIN_ACTION_DELAY_MS).then(() =>
-                setAwaitingMinDelayByRoleId({
-                  ...awaitingMinDelayByRoleId,
-                  [role.id]: false,
-                })
-              );
+              await wait(MIN_ACTION_DELAY_MS);
+
+              setAwaitingMinDelayByRoleId({
+                ...awaitingMinDelayByRoleId,
+                [role.id]: false,
+              });
             }
 
             if (included && includedEnvironment) {
@@ -248,42 +268,65 @@ export const ManageEnvParentEnvironments: OrgComponent<
                 ...removingEnvironmentsByRoleId,
                 [role.id]: true,
               });
-              props
-                .dispatch({
-                  type: Api.ActionType.DELETE_ENVIRONMENT,
-                  payload: { id: includedEnvironment.id },
-                })
-                .then((res) => {
-                  if (!res.success) {
-                    logAndAlertError(
-                      `There was a problem deleting the environment.`,
-                      (res.resultAction as any)?.payload
-                    );
-                  }
-                });
+
+              // can't remove environment if it's being inherited by another environment
+              if (!includedEnvironment.isSub) {
+                // first get latest envs if we haven't yet
+                await fetchEnvsIfNeeded(props, includedEnvironment.envParentId);
+
+                const inheritingEnvironmentIds = getInheritingEnvironmentIds(
+                  props.core,
+                  { environmentId: includedEnvironment.id, envParentId },
+                  true
+                );
+
+                if (inheritingEnvironmentIds.size > 0) {
+                  alert(
+                    "This environment cannot be removed because another environment inherits from it."
+                  );
+
+                  setRemovingEnvironmentsByRoleId(
+                    R.omit([role.id], removingEnvironmentsByRoleId)
+                  );
+
+                  return;
+                }
+              }
+
+              const res = await props.dispatch({
+                type: Api.ActionType.DELETE_ENVIRONMENT,
+                payload: { id: includedEnvironment.id },
+              });
+              if (!res.success) {
+                logAndAlertError(
+                  `There was a problem deleting the environment.`,
+                  (res.resultAction as any)?.payload
+                );
+              }
             } else {
               setAddingEnvironmentsByRoleId({
                 ...addingEnvironmentsByRoleId,
                 [role.id]: true,
               });
-              props
-                .dispatch({
-                  type: Api.ActionType.CREATE_ENVIRONMENT,
-                  payload: { envParentId, environmentRoleId: role.id },
-                })
-                .then((res) => {
-                  if (!res.success) {
-                    logAndAlertError(
-                      `There was a problem adding the environment.`,
-                      (res.resultAction as any)?.payload
-                    );
-                  }
-                });
+              const res = await props.dispatch({
+                type: Api.ActionType.CREATE_ENVIRONMENT,
+                payload: { envParentId, environmentRoleId: role.id },
+              });
+              if (!res.success) {
+                logAndAlertError(
+                  `There was a problem adding the environment.`,
+                  (res.resultAction as any)?.payload
+                );
+              }
             }
           }}
         >
           <label>Include environment</label>
-          <input type="checkbox" checked={included} disabled={updating} />
+          <input
+            type="checkbox"
+            checked={included}
+            disabled={updating || !canAddOrRemove}
+          />
         </div>
         {/* {includedEnvironment ? (
           <div className="field">

@@ -85,11 +85,6 @@ clientAction<Client.Action.ClientActions["CreateApp"]>({
       R.sortBy(R.prop("createdAt"), graphTypes(state.graph).apps)
     )!;
 
-    log("", {
-      app,
-      "graphTypes(state.graph).apps": graphTypes(state.graph).apps,
-    });
-
     const environmentIds = (
       getEnvironmentsByEnvParentId(state.graph)[app.id] ?? []
     ).map(R.prop("id"));
