@@ -115,7 +115,7 @@ apiAction<
       }
 
       const verifyLicenseFn = getVerifyLicenseFn();
-      license = verifyLicenseFn(orgId, org.signedLicense, now);
+      license = verifyLicenseFn(org, org.signedLicense, now);
 
       // FETCH_ENVKEY requests are tiny so we don't need to throttle based on requestBytes
       await throttleRequestFn(org, orgStats, license, 0, false);

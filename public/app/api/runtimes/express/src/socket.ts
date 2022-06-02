@@ -449,7 +449,7 @@ const start: Api.SocketServer["start"] = () => {
                   return;
                 }
                 license = verifySignedLicense(
-                  org.id,
+                  org,
                   org.signedLicense,
                   Date.now(),
                   false

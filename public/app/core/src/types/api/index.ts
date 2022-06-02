@@ -318,7 +318,7 @@ namespace Api {
   ) => void;
 
   export type VerifyLicenseFn = (
-    orgId: string,
+    org: Api.Db.Org,
     signedLicense: string | undefined,
     now: number,
     enforceExpiration?: boolean

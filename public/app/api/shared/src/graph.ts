@@ -75,7 +75,7 @@ export const getOrgGraph = async (
     const org = orgGraph[orgId] as Api.Db.Org;
     let userGraph = getUserGraph(orgGraph, userId, deviceId, includeDeleted);
     const billingId = getOrgBillingId(org.id);
-    const license = verifySignedLicense(orgId, org.signedLicense, now, false);
+    const license = verifySignedLicense(org, org.signedLicense, now, false);
 
     if (env.IS_CLOUD) {
       return {

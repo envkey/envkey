@@ -253,12 +253,7 @@ export const authenticate = async <
           throw new Api.ApiError("invalid bearer token credentials", 401);
         }
 
-        const license = verifySignedLicense(
-          org.id,
-          org.signedLicense,
-          now,
-          false
-        );
+        const license = verifySignedLicense(org, org.signedLicense, now, false);
 
         return {
           type: "provisioningBearerAuthContext",
@@ -381,7 +376,7 @@ export const authenticate = async <
       orgRole = orgRolesById[orgRoleId],
       orgPermissions = getOrgPermissions(orgRolesById, orgRoleId);
 
-    const license = verifySignedLicense(org.id, org.signedLicense, now, false);
+    const license = verifySignedLicense(org, org.signedLicense, now, false);
 
     switch (params.type) {
       case "tokenAuthParams":

@@ -6,7 +6,8 @@ export type License = {
   env: "development" | "production";
   plan: "free" | "paid";
 
-  isCloudEssentials?: boolean;
+  isCloudEssentials?: boolean; // old plan: now split into 'basics' and 'pro'
+  isCloudBasics?: boolean;
 
   hostType: "cloud" | "enterprise" | "community";
 
