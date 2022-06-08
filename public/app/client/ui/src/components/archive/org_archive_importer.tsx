@@ -263,7 +263,7 @@ export const OrgArchiveImporter: OrgComponent<
         <button
           className="primary"
           onClick={startImport}
-          disabled={encryptionKey.length != 25}
+          disabled={!encryptionKey}
         >
           Start Import
         </button>
