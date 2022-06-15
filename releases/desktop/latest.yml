@@ -1,8 +1,8 @@
-version: 2.0.61
+version: 2.0.62
 files:
-  - url: EnvKey_Windows_Installer-2.0.61.exe
-    sha512: 2wY5+WBUvLH+n7/Mm2t/FExt2DeDPgrnQbjRk+thFSVMtgOJBJByiWAVFuVGlEWybWzA8unsRUu3zEosAazVjg==
+  - url: EnvKey_Windows_Installer-2.0.62.exe
+    sha512: NQlSAGXQGiiucYsyrOEbEF/coEAaNTlKSelxdYWbN4pwXr9K2Kbzpz1RA5Qpb2xS96L795WmizRbJBHT2Gn1xw==
     size: 73188088
-path: EnvKey_Windows_Installer-2.0.61.exe
-sha512: 2wY5+WBUvLH+n7/Mm2t/FExt2DeDPgrnQbjRk+thFSVMtgOJBJByiWAVFuVGlEWybWzA8unsRUu3zEosAazVjg==
-releaseDate: '2022-06-15T15:59:41.567Z'
+path: EnvKey_Windows_Installer-2.0.62.exe
+sha512: NQlSAGXQGiiucYsyrOEbEF/coEAaNTlKSelxdYWbN4pwXr9K2Kbzpz1RA5Qpb2xS96L795WmizRbJBHT2Gn1xw==
+releaseDate: '2022-06-15T16:41:14.410Z'
