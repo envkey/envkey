@@ -184,7 +184,9 @@ export const decryptEnvs = async (
                       ...changesetPayload,
                       createdAt: encryptedBlob.createdAt,
                       encryptedById: encryptedBlob.encryptedById,
-                      createdById: encryptedBlob.encryptedById,
+                      createdById:
+                        encryptedBlob.createdById ??
+                        encryptedBlob.encryptedById,
                       id: encryptedBlob.changesetId!,
                     } as Client.Env.Changeset)
                 );

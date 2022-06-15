@@ -61,6 +61,7 @@ export namespace Blob {
       encryptedById: z.string(),
       data: Crypto.EncryptedDataSchema,
       changesetId: z.string().optional(),
+      createdById: z.string().optional(),
       envParentId: z.string().optional(),
       blockId: z.string().optional(),
       environmentId: z.string().optional(),

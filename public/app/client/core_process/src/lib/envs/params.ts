@@ -1,4 +1,3 @@
-import { log } from "@core/lib/utils/logger";
 import * as R from "ramda";
 import { Client, Api, Model, Crypto } from "@core/types";
 import { encryptSymmetricWithKey } from "@core/lib/crypto/proxy";
@@ -163,6 +162,14 @@ export const envParamsForEnvironments = async (params: {
       ]);
     }
 
+    const changesetsSymmetricKey =
+      changesetKeysByEnvironmentId[environmentId] ??
+      state.changesets[environmentId]?.key;
+
+    if (changesetsSymmetricKey) {
+      changesetKeysByEnvironmentId[environmentId] = changesetsSymmetricKey;
+    }
+
     if (reencryptChangesets || initEnvs) {
       if (!initEnvs) {
         ensureChangesetsFetched(state, envParentId);
@@ -172,14 +179,11 @@ export const envParamsForEnvironments = async (params: {
         ? []
         : state.changesets[environmentId]?.changesets ?? [];
 
-      if (
-        changesets.length > 0 &&
-        !changesetKeysByEnvironmentId[environmentId]
-      ) {
+      if (changesets.length > 0 && !changesetsSymmetricKey) {
         throw new Error("Missing changeset encryption key");
       }
 
-      if (changesetKeysByEnvironmentId[environmentId]) {
+      if (changesetsSymmetricKey) {
         const byId = R.groupBy(R.prop("id"), changesets);
 
         for (let changesetId in byId) {
@@ -190,8 +194,17 @@ export const envParamsForEnvironments = async (params: {
             [...blobBasePath, "changesetsById", changesetId, "data"],
             {
               data: JSON.stringify(changesetPayloads),
-              encryptionKey: changesetKeysByEnvironmentId[environmentId],
+              encryptionKey: changesetsSymmetricKey,
             },
+          ]);
+
+          addPaths.push([
+            [...blobBasePath, "changesetsById", changesetId, "createdAt"],
+            byId[changesetId][0].createdAt,
+          ]);
+          addPaths.push([
+            [...blobBasePath, "changesetsById", changesetId, "createdById"],
+            byId[changesetId][0].createdById,
           ]);
         }
       }
@@ -200,7 +213,7 @@ export const envParamsForEnvironments = async (params: {
         addPaths.push([[...blobBasePath, "changesetsById"], {}]);
       }
     } else if (pending) {
-      if (!changesetKeysByEnvironmentId[environmentId]) {
+      if (!changesetsSymmetricKey) {
         throw new Error("Missing changeset encryption key");
       }
 
@@ -218,7 +231,7 @@ export const envParamsForEnvironments = async (params: {
         [...blobBasePath, "changesets"],
         {
           data: JSON.stringify([changeset]),
-          encryptionKey: changesetKeysByEnvironmentId[environmentId],
+          encryptionKey: changesetsSymmetricKey,
         },
       ]);
     }

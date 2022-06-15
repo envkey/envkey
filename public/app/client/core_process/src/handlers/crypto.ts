@@ -775,6 +775,7 @@ clientAction<
             if (!key) {
               throw new Error("Missing inheritanceOverrides key");
             }
+
             res[composite] = { env: state.envs[composite].env, key };
           }
         }

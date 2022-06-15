@@ -1120,7 +1120,9 @@ describe("orgs", () => {
     state = getState(owner3Id);
     const pendingRecoveryKeyParams = state.generatedRecoveryKey!;
 
-    let orgGraph = await getOrgGraph(orgId, { transactionConn: undefined });
+    let orgGraph = await getOrgGraph(orgId, {
+      transactionConn: undefined,
+    });
 
     const start = Date.now();
 

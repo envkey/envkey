@@ -252,7 +252,6 @@ export const keySetForGraphProposal = (
               ],
               {
                 data: key,
-
                 pubkey: generatedEnvkey.pubkey,
                 privkey,
               },

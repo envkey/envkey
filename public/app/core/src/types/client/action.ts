@@ -767,7 +767,7 @@ export namespace Action {
 
     ExportOrg: {
       type: ActionType.EXPORT_ORG;
-      payload: { filePath: string };
+      payload: { filePath: string; debugData?: boolean };
     };
 
     ClearThrottleError: {

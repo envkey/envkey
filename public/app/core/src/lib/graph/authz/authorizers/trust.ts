@@ -1,6 +1,5 @@
-import { Graph } from "../../../../types";
+import { Graph, Rbac } from "../../../../types";
 import { authorizeUser, presence } from "./helpers";
-import { canUpdateEnv, canUpdateLocals } from ".";
 import {
   getEncryptedByEnvironmentIds,
   getEncryptedByLocalIds,
@@ -14,6 +13,16 @@ export const canRevokeTrustedUserPubkey = (
 ) => {
   const currentUserRes = authorizeUser(graph, currentUserId);
   if (!currentUserRes) {
+    return false;
+  }
+
+  const currentUser = currentUserRes[0];
+  const role = graph[currentUser.orgRoleId] as Rbac.OrgRole;
+
+  // quick fix for tricky issue with allowing basic users to re-encrypt
+  // and revoke pubkeys
+  // now only org owners and org admins can re-encrypt/revoke
+  if (role.defaultName != "Org Owner" && role.defaultName != "Org Admin") {
     return false;
   }
 

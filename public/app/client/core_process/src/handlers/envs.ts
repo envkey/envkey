@@ -34,6 +34,7 @@ import {
   getSubEnvironmentsByParentEnvironmentId,
   graphTypes,
   getEnvironmentName,
+  getObjectName,
 } from "@core/lib/graph";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -622,17 +623,22 @@ clientAction<
                 true
               )[environmentId];
 
-              overrides = {
-                ...parentOverrides,
-                ...overrides,
-              };
+              if (parentOverrides) {
+                overrides = {
+                  ...parentOverrides,
+                  ...(overrides ?? {}),
+                };
+              }
             }
-
             if (overrides) {
               let key = environmentKeysByComposite[composite];
               if (!key) {
                 log("Missing inheritanceOverrides key", {
                   composite,
+                  envParent: getObjectName(
+                    state.graph,
+                    environment.envParentId
+                  ),
                   environment: getEnvironmentName(state.graph, environment.id),
                   inheritingEnvironment: getEnvironmentName(
                     state.graph,

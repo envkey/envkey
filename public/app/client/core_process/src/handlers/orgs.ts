@@ -16,7 +16,6 @@ import {
 } from "@core/lib/crypto/proxy";
 import { secureRandomAlphanumeric } from "@core/lib/crypto/utils";
 import { fetchRequiredEnvs } from "@core_proc/lib/envs";
-import { log } from "@core/lib/utils/logger";
 import fs from "fs";
 import { wait } from "@core/lib/utils/wait";
 
@@ -417,10 +416,12 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
     const numActiveServerEnvkeys = byType.org.serverEnvkeyCount;
 
     if (
-      (license.maxDevices != -1 &&
+      (license.maxDevices &&
+        license.maxDevices != -1 &&
         numActiveDevices + archive.orgUsers.length + archive.cliUsers.length >
           license.maxDevices) ||
-      (license.maxServerEnvkeys != -1 &&
+      (license.maxServerEnvkeys &&
+        license.maxServerEnvkeys != -1 &&
         numActiveServerEnvkeys + archive.servers.length >
           license.maxServerEnvkeys) ||
       (license.maxUsers &&
@@ -1057,7 +1058,7 @@ clientAction<
   ...statusProducers("isExportingOrg", "exportOrgError"),
   handler: async (
     initialState,
-    { payload: { filePath } },
+    { payload: { filePath, debugData } },
     { context, dispatchSuccess, dispatchFailure }
   ) => {
     let state = initialState;
@@ -1083,7 +1084,9 @@ clientAction<
       }
     }
 
-    const encryptionKey = secureRandomAlphanumeric(22);
+    const encryptionKey = debugData
+      ? "debug-key"
+      : secureRandomAlphanumeric(22);
     const now = Date.now();
 
     const archive: Client.OrgArchiveV1 = {
@@ -1189,7 +1192,13 @@ clientAction<
 
           return [
             environmentId,
-            getEnvWithMeta(state, { envParentId, environmentId }),
+            getEnvWithMeta(
+              state,
+              { envParentId, environmentId },
+              undefined,
+              undefined,
+              debugData
+            ),
           ];
         })
       ),

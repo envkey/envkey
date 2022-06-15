@@ -19,7 +19,6 @@ import {
   getOrgPermissions,
   getEnvParentPermissions,
   getActiveOrExpiredInvitesByInvitedByUserId,
-  getActiveOrExpiredDeviceGrantsByGrantedByUserId,
 } from "@core/lib/graph";
 import * as R from "ramda";
 import { query, mergeObjectTransactionItems } from "./db";
@@ -1282,7 +1281,8 @@ export const getUserEncryptedKeys = async (
                 data: changesetsById[changesetId].data,
                 envParentId,
                 environmentId,
-                createdAt: now,
+                createdById: changesetsById[changesetId].createdById,
+                createdAt: changesetsById[changesetId].createdAt ?? now,
                 updatedAt: now,
               };
               transactionItems.puts.push(changesetsBlob);
@@ -1393,7 +1393,8 @@ export const getUserEncryptedKeys = async (
                 data: changesetsById[changesetId].data,
                 envParentId,
                 environmentId,
-                createdAt: now,
+                createdById: changesetsById[changesetId].createdById,
+                createdAt: changesetsById[changesetId].createdAt ?? now,
                 updatedAt: now,
               };
               transactionItems.puts.push(changesetsBlob);

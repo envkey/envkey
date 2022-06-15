@@ -1,5 +1,5 @@
 import * as R from "ramda";
-import { Client, Api, Model, Crypto, Rbac } from "@core/types";
+import { Client, Api, Model, Crypto } from "@core/types";
 import {
   graphTypes,
   getEnvironmentPermissions,
@@ -16,6 +16,8 @@ import {
   getLocalKeysByLocalsComposite,
   getConnectedAppsForBlock,
   getEnvironmentsByEnvParentId,
+  getObjectName,
+  getEnvironmentName,
 } from "@core/lib/graph";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import { encrypt } from "@core/lib/crypto/proxy";

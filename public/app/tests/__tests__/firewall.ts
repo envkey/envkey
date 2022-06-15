@@ -251,7 +251,9 @@ describe("firewall", () => {
       );
 
       // ensure they all have the right allowedIps set
-      const orgGraph = await getOrgGraph(orgId, { transactionConn: undefined });
+      const orgGraph = await getOrgGraph(orgId, {
+        transactionConn: undefined,
+      });
       const generatedEnvkeys = g.graphTypes(orgGraph).generatedEnvkeys;
       expect(generatedEnvkeys.length).toBe(3);
 

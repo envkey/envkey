@@ -18,11 +18,12 @@ export const OrgArchiveV1: OrgComponent = (props) => {
 
   const [exporting, setExporting] = useState(false);
   const [exportEncryptionKey, setExportEncryptionKey] = useState("");
+  const [debugData, setDebugData] = useState(false);
 
   const [importFilePath, setImportFilePath] = useState("");
 
   const exportArchive = async () => {
-    const fileName = `${org.name
+    const fileName = `${debugData ? "DEBUG-" : ""}${org.name
       .split(" ")
       .join("-")
       .toLowerCase()}-${new Date().toISOString().slice(0, 10)}.envkey-archive`;
@@ -37,7 +38,7 @@ export const OrgArchiveV1: OrgComponent = (props) => {
 
       const res = await props.dispatch({
         type: Client.ActionType.EXPORT_ORG,
-        payload: { filePath },
+        payload: { filePath, debugData },
       });
 
       setExporting(false);
@@ -93,6 +94,7 @@ export const OrgArchiveV1: OrgComponent = (props) => {
               onClick={() => {
                 setExporting(false);
                 setExportEncryptionKey("");
+                setDebugData(false);
               }}
             >
               Done
@@ -105,6 +107,14 @@ export const OrgArchiveV1: OrgComponent = (props) => {
             can then be imported into a new org. Archives{" "}
             <strong>do not include</strong> logs or old environment versions.
           </p>,
+
+          <div
+            className={"field checkbox" + (debugData ? " selected" : "")}
+            onClick={() => setDebugData(!debugData)}
+          >
+            <label>Export with obfuscated data for debugging</label>
+            <input type="checkbox" checked={debugData} />
+          </div>,
 
           <div className="field">
             <button className="primary" onClick={exportArchive}>

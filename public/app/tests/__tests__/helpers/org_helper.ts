@@ -312,7 +312,9 @@ export const testRemoveUser = async (
       expect(replacements.length).toBe(1);
       let replacement = replacements[0];
 
-      let orgGraph = await getOrgGraph(orgId, { transactionConn: undefined });
+      let orgGraph = await getOrgGraph(orgId, {
+        transactionConn: undefined,
+      });
       let orgGraphByType = graphTypes(orgGraph);
 
       let revocationProcessorDeviceId: string | undefined;

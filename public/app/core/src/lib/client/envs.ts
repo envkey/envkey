@@ -1,5 +1,6 @@
 import { pick } from "../utils/pick";
 import memoize from "../utils/memoize";
+import { sha256, secureRandomAlphanumeric } from "../crypto/utils";
 import { Client, Model, Rbac } from "../../types";
 import { getEnvWithMetaForActions } from "./versions";
 import * as R from "ramda";
@@ -11,6 +12,7 @@ import {
   getEnvironmentOrLocalsAutoCommitEnabled,
   authz,
   getEnvironmentName,
+  getObjectName,
 } from "../graph";
 import { groupBy } from "../utils/array";
 
@@ -22,7 +24,8 @@ export const getEnvWithMeta = memoize(
         environmentId: string;
       },
       pending?: true,
-      memoBuster?: number
+      memoBuster?: number,
+      debugData?: boolean
     ) => {
       const { environmentId } = params;
 
@@ -71,14 +74,43 @@ export const getEnvWithMeta = memoize(
       if (pending) {
         const pendingActions = getPendingActions(state, params);
 
-        if (pendingActions.length == 0) {
-          return envWithMeta;
+        if (pendingActions.length > 0) {
+          envWithMeta = getEnvWithMetaForActions(pendingActions, envWithMeta);
         }
-
-        return getEnvWithMetaForActions(pendingActions, envWithMeta);
-      } else {
-        return envWithMeta;
       }
+
+      // for sanitized debug output, replace keys and values with dummy data
+      if (debugData) {
+        envWithMeta = R.clone(envWithMeta);
+
+        const salt = secureRandomAlphanumeric(22);
+        const keyMap: Record<string, string> = {};
+
+        for (let k in envWithMeta.variables) {
+          const cell = envWithMeta.variables[k];
+          const keyHash = keyMap[k] ?? sha256(salt + k).slice(0, 10);
+          keyMap[k] = keyHash;
+
+          envWithMeta.variables[keyHash] = cell.val
+            ? ({
+                ...cell,
+                val: sha256(salt + cell.val).slice(10),
+              } as typeof cell)
+            : cell;
+
+          for (let k in keyMap) {
+            delete envWithMeta.variables[k];
+          }
+
+          for (let environmentId in envWithMeta.inherits) {
+            envWithMeta.inherits[environmentId] = envWithMeta.inherits[
+              environmentId
+            ].map((k) => keyMap[k]);
+          }
+        }
+      }
+
+      return envWithMeta;
     }
   ),
   getPendingEnvWithMeta = (
@@ -545,10 +577,26 @@ export const getEnvWithMeta = memoize(
     ),
     pending?: true
   ): string[] => {
+    const startEnvironment = state.graph[
+      params.environmentId
+    ] as Model.Environment;
+
     let currentEnvironmentId: string | undefined;
 
     if ("key" in params) {
-      const keyableEnv = getKeyableEnv(state, params, pending);
+      let keyableEnv = getKeyableEnv(state, params, pending);
+
+      if (startEnvironment.isSub) {
+        keyableEnv = R.mergeDeepRight(
+          getKeyableEnv(
+            state,
+            { ...params, environmentId: startEnvironment.parentEnvironmentId },
+            pending
+          ),
+          keyableEnv
+        ) as typeof keyableEnv;
+      }
+
       currentEnvironmentId = keyableEnv[params.key]?.inheritsEnvironmentId;
     } else {
       currentEnvironmentId =
@@ -562,8 +610,12 @@ export const getEnvWithMeta = memoize(
     const chain: string[] = [currentEnvironmentId];
 
     while (true) {
+      const currentEnvironment = state.graph[
+        currentEnvironmentId
+      ] as Model.Environment;
+
       if ("key" in params) {
-        const keyableEnv = getKeyableEnv(
+        let keyableEnv = getKeyableEnv(
           state,
           {
             ...params,
@@ -571,6 +623,20 @@ export const getEnvWithMeta = memoize(
           },
           pending
         );
+
+        if (currentEnvironment.isSub) {
+          keyableEnv = R.mergeDeepRight(
+            getKeyableEnv(
+              state,
+              {
+                ...params,
+                environmentId: currentEnvironment.parentEnvironmentId,
+              },
+              pending
+            ),
+            keyableEnv
+          ) as typeof keyableEnv;
+        }
 
         currentEnvironmentId = keyableEnv[params.key]?.inheritsEnvironmentId;
       } else {
@@ -617,12 +683,22 @@ export const getEnvWithMeta = memoize(
       ).filter(({ id }) => id != params.environmentId);
 
     for (let sibling of siblings) {
-      const siblingEnvWithMeta = (
+      let siblingEnvWithMeta = (
         pending ? getPendingEnvWithMeta : getEnvWithMeta
       )(state, {
         ...params,
         environmentId: sibling.id,
       });
+
+      if (sibling.isSub) {
+        siblingEnvWithMeta = R.mergeDeepRight(
+          (pending ? getPendingEnvWithMeta : getEnvWithMeta)(state, {
+            ...params,
+            environmentId: sibling.parentEnvironmentId,
+          }),
+          siblingEnvWithMeta
+        ) as typeof siblingEnvWithMeta;
+      }
 
       if ("newEntryVals" in params) {
         const chain = getInheritanceChain(
@@ -652,6 +728,7 @@ export const getEnvWithMeta = memoize(
             },
             pending
           );
+
           if (chain.includes(params.environmentId)) {
             inheritingEnvironmentIds.add(sibling.id);
           }

@@ -84,12 +84,16 @@ export const authenticate = async <
           getOrgUser(params.orgId, params.userId, transactionConn),
           getOrg(params.orgId, transactionConn),
           getOrgStats(params.orgId, transactionConn, isSocketConnection),
-          getDb<Api.Db.OrgUserDevice>(params.deviceId, { transactionConn }),
+          getDb<Api.Db.OrgUserDevice>(params.deviceId, {
+            transactionConn,
+          }),
         ]);
         break;
       case "cliAuthParams":
         [user, org, orgStats] = await Promise.all([
-          getDb<Api.Db.CliUser>(params.userId, { transactionConn }),
+          getDb<Api.Db.CliUser>(params.userId, {
+            transactionConn,
+          }),
           getOrg(params.orgId, transactionConn),
           getOrgStats(params.orgId, transactionConn, isSocketConnection),
         ]);
@@ -118,7 +122,9 @@ export const authenticate = async <
         [org, orgStats, invite] = await Promise.all([
           getOrg(invitePointer.orgId, transactionConn),
           getOrgStats(invitePointer.orgId, transactionConn, isSocketConnection),
-          getDb<Api.Db.Invite>(invitePointer.inviteId, { transactionConn }),
+          getDb<Api.Db.Invite>(invitePointer.inviteId, {
+            transactionConn,
+          }),
         ]);
 
         if (!invite || invite.deletedAt || invite.acceptedAt) {

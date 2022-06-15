@@ -9,6 +9,7 @@ import {
 } from "./helpers/auth_helper";
 import { inviteAdminUser, acceptInvite } from "./helpers/invites_helper";
 import { acceptDeviceGrant } from "./helpers/device_grants_helper";
+import { log } from "@core/lib/utils/logger";
 
 describe("registration", () => {
   describe("with email auth", () => {
@@ -266,6 +267,7 @@ describe("manage tokens", () => {
     expect(state.isClearingOrgTokens).toBeTrue();
 
     const res = await clearPromise;
+
     expect(res.success).toBeTrue();
 
     state = getState(ownerId);

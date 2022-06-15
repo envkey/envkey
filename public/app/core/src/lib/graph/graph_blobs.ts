@@ -1,4 +1,4 @@
-import { Graph, Blob, Model } from "../../types";
+import { Graph, Blob, Model, Rbac } from "../../types";
 import {
   graphTypes,
   authz,
@@ -232,6 +232,18 @@ export const getRequiredBlobPathsForDeleteEncryptedKeys = (
 
 export const getEnvironmentsQueuedForReencryptionIds = memoize(
   (graph: Graph.Graph, currentUserId: string) => {
+    const user = graph[currentUserId] as Model.OrgUser;
+    if (!user) {
+      return [];
+    }
+    const role = graph[user.orgRoleId] as Rbac.OrgRole;
+
+    // quick fix for tricky issue with allowing basic users to re-encrypt
+    // now only org owners and org admins can re-encrypt
+    if (role.defaultName != "Org Owner" && role.defaultName != "Org Admin") {
+      return [];
+    }
+
     const { apps, blocks, environments } = graphTypes(graph);
     const ids: string[] = [];
 
