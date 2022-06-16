@@ -665,6 +665,13 @@ clientAction<
       );
     }
 
+    if (R.isEmpty(keys) && R.isEmpty(blobs)) {
+      return dispatchSuccess(null, {
+        ...context,
+        dispatchContext: { envs: {}, changesets: {} },
+      });
+    }
+
     let encryptedByTrustChain: string | undefined;
     const hasKeyables =
       Object.keys(keys.keyableParents ?? {}).length +
