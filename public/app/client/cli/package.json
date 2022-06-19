@@ -1,6 +1,6 @@
 {
   "name": "envkey-cli",
-  "version": "2.0.38",
+  "version": "2.0.39",
   "description": "EnvKey CLI--dispatches actions and retrieves state from core_process server",
   "author": "",
   "license": "MIT",

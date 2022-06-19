@@ -18,7 +18,8 @@ import {
 import { log } from "@core/lib/utils/logger";
 import { env } from "../env";
 import { getOrg } from "../models/orgs";
-import { getOrgStats, getVerifyLicenseFn } from "../auth";
+import { getOrgStats } from "../auth";
+import { getVerifyLicenseFn } from "../billing";
 import { ipMatchesAny } from "@core/lib/utils/ip";
 
 apiAction<

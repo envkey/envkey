@@ -25,6 +25,7 @@ import { wait } from "@core/lib/utils/wait";
 import { PoolConnection } from "mysql2/promise";
 import { env } from "./env";
 import { ipMatchesAny } from "@core/lib/utils/ip";
+import { verifySignedLicense } from "./billing";
 import { log } from "@core/lib/utils/logger";
 
 let getOrgStatsFn: (
@@ -1217,28 +1218,3 @@ const authorizeEnvUpdate = (
 
     return true;
   };
-
-export const verifySignedLicense: Api.VerifyLicenseFn = (
-  orgId,
-  signedLicense,
-  now,
-  enforceExpiration = false
-) => {
-  if (!verifyLicenseFn) {
-    throw new Api.ApiError("verifyLicenseFn not registered", 500);
-  }
-  return verifyLicenseFn(orgId, signedLicense, now, enforceExpiration);
-};
-
-let verifyLicenseFn: Api.VerifyLicenseFn | undefined;
-
-export const registerVerifyLicenseFn = (fn: Api.VerifyLicenseFn) => {
-  verifyLicenseFn = fn;
-};
-
-export const getVerifyLicenseFn = () => {
-  if (!verifyLicenseFn) {
-    throw new Api.ApiError("verifyLicenseFn not registered", 500);
-  }
-  return verifyLicenseFn;
-};

@@ -316,6 +316,13 @@ export const handler = async (
     chalk.bold(`$HOME/.envkey/apps/${app.id}.env`)
   );
 
+  await dispatch({
+    type: Client.ActionType.CLEAR_GENERATED_ENVKEY,
+    payload: {
+      keyableParentId: serverKey.id,
+    },
+  });
+
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();
 };

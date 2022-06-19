@@ -204,6 +204,13 @@ export const handler = async (
     appId: app.id,
   });
 
+  await dispatch({
+    type: Client.ActionType.CLEAR_GENERATED_ENVKEY,
+    payload: {
+      keyableParentId: localKey.id,
+    },
+  });
+
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();
 };

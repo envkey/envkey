@@ -13,6 +13,7 @@ import {
   getDb,
   getNewTransactionConn,
   releaseTransaction,
+  pool,
 } from "@api_shared/db";
 import * as R from "ramda";
 import { getAuth, getEnvWithMeta } from "@core/lib/client";
@@ -1121,7 +1122,7 @@ describe("orgs", () => {
     const pendingRecoveryKeyParams = state.generatedRecoveryKey!;
 
     let orgGraph = await getOrgGraph(orgId, {
-      transactionConn: undefined,
+      transactionConnOrPool: pool,
     });
 
     const start = Date.now();
@@ -1232,7 +1233,7 @@ describe("orgs", () => {
     // test fetch ENVKEY root replacements
     await envkeyFetch(serverEnvkeyIdPart, serverEncryptionKey);
 
-    orgGraph = await getOrgGraph(orgId, { transactionConn: undefined });
+    orgGraph = await getOrgGraph(orgId, { transactionConnOrPool: pool });
     let generatedEnvkey = orgGraph[
       serverGeneratedEnvkeyId
     ] as Api.Db.GeneratedEnvkey;
@@ -1248,7 +1249,7 @@ describe("orgs", () => {
 
     await envkeyFetch(serverEnvkeyIdPart, serverEncryptionKey);
 
-    orgGraph = await getOrgGraph(orgId, { transactionConn: undefined });
+    orgGraph = await getOrgGraph(orgId, { transactionConnOrPool: pool });
     generatedEnvkey = orgGraph[
       serverGeneratedEnvkeyId
     ] as Api.Db.GeneratedEnvkey;

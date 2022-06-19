@@ -26,14 +26,17 @@ export namespace Db {
     | {
         pkey: string | string[];
         scope?: undefined;
+        pkeyScope?: undefined;
       }
     | {
         scope: string | string[];
         pkey?: undefined;
+        pkeyScope?: string;
       }
     | {
         pkey: string | string[];
         scope: string | string[];
+        pkeyScope?: undefined;
       }
   ) & {
     limit?: number;

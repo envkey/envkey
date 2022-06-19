@@ -10,7 +10,7 @@ import {
   environmentCompositeId,
   getGroupObjectTypeLabel,
 } from "@core/lib/graph";
-import { poolQuery } from "../db";
+import { poolQuery, pool } from "../db";
 import { objectPaths, pick } from "@core/lib/utils/object";
 import moment from "moment";
 import { PoolConnection } from "mysql2/promise";
@@ -183,7 +183,7 @@ export const registerLimitLogsFn = (fn: Api.LimitLogsFn) => {
         auth.org.id,
         startsAt,
         endsAt,
-        transactionConn
+        transactionConn ?? pool
       ),
       mergedOrgGraph = { ...orgGraph, ...deletedOrgGraph },
       mergedUserGraph = getUserGraph(

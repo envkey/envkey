@@ -161,10 +161,9 @@ export const setMaxPacketSize = (n: number) => {
   },
   getActiveOrgGraphObjects = async (
     orgId: string,
-    readOpts: Api.Db.DbReadOpts &
-      Omit<Api.Db.DbReadOpts, "transactionConn"> & {
-        transactionConnOrPool: PoolConnection | Pool;
-      },
+    readOpts: Omit<Api.Db.DbReadOpts, "transactionConn"> & {
+      transactionConnOrPool: PoolConnection | Pool;
+    },
     nonBaseScopes?: string[]
   ) =>
     query<Api.Graph.GraphObject>({
@@ -199,6 +198,7 @@ export const setMaxPacketSize = (n: number) => {
   ) => {
     const {
       pkey,
+      pkeyScope,
       scope,
       limit,
       offset,
@@ -248,10 +248,13 @@ export const setMaxPacketSize = (n: number) => {
         qs += "pkey = ?";
         qargs.push(pkey);
       }
+    } else if (pkeyScope) {
+      qs += "pkey LIKE ?";
+      qargs.push(pkeyScope + "%");
     }
 
     if (scope) {
-      if (pkey) {
+      if (pkey || pkeyScope) {
         qs += " AND ";
       }
       if (Array.isArray(scope)) {

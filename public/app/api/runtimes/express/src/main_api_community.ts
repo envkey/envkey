@@ -13,7 +13,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 import { log } from "@core/lib/utils/logger";
-import { registerVerifyLicenseFn } from "../../../shared/src/auth";
+import { registerVerifyLicenseFn } from "../../../shared/src/billing";
 import startup from "./startup";
 import { registerSocketServer } from "../../../shared/src/handler";
 import socketServer, { clearAllSockets } from "./socket";

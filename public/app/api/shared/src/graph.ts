@@ -1,9 +1,8 @@
-import { getActiveOrgGraphObjects, getDeletedOrgGraphObjects } from "./db";
+import { getActiveOrgGraphObjects, getDeletedOrgGraphObjects } from "./db_fns";
 import * as graphKey from "./graph_key";
 import { Graph, Rbac, Model, Api, Auth } from "@core/types";
 import { env } from "./env";
-import { verifySignedLicense } from "./auth";
-import { getOrgBillingId } from "./billing";
+import { getOrgBillingId, verifySignedLicense } from "./billing";
 import * as R from "ramda";
 import { pick } from "@core/lib/utils/pick";
 import produce, { Draft } from "immer";
@@ -31,14 +30,16 @@ import {
 } from "@core/lib/graph";
 import { v4 as uuid } from "uuid";
 import { objectDifference } from "@core/lib/utils/object";
-import { PoolConnection } from "mysql2/promise";
+import { PoolConnection, Pool } from "mysql2/promise";
 import { log } from "@core/lib/utils/logger";
 import { indexBy } from "@core/lib/utils/array";
 import { asyncify } from "@core/lib/async";
 
 export const getOrgGraph = async (
     orgId: string,
-    readOpts: Api.Db.DbReadOpts,
+    readOpts: Omit<Api.Db.DbReadOpts, "transactionConn"> & {
+      transactionConnOrPool: PoolConnection | Pool;
+    },
     nonBaseScopes?: string[]
   ): Promise<Api.Graph.OrgGraph> => {
     // query for active graph items, add to graph
@@ -54,13 +55,13 @@ export const getOrgGraph = async (
     orgId: string,
     startsAt: number,
     endsAt: number,
-    transactionConn: PoolConnection | undefined
+    transactionConnOrPool: PoolConnection | Pool
   ): Promise<Api.Graph.OrgGraph> => {
     const graphObjects = await getDeletedOrgGraphObjects(
       orgId,
       startsAt,
       endsAt,
-      transactionConn
+      transactionConnOrPool
     );
     return indexBy(R.prop("id"), graphObjects);
   },

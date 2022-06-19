@@ -8,6 +8,7 @@ import { envkeyFetch, envkeyFetchExpectError } from "./helpers/fetch_helper";
 import * as g from "@core/lib/graph";
 import * as R from "ramda";
 import { log } from "@core/lib/utils/logger";
+import { pool } from "@api_shared/db";
 import { getOrgGraph } from "@api_shared/graph";
 
 describe("firewall", () => {
@@ -252,7 +253,7 @@ describe("firewall", () => {
 
       // ensure they all have the right allowedIps set
       const orgGraph = await getOrgGraph(orgId, {
-        transactionConn: undefined,
+        transactionConnOrPool: pool,
       });
       const generatedEnvkeys = g.graphTypes(orgGraph).generatedEnvkeys;
       expect(generatedEnvkeys.length).toBe(3);

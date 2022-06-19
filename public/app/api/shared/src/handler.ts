@@ -326,14 +326,14 @@ export const apiAction = <
           orgGraph = await getOrgGraph(
             auth.org.id,
             {
-              transactionConn,
+              transactionConnOrPool: transactionConn,
             },
             Array.from(scopes)
           );
         }
       } else {
         orgGraph = await getOrgGraph(auth.org.id, {
-          transactionConn,
+          transactionConnOrPool: transactionConn,
         });
       }
 
@@ -454,14 +454,14 @@ export const apiAction = <
             orgGraph = await getOrgGraph(
               auth.org.id,
               {
-                transactionConn,
+                transactionConnOrPool: transactionConn,
               },
               scopeFn(auth, action)(orgGraph)
             );
           }
         } else {
           orgGraph = await getOrgGraph(auth.org.id, {
-            transactionConn,
+            transactionConnOrPool: transactionConn,
           });
         }
 

@@ -1,7 +1,7 @@
 import waitForExpect from "wait-for-expect";
 import { getState, dispatch, hostUrl } from "./test_helper";
 import { getUserEncryptedKeys } from "@api_shared/blob";
-import { query } from "@api_shared/db";
+import { query, pool } from "@api_shared/db";
 import * as R from "ramda";
 import { loadAccount } from "./auth_helper";
 import { Client, Api, Model } from "@core/types";
@@ -313,7 +313,7 @@ export const testRemoveUser = async (
       let replacement = replacements[0];
 
       let orgGraph = await getOrgGraph(orgId, {
-        transactionConn: undefined,
+        transactionConnOrPool: pool,
       });
       let orgGraphByType = graphTypes(orgGraph);
 

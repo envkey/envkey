@@ -215,7 +215,7 @@ apiAction<
     }
 
     const orgGraph = await getOrgGraph(cliUserPointer.orgId, {
-      transactionConn,
+      transactionConnOrPool: transactionConn,
     });
 
     const org = orgGraph[cliUserPointer.orgId] as Api.Db.Org;

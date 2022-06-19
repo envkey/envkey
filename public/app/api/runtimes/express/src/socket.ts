@@ -5,11 +5,8 @@ import url from "url";
 import { IncomingMessage, createServer } from "http";
 import { Auth, Api, Model, Billing } from "@core/types";
 import { log, logStderr } from "@core/lib/utils/logger";
-import {
-  authenticate,
-  verifySignedLicense,
-  getOrgStats,
-} from "../../../shared/src/auth";
+import { authenticate, getOrgStats } from "../../../shared/src/auth";
+import { verifySignedLicense } from "../../../shared/src/billing";
 import { okResult } from "./routes/route_helpers";
 import { upTo1Sec, wait } from "@core/lib/utils/wait";
 import {

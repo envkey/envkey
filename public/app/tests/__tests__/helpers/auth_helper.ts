@@ -196,7 +196,7 @@ export const getEmailToken = async (
         orgId: expect.toBeString(),
         orgName: expect.toBeString(),
         hostUrl,
-        email,
+        email: email.toLowerCase(),
         provider: "email",
         uid: expect.toBeString(),
         firstName: firstName ?? "Test",

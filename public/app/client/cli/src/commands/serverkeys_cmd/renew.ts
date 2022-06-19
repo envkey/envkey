@@ -225,6 +225,13 @@ export const handler = async (
   console.log("New Server Key:", `\nENVKEY=${chalk.bold(fullKey)}`);
   autoModeOut({ serverKey: fullKey, id: server.id, appId: app.id });
 
+  await dispatch({
+    type: Client.ActionType.CLEAR_GENERATED_ENVKEY,
+    payload: {
+      keyableParentId: server.id,
+    },
+  });
+
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();
 };

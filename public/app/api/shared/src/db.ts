@@ -30,7 +30,7 @@ export const poolConfig = {
   connectionLimit: 100,
 };
 
-const pool = createPool(poolConfig);
+export const pool = createPool(poolConfig);
 
 export const getPoolConn = async () => db_fns.getPoolConn(pool),
   getNewTransactionConn = async () => db_fns.getNewTransactionConn(pool),

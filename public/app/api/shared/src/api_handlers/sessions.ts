@@ -149,8 +149,10 @@ apiAction<
     const orgId = org.id,
       userId = user.id;
 
-    const graph = await getOrgGraph(org.id, { transactionConn }).then(
-      (orgGraph) => getApiUserGraph(orgGraph, org.id, userId, deviceId, now)
+    const graph = await getOrgGraph(org.id, {
+      transactionConnOrPool: transactionConn,
+    }).then((orgGraph) =>
+      getApiUserGraph(orgGraph, org.id, userId, deviceId, now)
     );
 
     return {
@@ -219,7 +221,7 @@ apiAction<
     }
 
     const graphPromise = getOrgGraph(auth.org.id, {
-        transactionConn,
+        transactionConnOrPool: transactionConn,
       }).then((orgGraph) =>
         getApiUserGraph(
           orgGraph,

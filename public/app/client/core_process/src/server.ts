@@ -40,7 +40,7 @@ import { createPatch, Patch } from "rfc6902";
 import { version as cliVersion } from "../../cli/package.json";
 
 export const start = async (port = 19047, wsport = 19048) => {
-  log("Starting EnvKey core process...");
+  log("Starting EnvKey core process...", { cliVersion });
   initFileLogger("core");
   await init();
 

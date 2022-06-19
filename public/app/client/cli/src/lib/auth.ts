@@ -171,8 +171,7 @@ export const authenticate = async <
             (!signedIn || acct.token)
         )
         .map((acct) => ({
-          name: "id",
-          value: acct.userId,
+          name: acct.userId,
           message: chalk.bold(acct.orgName),
         })),
     });

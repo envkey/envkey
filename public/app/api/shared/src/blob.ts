@@ -30,7 +30,7 @@ import { deleteUser } from "./graph";
 
 export const getUserEncryptedKeys = async (
     params: Blob.UserEncryptedKeyPkeyWithScopeParams,
-    queryParams: Omit<Api.Db.QueryParams, "pkey" | "scope">
+    queryParams: Omit<Api.Db.QueryParams, "pkey" | "scope" | "pkeyScope">
   ) => {
     const pkey = userEncryptedKeyPkey(params),
       scope = getScope(params),
@@ -110,7 +110,7 @@ export const getUserEncryptedKeys = async (
   },
   getEncryptedBlobs = async (
     params: Blob.EncryptedBlobPkeyWithScopeParams,
-    queryParams: Omit<Api.Db.QueryParams, "pkey" | "scope">
+    queryParams: Omit<Api.Db.QueryParams, "pkey" | "scope" | "pkeyScope">
   ) => {
     const pkey = encryptedBlobPkey(params),
       scope = getScope(params),

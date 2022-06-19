@@ -440,7 +440,7 @@ apiAction<
     await getOrg(auth.org.id, transactionConn, true);
 
     const orgGraph = await getOrgGraph(auth.org.id, {
-        transactionConn,
+        transactionConnOrPool: transactionConn,
       }),
       keySet = getCurrentEncryptedKeys(orgGraph, "all", now, true),
       { hardDeleteKeys, hardDeleteEncryptedKeyParams } =
