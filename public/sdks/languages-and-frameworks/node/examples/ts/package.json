@@ -6,6 +6,6 @@
     "start": "ts-node index.ts"
   },
   "dependencies": {
-    "envkey": "2.0.7"
+    "envkey": "2.0.8"
   }
 }

@@ -93,6 +93,17 @@ clientAction<
     }
     draft.renameErrors[auth.orgId] = payload;
   },
+  successStateProducer: (draft, { meta }) => {
+    const accountId = meta.accountIdOrCliKey,
+      rootActionPayload = meta.rootAction.payload,
+      name = rootActionPayload.name;
+
+    const authDraft = getAuth(draft, accountId);
+
+    if (authDraft && authDraft.type == "clientUserAuth") {
+      authDraft.orgName = name;
+    }
+  },
   endStateProducer: (draft, { meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {

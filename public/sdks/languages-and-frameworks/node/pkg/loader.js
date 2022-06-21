@@ -5,7 +5,7 @@ var path = require('path'),
     execFile = childProcess.execFile,
     execFileSync = childProcess.execFileSync
 
-var ENVKEY_SOURCE_VERSION = "2.0.24"
+var ENVKEY_SOURCE_VERSION = "2.0.26"
 
 function keyError(){
   return "ENVKEY invalid. Couldn't load vars."
@@ -134,12 +134,12 @@ function fetch(optsOrCb, maybeCb){
 
   var ext = platformPart == "windows" ? ".exe" : "",
       filePath = path.join(__dirname, "ext", ["envkey-source", ENVKEY_SOURCE_VERSION, platformPart, archPart].join("_"), ("envkey-source" + ext)),
-      execArgs = ["--json", (shouldCache ? "--cache" : ""), "--client-name", "envkey-node", "--client-version", "2.0.6"]
+      execArgs = ["--json", (shouldCache ? "--cache" : ""), "--client-name", "envkey-node", "--client-version", "2.0.9"]
 
   if (cb){
-    execFile(filePath, execArgs, { env: { ENVKEY: process.env.ENVKEY }}, function(err, stdoutStr, stderrStr){
+    execFile(filePath, execArgs, { env: process.env }, function(err, stdoutStr, stderrStr){
       if (err){
-        cb(stderrStr)
+        cb(stderrStr.replaceAll("echo 'error: ", "").replaceAll("'; false", ""))
       } else if (stdoutStr.indexOf("error: ") == 0){
         cb(stdoutStr)
       } else {
@@ -150,7 +150,7 @@ function fetch(optsOrCb, maybeCb){
 
   } else {
     try {
-      var res = execFileSync(filePath, execArgs, { env: { ENVKEY: process.env.ENVKEY }}).toString()
+      var res = execFileSync(filePath, execArgs, { env: process.env}).toString()
 
       if(!res || !res.trim()){
         throwKeyError()
@@ -165,9 +165,9 @@ function fetch(optsOrCb, maybeCb){
       return pickPermitted(json, opts)
     } catch (e){
       if (e.stderr){
-        console.error(e.stdout.toString())
-        console.error(e.stderr.toString())
-        throw(e.stderr.toString())
+        const err = e.stdout.toString().replaceAll("echo 'error: ", "").replaceAll("'; false", "")
+        console.error(err)
+        throw(err)
       } else {
         console.error(e.stack)
         throw(e)
