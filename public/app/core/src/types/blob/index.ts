@@ -77,9 +77,7 @@ export namespace Blob {
     env: z.literal(true).optional(),
     localOverrides: z.literal(true).optional(),
     subEnv: z.literal(true).optional(),
-    inheritanceOverrides: z
-      .union([z.literal(true), z.array(z.string())])
-      .optional(),
+    inheritanceOverrides: z.array(z.string()).optional(),
   });
 
   export type UserEnvSet = z.infer<typeof UserEnvSetSchema>;
@@ -87,9 +85,7 @@ export namespace Blob {
     env: z.literal(true).optional(),
     meta: z.literal(true).optional(),
     inherits: z.literal(true).optional(),
-    inheritanceOverrides: z
-      .union([z.literal(true), z.array(z.string())])
-      .optional(),
+    inheritanceOverrides: z.array(z.string()).optional(),
     changesets: z.literal(true).optional(),
   });
 

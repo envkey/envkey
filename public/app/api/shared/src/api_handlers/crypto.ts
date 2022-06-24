@@ -250,10 +250,14 @@ apiAction<
 
         if (environments) {
           for (let environmentId of Object.keys(environments)) {
-            const environmentDraft = draft[environmentId] as Model.Environment;
-            if (environmentDraft.reencryptionRequiredAt) {
-              delete environmentDraft.reencryptionRequiredAt;
-              environmentDraft.updatedAt = now;
+            if (environments[environmentId].env) {
+              const environmentDraft = draft[
+                environmentId
+              ] as Model.Environment;
+              if (environmentDraft.reencryptionRequiredAt) {
+                delete environmentDraft.reencryptionRequiredAt;
+                environmentDraft.updatedAt = now;
+              }
             }
           }
         }

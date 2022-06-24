@@ -17,9 +17,8 @@ import {
   getPendingKeyableEnv,
   getPendingEnvMeta,
   getPendingInherits,
-  getInheritingEnvironmentIds,
-  getInheritanceOverrides,
   getPendingInheritingEnvironmentIds,
+  getInheritanceOverrides,
 } from "@core/lib/client";
 import {
   getUserEncryptedKeyOrBlobComposite,
@@ -339,12 +338,13 @@ clientAction<
     let pendingIds: string[];
 
     if (payload.pendingEnvironmentIds) {
-      pendingIds = payload.initEnvs
-        ? payload.pendingEnvironmentIds
-        : R.intersection(
-            payload.pendingEnvironmentIds,
-            getPendingEnvironmentIds(draft)
-          );
+      pendingIds =
+        payload.initEnvs || payload.upgradeCrypto
+          ? payload.pendingEnvironmentIds
+          : R.intersection(
+              payload.pendingEnvironmentIds,
+              getPendingEnvironmentIds(draft)
+            );
     } else {
       pendingIds = getPendingEnvironmentIds(draft);
     }
@@ -415,12 +415,13 @@ clientAction<
     let pendingEnvironmentIds: string[];
 
     if (payload.pendingEnvironmentIds) {
-      pendingEnvironmentIds = payload.initEnvs
-        ? payload.pendingEnvironmentIds
-        : R.intersection(
-            payload.pendingEnvironmentIds,
-            getPendingEnvironmentIds(state)
-          );
+      pendingEnvironmentIds =
+        payload.initEnvs || payload.upgradeCrypto
+          ? payload.pendingEnvironmentIds
+          : R.intersection(
+              payload.pendingEnvironmentIds,
+              getPendingEnvironmentIds(state)
+            );
     } else {
       pendingEnvironmentIds = getPendingEnvironmentIds(state);
     }
@@ -463,13 +464,14 @@ clientAction<
 
     const pendingEnvironmentIdsSet = new Set(pendingEnvironmentIds);
 
-    const pendingEnvUpdates = payload.initEnvs
-      ? []
-      : R.clone(state.pendingEnvUpdates).filter(({ meta }) =>
-          pendingEnvironmentIdsSet.has(meta.environmentId)
-        );
+    const pendingEnvUpdates =
+      payload.initEnvs || payload.upgradeCrypto
+        ? []
+        : R.clone(state.pendingEnvUpdates).filter(({ meta }) =>
+            pendingEnvironmentIdsSet.has(meta.environmentId)
+          );
 
-    // const start = Date.now();
+    const start = Date.now();
     // log("getting envParamsForEnvironments");
 
     const {
@@ -481,7 +483,7 @@ clientAction<
       state,
       environmentIds: pendingEnvironmentIds,
       context,
-      pending: payload.initEnvs ? undefined : true,
+      pending: payload.initEnvs || payload.upgradeCrypto ? undefined : true,
       initEnvs: payload.initEnvs,
       message,
     });
@@ -513,6 +515,7 @@ clientAction<
           encryptedByTrustChain: encryptedByTrustChain
             ? { data: encryptedByTrustChain }
             : undefined,
+          upgradeCrypto: payload.upgradeCrypto,
         },
       },
       { ...context, rootClientAction: action }
@@ -571,25 +574,21 @@ clientAction<
         };
 
         if (environment && !environment.isSub) {
-          let inheritingEnvironmentIds = getInheritingEnvironmentIds(
-            state,
-            {
-              envParentId: environment.envParentId,
-              environmentId,
-            },
-            true
-          );
-
-          let subEnvironmentIds: string[] = [];
-          for (const id of inheritingEnvironmentIds) {
-            const subEnvironments =
-              getSubEnvironmentsByParentEnvironmentId(state.graph)[id] ?? [];
-            subEnvironmentIds = subEnvironmentIds.concat(
-              subEnvironments.map(R.prop("id"))
-            );
-          }
-          inheritingEnvironmentIds = new Set(
-            Array.from(inheritingEnvironmentIds).concat(subEnvironmentIds)
+          let inheritingEnvironmentIds = new Set(
+            (
+              getEnvironmentsByEnvParentId(state.graph)[
+                environment.envParentId
+              ] ?? []
+            )
+              .filter(
+                (sibling) =>
+                  sibling.id != environment.id &&
+                  !(
+                    sibling.isSub &&
+                    sibling.parentEnvironmentId == environment.id
+                  )
+              )
+              .map(R.prop("id"))
           );
 
           for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
@@ -602,70 +601,142 @@ clientAction<
               inheritsEnvironmentId: environment.id,
             });
 
-            let overrides = getInheritanceOverrides(
-              state,
-              {
-                envParentId: environment.envParentId,
-                environmentId: inheritingEnvironmentId,
-                forInheritsEnvironmentId: environmentId,
-              },
-              true
-            )[environmentId];
-
-            if (inheritingEnvironment.isSub) {
-              const parentOverrides = getInheritanceOverrides(
+            let overrides =
+              getInheritanceOverrides(
                 state,
                 {
                   envParentId: environment.envParentId,
-                  environmentId: inheritingEnvironment.parentEnvironmentId,
+                  environmentId: inheritingEnvironmentId,
                   forInheritsEnvironmentId: environmentId,
                 },
                 true
-              )[environmentId];
+              )[environmentId] ?? {};
 
-              if (parentOverrides) {
-                overrides = {
-                  ...parentOverrides,
-                  ...(overrides ?? {}),
-                };
-              }
+            if (inheritingEnvironment.isSub) {
+              const parentOverrides =
+                getInheritanceOverrides(
+                  state,
+                  {
+                    envParentId: environment.envParentId,
+                    environmentId: inheritingEnvironment.parentEnvironmentId,
+                    forInheritsEnvironmentId: environmentId,
+                  },
+                  true
+                )[environmentId] ?? {};
+
+              overrides = {
+                ...parentOverrides,
+                ...overrides,
+              };
             }
-            if (overrides) {
-              let key = environmentKeysByComposite[composite];
-              if (!key) {
-                log("Missing inheritanceOverrides key", {
-                  composite,
-                  envParent: getObjectName(
-                    state.graph,
-                    environment.envParentId
-                  ),
-                  environment: getEnvironmentName(state.graph, environment.id),
-                  inheritingEnvironment: getEnvironmentName(
-                    state.graph,
-                    inheritingEnvironment.id
-                  ),
-                });
-                throw new Error("Missing inheritanceOverrides key");
-              }
-              res[composite] = { env: overrides, key };
+            let key = environmentKeysByComposite[composite];
+            if (!key) {
+              log("Missing inheritanceOverrides key", {
+                composite,
+                envParent: getObjectName(state.graph, environment.envParentId),
+                environment: getEnvironmentName(state.graph, environment.id),
+                inheritingEnvironment: getEnvironmentName(
+                  state.graph,
+                  inheritingEnvironment.id
+                ),
+              });
+              throw new Error("Missing inheritanceOverrides key");
             }
+            res[composite] = { env: overrides, key };
+          }
+        }
+
+        if (environment) {
+          const siblingBaseEnvironmentIds = (
+            getEnvironmentsByEnvParentId(state.graph)[
+              environment.envParentId
+            ] ?? []
+          )
+            .filter(
+              (sibling) =>
+                !sibling.isSub &&
+                sibling.id != environment.id &&
+                !(
+                  environment.isSub &&
+                  environment.parentEnvironmentId == sibling.id
+                )
+            )
+            .map(R.prop("id"));
+
+          for (let siblingBaseEnvironmentId of siblingBaseEnvironmentIds) {
+            const siblingEnvironment = state.graph[
+              siblingBaseEnvironmentId
+            ] as Model.Environment;
+
+            const composite = getUserEncryptedKeyOrBlobComposite({
+              environmentId: environment.id,
+              inheritsEnvironmentId: siblingBaseEnvironmentId,
+            });
+
+            let overrides =
+              getInheritanceOverrides(
+                state,
+                {
+                  envParentId: environment.envParentId,
+                  environmentId: environmentId,
+                  forInheritsEnvironmentId: siblingBaseEnvironmentId,
+                },
+                true
+              )[environmentId] ?? {};
+
+            if (siblingEnvironment.isSub) {
+              const parentOverrides =
+                getInheritanceOverrides(
+                  state,
+                  {
+                    envParentId: environment.envParentId,
+                    environmentId: siblingEnvironment.parentEnvironmentId,
+                    forInheritsEnvironmentId: environmentId,
+                  },
+                  true
+                )[environmentId] ?? {};
+
+              overrides = {
+                ...parentOverrides,
+                ...overrides,
+              };
+            }
+            let key =
+              environmentKeysByComposite[composite] ?? state.envs[composite];
+            if (!key) {
+              log("Missing inheritanceOverrides key", {
+                composite,
+                envParent: getObjectName(state.graph, environment.envParentId),
+                inheritingEnvironment: getEnvironmentName(
+                  state.graph,
+                  environment.id
+                ),
+                baseEnvironment: getEnvironmentName(
+                  state.graph,
+                  siblingEnvironment.id
+                ),
+              });
+              throw new Error("Missing inheritanceOverrides key");
+            }
+            res[composite] = { env: overrides, key };
           }
         }
 
         return res;
       }, {} as Client.State["envs"]),
-      changesets: payload.initEnvs
-        ? ({} as Client.State["changesets"])
-        : pendingEnvironmentIds.reduce(
-            (agg, environmentId) => ({
-              ...agg,
-              [environmentId]: {
-                key: changesetKeysByEnvironmentId[environmentId],
-                changesets: state.changesets[environmentId]?.changesets ?? [],
-              },
-            }),
-            {} as Client.State["changesets"]
-          ),
+      changesets:
+        payload.initEnvs || payload.upgradeCrypto
+          ? ({} as Client.State["changesets"])
+          : pendingEnvironmentIds.reduce(
+              (agg, environmentId) => ({
+                ...agg,
+                [environmentId]: {
+                  key: changesetKeysByEnvironmentId[environmentId],
+                  changesets: state.changesets[environmentId]?.changesets ?? [],
+                },
+              }),
+              {} as Client.State["changesets"]
+            ),
     };
 
     // log("got dispatchContext: " + (Date.now() - start).toString());

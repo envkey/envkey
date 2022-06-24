@@ -1,7 +1,7 @@
-import { log } from "./../utils/logger";
 import { Graph, Rbac, Model, Blob } from "../../types";
 import * as R from "ramda";
 import { getActiveGraph, graphTypes } from "./base";
+import { getEnvironmentsByEnvParentId } from "./indexed_graph";
 import {
   getEnvParentPermissions,
   getOrgPermissions,
@@ -15,7 +15,7 @@ import {
 import memoize from "../utils/memoize";
 import { getScoped } from "./scoped";
 import set from "lodash.set";
-import { getObjectName } from "./names";
+import { log } from "./../utils/logger";
 
 export const getCurrentEncryptedKeys = memoize(
   (
@@ -24,8 +24,7 @@ export const getCurrentEncryptedKeys = memoize(
     now: number,
     skipFilterActive = false
   ): Blob.KeySet => {
-    // log("getCurrentEncryptedKeys");
-    const start = Date.now();
+    // const start = Date.now();
 
     let keys: Blob.KeySet = { type: "keySet" };
 
@@ -57,7 +56,8 @@ export const getCurrentEncryptedKeys = memoize(
 
     const addUserPath = (
       userId: string,
-      path: [string, "environments" | "locals", string, keyof Blob.UserEnvSet]
+      path: [string, "environments" | "locals", string, keyof Blob.UserEnvSet],
+      val: true | string[] = true
     ) => {
       let deviceIds = deviceIdsByUserId[userId];
 
@@ -72,26 +72,23 @@ export const getCurrentEncryptedKeys = memoize(
       }
 
       deviceIds.forEach((deviceId) =>
-        set(keys, ["users", userId, deviceId, ...path], true)
+        set(keys, ["users", userId, deviceId, ...path], val)
       );
     };
-
-    // log("", {
-    //   "scopeUsers.length": scopeUsers.length,
-    //   "scopeEnvironments.length": scopeEnvironments.length,
-    // });
 
     for (let { id: userId } of scopeUsers) {
       // environments
       for (let environment of scopeEnvironments) {
         if (environment.envUpdatedAt) {
-          const addEnvironmentPath = (k: keyof Blob.UserEnvSet) =>
-            addUserPath(userId, [
-              environment.envParentId,
-              "environments",
-              environment.id,
-              k,
-            ]);
+          const addEnvironmentPath = (
+            k: keyof Blob.UserEnvSet,
+            val: true | string[] = true
+          ) =>
+            addUserPath(
+              userId,
+              [environment.envParentId, "environments", environment.id, k],
+              val
+            );
 
           const permissions = getEnvironmentPermissions(
             active,
@@ -101,6 +98,29 @@ export const getCurrentEncryptedKeys = memoize(
 
           if (permissions.has("read")) {
             addEnvironmentPath("env");
+
+            const siblingBaseEnvironmentIds = (
+              getEnvironmentsByEnvParentId(active)[environment.envParentId] ??
+              []
+            )
+              .filter(
+                (sibling) =>
+                  sibling.id != environment.id &&
+                  !sibling.isSub &&
+                  !(
+                    environment.isSub &&
+                    environment.parentEnvironmentId == sibling.id
+                  ) &&
+                  sibling.envUpdatedAt
+              )
+              .map(R.prop("id"));
+
+            if (siblingBaseEnvironmentIds.length > 0) {
+              addEnvironmentPath(
+                "inheritanceOverrides",
+                siblingBaseEnvironmentIds
+              );
+            }
           }
           if (permissions.has("read_meta")) {
             addEnvironmentPath("meta");
@@ -128,11 +148,6 @@ export const getCurrentEncryptedKeys = memoize(
         keyableParent.environmentId
       ] as Model.Environment;
 
-      const environmentRole = active[
-        environment.environmentRoleId
-      ] as Rbac.EnvironmentRole;
-      const app = active[environment.envParentId] as Model.App;
-
       if (environment.isSub) {
         const parentEnvironment = active[
           environment.parentEnvironmentId
@@ -145,13 +160,9 @@ export const getCurrentEncryptedKeys = memoize(
         if (environment.envUpdatedAt) {
           appProps.push("subEnv");
         }
-
-        if (parentEnvironment.envUpdatedAt || environment.envUpdatedAt) {
-          appProps.push("inheritanceOverrides");
-        }
       } else {
         if (environment.envUpdatedAt) {
-          appProps.push("env", "inheritanceOverrides");
+          appProps.push("env");
         }
       }
 
@@ -168,6 +179,55 @@ export const getCurrentEncryptedKeys = memoize(
           ["keyableParents", keyableParent.id, generatedEnvkey.id, prop],
           true
         );
+      }
+
+      // inheritance overrides
+      const siblingBaseEnvironmentIds = (
+        getEnvironmentsByEnvParentId(active)[environment.envParentId] ?? []
+      )
+        .filter(
+          (sibling) =>
+            sibling.id != environment.id &&
+            !sibling.isSub &&
+            !(
+              environment.isSub && environment.parentEnvironmentId == sibling.id
+            ) &&
+            sibling.envUpdatedAt
+        )
+        .map(R.prop("id"));
+
+      if (siblingBaseEnvironmentIds.length > 0) {
+        if (environment.isSub) {
+          const parentEnvironment = active[
+            environment.parentEnvironmentId
+          ] as Model.Environment;
+
+          if (parentEnvironment.envUpdatedAt || environment.envUpdatedAt) {
+            set(
+              keys,
+              [
+                "keyableParents",
+                keyableParent.id,
+                generatedEnvkey.id,
+                "inheritanceOverrides",
+              ],
+              siblingBaseEnvironmentIds
+            );
+          }
+        } else {
+          if (environment.envUpdatedAt) {
+            set(
+              keys,
+              [
+                "keyableParents",
+                keyableParent.id,
+                generatedEnvkey.id,
+                "inheritanceOverrides",
+              ],
+              siblingBaseEnvironmentIds
+            );
+          }
+        }
       }
 
       const connectedBlocks = getConnectedBlocksForApp(
@@ -206,23 +266,9 @@ export const getCurrentEncryptedKeys = memoize(
             if (blockEnvironment.envUpdatedAt) {
               blockProps.push("subEnv");
             }
-
-            if (
-              parentEnvironment.envUpdatedAt ||
-              blockEnvironment.envUpdatedAt
-            ) {
-              blockProps.push("inheritanceOverrides");
-            }
           } else {
-            const block = active[
-              blockEnvironment.envParentId
-            ] as Model.EnvParent;
-            const environmentRole = active[
-              blockEnvironment.environmentRoleId
-            ] as Rbac.EnvironmentRole;
-
             if (blockEnvironment.envUpdatedAt) {
-              blockProps.push("env", "inheritanceOverrides");
+              blockProps.push("env");
             }
           }
         }
@@ -246,6 +292,65 @@ export const getCurrentEncryptedKeys = memoize(
             ],
             true
           );
+        }
+
+        // inheritance overrides
+        if (blockEnvironment) {
+          const siblingBaseEnvironmentIds = (
+            getEnvironmentsByEnvParentId(active)[
+              blockEnvironment.envParentId
+            ] ?? []
+          )
+            .filter(
+              (sibling) =>
+                sibling.id != blockEnvironment.id &&
+                !sibling.isSub &&
+                !(
+                  blockEnvironment.isSub &&
+                  blockEnvironment.parentEnvironmentId == sibling.id
+                ) &&
+                sibling.envUpdatedAt
+            )
+            .map(R.prop("id"));
+
+          if (siblingBaseEnvironmentIds.length > 0) {
+            if (blockEnvironment.isSub) {
+              const parentEnvironment = active[
+                blockEnvironment.parentEnvironmentId
+              ] as Model.Environment;
+
+              if (
+                parentEnvironment.envUpdatedAt ||
+                blockEnvironment.envUpdatedAt
+              ) {
+                set(
+                  keys,
+                  [
+                    "blockKeyableParents",
+                    blockId,
+                    keyableParent.id,
+                    generatedEnvkey.id,
+                    "inheritanceOverrides",
+                  ],
+                  siblingBaseEnvironmentIds
+                );
+              }
+            } else {
+              if (blockEnvironment.envUpdatedAt) {
+                set(
+                  keys,
+                  [
+                    "blockKeyableParents",
+                    blockId,
+                    keyableParent.id,
+                    generatedEnvkey.id,
+                    "inheritanceOverrides",
+                  ],
+                  siblingBaseEnvironmentIds
+                );
+              }
+            }
+          }
         }
       }
     }

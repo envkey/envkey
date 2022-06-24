@@ -230,19 +230,7 @@ export const getUserEncryptedKeys = async (
     }
 
     if (generatedEnvkeyToDelete.inheritanceOverrides) {
-      let environmentIds: string[];
-      if (generatedEnvkeyToDelete.inheritanceOverrides === true) {
-        const keyableParent = originalGraph[
-          keyableParentId
-        ] as Model.KeyableParent;
-        environmentIds = (
-          getEnvironmentsByEnvParentId(originalGraph)[
-            blockId || keyableParent.appId
-          ] || []
-        ).map(R.prop("id"));
-      } else {
-        environmentIds = generatedEnvkeyToDelete.inheritanceOverrides;
-      }
+      const environmentIds = generatedEnvkeyToDelete.inheritanceOverrides;
 
       keys = keys.concat(
         environmentIds.map((environmentId) =>
@@ -342,26 +330,22 @@ export const getUserEncryptedKeys = async (
                   environmentToDelete.env ||
                   environmentToDelete.inheritanceOverrides
                 ) {
-                  let siblingEnvironmentIds: string[] = [];
+                  let siblingBaseEnvironmentIds: string[] = [];
 
-                  if (
-                    environmentToDelete.env ||
-                    environmentToDelete.inheritanceOverrides === true
-                  ) {
-                    siblingEnvironmentIds = (
+                  if (environmentToDelete.env) {
+                    siblingBaseEnvironmentIds = (
                       getEnvironmentsByEnvParentId(originalGraph)[
                         envParentId
                       ] || []
                     )
-                      .filter(({ id }) => id != environmentId)
+                      .filter(({ id, isSub }) => id != environmentId && !isSub)
                       .map(R.prop("id"));
                   } else if (environmentToDelete.inheritanceOverrides) {
-                    throw new Error(
-                      "When deleting keys, can only handle boolean 'inheritanceOverrides' flag, not list of ids"
-                    );
+                    siblingBaseEnvironmentIds =
+                      environmentToDelete.inheritanceOverrides;
                   }
 
-                  for (let siblingEnvironmentId of siblingEnvironmentIds) {
+                  for (let siblingEnvironmentId of siblingBaseEnvironmentIds) {
                     hardDeleteKeys.push(
                       getUserEncryptedKey({
                         orgId: auth.org.id,
@@ -1122,7 +1106,13 @@ export const getUserEncryptedKeys = async (
 
           if (
             !(
-              (env && meta && inherits && (changesets || changesetsById)) ||
+              (env &&
+                meta &&
+                inherits &&
+                (changesets ||
+                  changesetsById ||
+                  (action.type == Api.ActionType.UPDATE_ENVS &&
+                    action.payload.upgradeCrypto))) ||
               inheritanceOverrides
             )
           ) {
@@ -1414,11 +1404,6 @@ export const getUserEncryptedKeys = async (
   ): void => {
     const requiredPaths = objectPaths(required);
     for (let path of requiredPaths) {
-      // don't require inheritanceOverrides since the client decides whether these should be posted
-      if (R.last(path) == "inheritanceOverrides") {
-        continue;
-      }
-
       let toRequirePath: string[];
       if (keys.newDevice && path[0] == "users") {
         toRequirePath = ["newDevice", ...path.slice(3)];

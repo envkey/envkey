@@ -8,10 +8,12 @@ import {
   ensureChangesetsFetched,
   getEnvMetaOnly,
   getPendingActionsByEnvironmentId,
+  getInheritanceOverrides,
 } from "@core/lib/client";
 import { encryptedKeyParamsForEnvironments } from ".";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import set from "lodash.set";
+import { log } from "@core/lib/utils/logger";
 
 export const envParamsForEnvironments = async (params: {
   state: Client.State;
@@ -56,7 +58,6 @@ export const envParamsForEnvironments = async (params: {
     envParentIds,
     baseEnvironmentsByEnvParentId,
     inheritingEnvironmentIdsByEnvironmentId,
-    inheritanceOverridesByEnvironmentId,
   } = await encryptedKeyParamsForEnvironments({
     ...params,
     environmentIds,
@@ -255,39 +256,42 @@ export const envParamsForEnvironments = async (params: {
           continue;
         }
 
-        const overridesByEnvironmentId =
-          inheritanceOverridesByEnvironmentId[inheritingEnvironmentId];
+        const composite = getUserEncryptedKeyOrBlobComposite({
+          environmentId: inheritingEnvironmentId,
+          inheritsEnvironmentId: baseEnvironment.id,
+        });
 
-        if (overridesByEnvironmentId?.[baseEnvironment.id]) {
-          const composite = getUserEncryptedKeyOrBlobComposite({
-            environmentId: inheritingEnvironmentId,
-            inheritsEnvironmentId: baseEnvironment.id,
-          });
+        const encryptionKey =
+          environmentKeysByComposite[composite] ?? state.envs[composite]?.key;
 
-          const encryptionKey =
-            environmentKeysByComposite[composite] ?? state.envs[composite]?.key;
+        if (encryptionKey) {
+          environmentKeysByComposite[composite] = encryptionKey;
 
-          if (encryptionKey) {
-            environmentKeysByComposite[composite] = encryptionKey;
-
-            const data = JSON.stringify(
-              overridesByEnvironmentId[baseEnvironment.id]
-            );
-
-            toEncrypt.push([
-              [
-                envParentId,
-                "environments",
-                inheritingEnvironmentId,
-                "inheritanceOverrides",
-                baseEnvironment.id,
-              ],
+          const data = JSON.stringify(
+            getInheritanceOverrides(
+              state,
               {
-                data,
-                encryptionKey,
+                envParentId,
+                environmentId: inheritingEnvironmentId,
+                forInheritsEnvironmentId: baseEnvironment.id,
               },
-            ]);
-          }
+              pending
+            )[baseEnvironment.id] ?? {}
+          );
+
+          toEncrypt.push([
+            [
+              envParentId,
+              "environments",
+              inheritingEnvironmentId,
+              "inheritanceOverrides",
+              baseEnvironment.id,
+            ],
+            {
+              data,
+              encryptionKey,
+            },
+          ]);
         }
       }
     }

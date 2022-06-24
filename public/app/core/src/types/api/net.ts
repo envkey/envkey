@@ -1019,7 +1019,11 @@ export namespace Net {
     [ActionType.DISCONNECT_BLOCK]: IdParamsSchema.merge(
       EnvParamsSchema.partial()
     ),
-    [ActionType.UPDATE_ENVS]: EnvParamsSchema,
+    [ActionType.UPDATE_ENVS]: EnvParamsSchema.merge(
+      z.object({
+        upgradeCrypto: z.boolean().optional(),
+      })
+    ),
     [ActionType.FETCH_ENVS]: FetchEnvsParamsSchema,
     [ActionType.CREATE_VARIABLE_GROUP]: Model.VariableGroupSchema.pick({
       envParentId: true,

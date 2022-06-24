@@ -108,6 +108,7 @@ export namespace Db {
       generatedAnyEnvkey: z.boolean().optional(),
       startedOrgImportAt: z.number().optional(),
       finishedOrgImportAt: z.number().optional(),
+      envUpdateRequiresClientVersion: z.string().optional(),
     })
     .merge(Model.OrgSchema)
     .merge(DbObjectSchema);

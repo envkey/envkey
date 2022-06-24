@@ -1,4 +1,5 @@
 process.env.NODE_ENV = "development";
+Error.stackTraceLimit = Infinity;
 
 import "jest-extended";
 

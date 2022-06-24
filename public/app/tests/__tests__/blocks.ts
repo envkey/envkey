@@ -409,6 +409,8 @@ describe("blocks", () => {
       ownerId
     );
 
+    state = getState(ownerId);
+
     await dispatch(
       {
         type: Client.ActionType.CREATE_SERVER,

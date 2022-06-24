@@ -340,6 +340,9 @@ apiAction<
             ? payload.selfHostedFailoverRegion
             : undefined,
         ...(env.IS_CLOUD ? { lifecycleEmailsEnabled: true } : {}),
+
+        envUpdateRequiresClientVersion: "2.1.0",
+        "upgradedCrypto-2.1.0": true,
       },
       orgUserDevice: Api.Db.OrgUserDevice = {
         type: "orgUserDevice",

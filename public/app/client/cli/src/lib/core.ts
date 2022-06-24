@@ -61,8 +61,6 @@ export const getState = () => state,
   startCore = async (inline = false) => {
     const alive = await isAlive();
 
-    console.log("alive", alive);
-
     if (typeof alive == "string") {
       if (semver.valid(alive) && semver.gt(cliVersion, alive)) {
         const res = await stop();

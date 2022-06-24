@@ -3,6 +3,7 @@ import { Client, Model } from "@core/types";
 import * as R from "ramda";
 import { graphTypes } from "@core/lib/graph";
 import waitForExpect from "wait-for-expect";
+import { log } from "@core/lib/utils/logger";
 
 export const createApp = async (
   accountId: string,
@@ -29,6 +30,10 @@ export const createApp = async (
   });
 
   const res = await promise;
+
+  if (!res.success) {
+    log("", res.resultAction);
+  }
 
   expect(res.success).toBeTrue();
 

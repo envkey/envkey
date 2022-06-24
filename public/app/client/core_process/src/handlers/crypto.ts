@@ -5,7 +5,6 @@ import {
   getTrustChain,
   getPubkeyHash,
   envsNeedFetch,
-  getInheritingEnvironmentIds,
   changesetsNeedFetch,
 } from "@core/lib/client";
 import { Client, Api, Crypto, Model } from "@core/types";
@@ -17,6 +16,9 @@ import {
   getSignedByKeyableIds,
   getEnvironmentsQueuedForReencryptionIds,
   graphTypes,
+  getEnvironmentsByEnvParentId,
+  getObjectName,
+  getEnvironmentName,
 } from "@core/lib/graph";
 import { log } from "@core/lib/utils/logger";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
@@ -762,13 +764,20 @@ clientAction<
       };
 
       if (environment && !environment.isSub) {
-        const inheritingEnvironmentIds = getInheritingEnvironmentIds(
-          state,
-          {
-            envParentId: environment.envParentId,
-            environmentId,
-          },
-          true
+        const inheritingEnvironmentIds = new Set(
+          (
+            getEnvironmentsByEnvParentId(state.graph)[
+              environment.envParentId
+            ] ?? []
+          )
+            .filter(
+              (sibling) =>
+                sibling.id != environment.id &&
+                !(
+                  sibling.isSub && sibling.parentEnvironmentId == environment.id
+                )
+            )
+            .map(R.prop("id"))
         );
 
         for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
@@ -784,6 +793,65 @@ clientAction<
             }
 
             res[composite] = { env: state.envs[composite].env, key };
+          } else {
+            log("Missing inheritanceOverrides composite", {
+              composite,
+              envParent: getObjectName(state.graph, environment.envParentId),
+              environment: getEnvironmentName(state.graph, environment.id),
+              inheritingEnvironment: getEnvironmentName(
+                state.graph,
+                inheritingEnvironmentId
+              ),
+            });
+            throw new Error("Missing inheritanceOverrides composite");
+          }
+        }
+      }
+
+      if (environment) {
+        const siblingBaseEnvironmentIds = (
+          getEnvironmentsByEnvParentId(state.graph)[environment.envParentId] ??
+          []
+        )
+          .filter(
+            (sibling) =>
+              !sibling.isSub &&
+              sibling.id != environment.id &&
+              !(
+                environment.isSub &&
+                environment.parentEnvironmentId == sibling.id
+              )
+          )
+          .map(R.prop("id"));
+
+        for (let siblingBaseEnvironmentId of siblingBaseEnvironmentIds) {
+          const siblingEnvironment = state.graph[
+            siblingBaseEnvironmentId
+          ] as Model.Environment;
+
+          const composite = getUserEncryptedKeyOrBlobComposite({
+            environmentId: environment.id,
+            inheritsEnvironmentId: siblingBaseEnvironmentId,
+          });
+
+          if (state.envs[composite]) {
+            const key = environmentKeysByComposite![composite];
+            if (!key) {
+              throw new Error("Missing inheritanceOverrides key");
+            }
+
+            res[composite] = { env: state.envs[composite].env, key };
+          } else {
+            log("Missing inheritanceOverrides composite", {
+              composite,
+              envParent: getObjectName(state.graph, environment.envParentId),
+              environment: getEnvironmentName(state.graph, environment.id),
+              inheritingEnvironment: getEnvironmentName(
+                state.graph,
+                siblingEnvironment.id
+              ),
+            });
+            throw new Error("Missing inheritanceOverrides composite");
           }
         }
       }

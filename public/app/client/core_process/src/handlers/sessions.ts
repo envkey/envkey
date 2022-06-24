@@ -3,6 +3,7 @@ import {
   decryptedEnvsStateProducer,
   fetchLoadedEnvs,
   fetchPendingEnvs,
+  fetchRequiredEnvs,
 } from "../lib/envs";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -11,6 +12,7 @@ import { getAuth } from "@core/lib/client";
 import { verifyCurrentUser } from "../lib/trust";
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
+import * as g from "@core/lib/graph";
 import { log } from "@core/lib/utils/logger";
 
 clientAction<
@@ -39,10 +41,11 @@ clientAction<
     draft.createSessionError = payload;
   },
   handler: async (
-    state,
+    initialState,
     action,
     { context: contextParams, dispatchSuccess, dispatchFailure }
   ) => {
+    let state = initialState;
     const { payload } = action;
     let auth = state.orgUserAccounts[
       payload.accountId
@@ -97,21 +100,29 @@ clientAction<
       return dispatchFailure((apiRes.resultAction as any).payload, context);
     }
 
+    state = apiRes.state;
+
     const timestamp = (
       (apiRes.resultAction as any).payload as Api.Net.SessionResult
     ).timestamp;
 
     try {
-      const verifyRes = await verifyCurrentUser(apiRes.state, context);
+      const verifyRes = await verifyCurrentUser(state, context);
 
       if (!verifyRes.success) {
         throw new Error("Couldn't verify current user");
       }
 
-      const fetchLoadedRes = await fetchLoadedEnvs(verifyRes.state, context);
+      state = verifyRes.state;
+
+      const fetchLoadedRes = await fetchLoadedEnvs(state, context);
 
       if (fetchLoadedRes && !fetchLoadedRes.success) {
         throw new Error("Error fetching latest loaded environments");
+      }
+
+      if (fetchLoadedRes) {
+        state = fetchLoadedRes.state;
       }
 
       const fetchPendingRes = await fetchPendingEnvs(
@@ -121,6 +132,19 @@ clientAction<
 
       if (fetchPendingRes && !fetchPendingRes.success) {
         throw new Error("Error fetching latest pending environments");
+      }
+
+      if (fetchPendingRes) {
+        state = fetchPendingRes.state;
+      }
+
+      const upgradeCryptoRes = await upgradeCryptoIfNeeded(
+        state,
+        auth.userId,
+        context
+      );
+      if (upgradeCryptoRes && !upgradeCryptoRes.success) {
+        throw new Error("Error upgrading to latest crypto version");
       }
     } catch (error) {
       return dispatchFailure({ type: "clientError", error }, context);
@@ -210,10 +234,11 @@ clientAction<
     );
   },
   handler: async (
-    state,
+    initialState,
     action,
     { context, dispatchSuccess, dispatchFailure }
   ) => {
+    let state = initialState;
     let auth = getAuth<Client.ClientUserAuth>(state, context.accountIdOrCliKey);
     if (!auth) {
       throw new Error("Action requires authentication and decrypted privkey");
@@ -232,6 +257,8 @@ clientAction<
     if (!apiRes.success) {
       return dispatchFailure((apiRes.resultAction as any).payload, context);
     }
+
+    state = apiRes.state;
 
     if (
       (
@@ -253,6 +280,8 @@ clientAction<
         throw new Error("Couldn't verify current user");
       }
 
+      state = verifyRes.state;
+
       const fetchLoadedRes = await fetchLoadedEnvs(
         verifyRes.state,
         context,
@@ -265,6 +294,10 @@ clientAction<
         );
       }
 
+      if (fetchLoadedRes) {
+        state = fetchLoadedRes.state;
+      }
+
       const fetchPendingRes = await fetchPendingEnvs(
         fetchLoadedRes?.state ?? verifyRes.state,
         context
@@ -272,6 +305,19 @@ clientAction<
 
       if (fetchPendingRes && !fetchPendingRes.success) {
         throw new Error("Error fetching latest pending environments");
+      }
+
+      if (fetchPendingRes) {
+        state = fetchPendingRes.state;
+      }
+
+      const upgradeCryptoRes = await upgradeCryptoIfNeeded(
+        state,
+        auth.userId,
+        context
+      );
+      if (upgradeCryptoRes && !upgradeCryptoRes.success) {
+        throw new Error("Error upgrading to latest crypto version");
       }
     } catch (error) {
       return dispatchFailure({ type: "clientError", error }, context);
@@ -595,3 +641,43 @@ clientAction<Api.Action.RequestActions["ClearOrgTokens"]>({
     } as Client.State;
   },
 });
+
+export const upgradeCryptoIfNeeded = async (
+  state: Client.State,
+  currentUserId: string,
+  context: Client.Context
+) => {
+  const { org, environments } = g.graphTypes(state.graph);
+
+  if (!org["upgradedCrypto-2.1.0"]) {
+    const environmentIds = environments
+      .filter(
+        (environment) =>
+          !environment["upgradedCrypto-2.1.0"] &&
+          g.authz.canUpdateEnv(state.graph, currentUserId, environment.id)
+      )
+      .map(R.prop("id"));
+
+    const fetchRes = await fetchRequiredEnvs(
+      state,
+      new Set(environmentIds),
+      new Set(),
+      context
+    );
+
+    if (fetchRes && !fetchRes.success) {
+      return fetchRes;
+    }
+
+    return dispatch<Client.Action.ClientActions["CommitEnvs"]>(
+      {
+        type: Client.ActionType.COMMIT_ENVS,
+        payload: {
+          pendingEnvironmentIds: environmentIds,
+          upgradeCrypto: true,
+        },
+      },
+      context
+    );
+  }
+};

@@ -5,26 +5,17 @@ import {
   getCurrentEncryptedKeys,
   getConnectedBlockEnvironmentsForApp,
   getEnvironmentName,
+  getEnvironmentsByEnvParentId,
 } from "@core/lib/graph";
 import {
   keySetDifference,
   getUserEncryptedKeyOrBlobComposite,
   parseUserEncryptedKeyOrBlobComposite,
 } from "@core/lib/blob";
-import {
-  encrypt,
-  encryptSymmetricWithKey,
-  signJson,
-} from "@core/lib/crypto/proxy";
-import { symmetricEncryptionKey } from "@core/lib/crypto/utils";
+import { encrypt, signJson } from "@core/lib/crypto/proxy";
 import { verifyOrgKeyable } from "../trust";
-import {
-  getTrustChain,
-  getAuth,
-  getInheritanceOverrides,
-} from "@core/lib/client";
+import { getTrustChain, getAuth } from "@core/lib/client";
 import set from "lodash.set";
-import { dispatch } from "../../handler";
 import { log } from "@core/lib/utils/logger";
 
 export const keySetForGraphProposal = (
@@ -134,16 +125,7 @@ export const keySetForGraphProposal = (
 
     const privkey = currentAuth.privkey,
       toVerifyKeyableIds = new Set<string>(),
-      toEncryptKeys: [string[], Parameters<typeof encrypt>[0]][] = [],
-      inheritanceOverridesByEnvironmentId = R.groupBy(
-        ([composite]) =>
-          parseUserEncryptedKeyOrBlobComposite(composite).environmentId,
-        R.toPairs(state.envs).filter(
-          ([composite]) =>
-            parseUserEncryptedKeyOrBlobComposite(composite)
-              .inheritsEnvironmentId
-        )
-      );
+      toEncryptKeys: [string[], Parameters<typeof encrypt>[0]][] = [];
 
     let keys = {} as Api.Net.EnvParams["keys"];
 
@@ -157,21 +139,6 @@ export const keySetForGraphProposal = (
           environment = state.graph[
             keyableParent.environmentId
           ] as Model.Environment;
-
-        let inheritanceOverrides = getInheritanceOverrides(state, {
-          envParentId: keyableParent.appId,
-          environmentId: environment.id,
-        });
-        // for sub-environment, also include parent environment overrides
-        if (environment.isSub) {
-          inheritanceOverrides = R.mergeDeepRight(
-            getInheritanceOverrides(state, {
-              envParentId: keyableParent.appId,
-              environmentId: environment.parentEnvironmentId,
-            }),
-            inheritanceOverrides
-          ) as typeof inheritanceOverrides;
-        }
 
         const generatedEnvkeyId = Object.keys(
             toSet.keyableParents[keyableParentId]
@@ -260,16 +227,12 @@ export const keySetForGraphProposal = (
         }
 
         // inheritance overrides
-        if (!R.isEmpty(inheritanceOverrides)) {
-          for (let inheritanceOverridesEnvironmentId in inheritanceOverrides) {
+        if (envkeyToSet.inheritanceOverrides) {
+          for (let inheritanceOverridesEnvironmentId of envkeyToSet.inheritanceOverrides) {
             const composite = getUserEncryptedKeyOrBlobComposite({
               environmentId: keyableParent.environmentId,
               inheritsEnvironmentId: inheritanceOverridesEnvironmentId,
             });
-
-            const environment = state.graph[
-              keyableParent.environmentId
-            ] as Model.Environment;
 
             let key = state.envs[composite]?.key;
 
@@ -287,6 +250,8 @@ export const keySetForGraphProposal = (
                   state.graph,
                   inheritanceOverridesEnvironmentId
                 ),
+                "envkeyToSet.inheritanceOverrides":
+                  envkeyToSet.inheritanceOverrides,
               });
 
               throw new Error("Missing symmetric key for blob");
@@ -329,21 +294,6 @@ export const keySetForGraphProposal = (
               blockId,
               appEnvironment.id
             )[0];
-
-          let inheritanceOverrides = getInheritanceOverrides(state, {
-            envParentId: blockId,
-            environmentId: blockEnvironment.id,
-          });
-          // for sub-environment, also include parent environment overrides
-          if (blockEnvironment.isSub) {
-            inheritanceOverrides = R.mergeDeepRight(
-              getInheritanceOverrides(state, {
-                envParentId: blockId,
-                environmentId: blockEnvironment.parentEnvironmentId,
-              }),
-              inheritanceOverrides
-            ) as typeof inheritanceOverrides;
-          }
 
           const generatedEnvkeyId = Object.keys(
               toSet.blockKeyableParents[blockId][keyableParentId]
@@ -439,8 +389,8 @@ export const keySetForGraphProposal = (
           }
 
           // inheritance overrides
-          if (!R.isEmpty(inheritanceOverrides)) {
-            for (let inheritanceOverridesEnvironmentId in inheritanceOverrides) {
+          if (envkeyToSet.inheritanceOverrides) {
+            for (let inheritanceOverridesEnvironmentId of envkeyToSet.inheritanceOverrides) {
               const composite = getUserEncryptedKeyOrBlobComposite({
                 environmentId: blockEnvironment.id,
                 inheritsEnvironmentId: inheritanceOverridesEnvironmentId,
@@ -629,16 +579,35 @@ export const keySetForGraphProposal = (
                 }
 
                 // inheritance overrides
-                if (environmentToSet.env) {
-                  const environmentInheritanceOverrides =
-                    inheritanceOverridesByEnvironmentId[environmentId] ?? [];
+                if (environmentToSet.inheritanceOverrides) {
+                  for (let inheritsEnvironmentId of environmentToSet.inheritanceOverrides) {
+                    const composite = getUserEncryptedKeyOrBlobComposite({
+                      environmentId,
+                      inheritsEnvironmentId,
+                    });
 
-                  for (let [
-                    composite,
-                    { key },
-                  ] of environmentInheritanceOverrides) {
-                    const { inheritsEnvironmentId } =
-                      parseUserEncryptedKeyOrBlobComposite(composite);
+                    const key = state.envs[composite]?.key;
+
+                    if (!key) {
+                      log("missing state.envs[composite]?.key", {
+                        composite,
+                        environmentId: environmentId,
+                        environment: getEnvironmentName(
+                          state.graph,
+                          environmentId
+                        ),
+                        envParentId,
+                        envParent: (state.graph[envParentId] as Model.EnvParent)
+                          .name,
+                        inheritsEnvironmentId,
+                        inheritsEnvironment: getEnvironmentName(
+                          state.graph,
+                          inheritsEnvironmentId
+                        ),
+                      });
+
+                      throw new Error("Missing symmetric key for blob");
+                    }
 
                     toEncryptKeys.push([
                       [

@@ -73,6 +73,8 @@ export namespace Model {
           startedAt: z.number(),
         })
         .optional(),
+
+      "upgradedCrypto-2.1.0": z.boolean().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -440,6 +442,7 @@ export namespace Model {
       envUpdatedAt: z.number().optional(),
       encryptedById: z.string().optional(),
       reencryptionRequiredAt: z.number().optional(),
+      "upgradedCrypto-2.1.0": z.boolean().optional(),
     })
     .merge(TimestampsSchema);
 

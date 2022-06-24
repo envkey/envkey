@@ -4,6 +4,7 @@ import yargsParser from "yargs-parser";
 import { stopCore } from "./lib/core";
 import { start } from "@core_proc/server";
 import { log } from "@core/lib/utils/logger";
+import { version as cliVersion } from "../package.json";
 
 const parsed = yargsParser(process.argv.slice(2));
 const port = parsed.port || "19047";
@@ -23,7 +24,7 @@ console.log("running cli_core_proc");
   }
   try {
     await start(port, wsport);
-    log("Started core process", { port, wsport });
+    log("Started core process", { port, wsport, cliVersion });
   } catch (err) {
     log("Did not start core process", { err, port, wsport });
   }

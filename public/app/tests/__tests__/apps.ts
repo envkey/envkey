@@ -267,6 +267,10 @@ describe("apps", () => {
 
     const res = await promise;
 
+    if (!res.success) {
+      log("", res.resultAction);
+    }
+
     expect(res.success).toBeTrue();
     state = getState(ownerId);
     const {
@@ -503,6 +507,7 @@ describe("apps", () => {
       await inviteeAcceptInvite();
       await grantAccess();
       await fetchAllEnvs();
+
       await confirmInviteeEnvs();
       confirmInviteeInheritanceOverrides();
       await fetchAllEnvs();

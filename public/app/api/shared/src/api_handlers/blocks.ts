@@ -47,6 +47,7 @@ apiAction<
             settings: {},
             createdAt: now,
             updatedAt: now,
+            "upgradedCrypto-2.1.0": true,
           };
         }
       ),

@@ -294,6 +294,10 @@ export const getEnvironments = (accountId: string, envParentId: string) => {
       const res = await promise;
       state = getState(accountId);
 
+      if (!res.success) {
+        log("", res.resultAction);
+      }
+
       expect(res.success).toBeTrue();
       for (let { id } of environments) {
         expect(state.isUpdatingEnvs[id]).toBeUndefined();

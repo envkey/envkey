@@ -156,21 +156,28 @@ export const getOrgGraph = async (
       for (let envParentId in blobs) {
         const envParent = draft[envParentId] as Model.App | Model.Block;
 
-        updatingEnvParentIds.add(envParentId);
-
         const { environments, locals } = blobs[envParentId];
 
         for (let environmentId in environments) {
-          updatingEnvironmentIds.add(environmentId);
+          if (environments[environmentId].env) {
+            updatingEnvironmentIds.add(environmentId);
 
-          const environment = draft[environmentId] as Model.Environment;
+            const environment = draft[environmentId] as Model.Environment;
 
-          environment.envUpdatedAt = now;
-          environment.encryptedById = encryptedById;
-          environment.updatedAt = now;
-          envParent.envsUpdatedAt = now;
-          envParent.envsOrLocalsUpdatedAt = now;
-          envParent.updatedAt = now;
+            environment.envUpdatedAt = now;
+            environment.encryptedById = encryptedById;
+            environment.updatedAt = now;
+
+            if (!environment["upgradedCrypto-2.1.0"]) {
+              environment["upgradedCrypto-2.1.0"] = true;
+            }
+
+            envParent.envsUpdatedAt = now;
+            envParent.envsOrLocalsUpdatedAt = now;
+            envParent.updatedAt = now;
+
+            updatingEnvParentIds.add(envParentId);
+          }
         }
 
         for (let localsUserId in locals) {
@@ -179,7 +186,18 @@ export const getOrgGraph = async (
           envParent.envsOrLocalsUpdatedAt = now;
           envParent.localsEncryptedBy[localsUserId] = encryptedById;
           envParent.updatedAt = now;
+
+          updatingEnvParentIds.add(envParentId);
         }
+      }
+
+      if (
+        R.all(
+          (environment) => Boolean(environment["upgradedCrypto-2.1.0"]),
+          graphTypes(draft).environments
+        )
+      ) {
+        (draft[auth.org.id] as Api.Db.Org)["upgradedCrypto-2.1.0"] = true;
       }
     });
 

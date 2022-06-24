@@ -40,50 +40,6 @@ apiAction<
       now
     );
 
-    const hardDeleteSecondaryIndices: string[] = [];
-    const hardDeleteTertiaryIndices: string[] = [];
-
-    // for any base environment we're updating, clear out any inheritance overrides
-    // set for it on sibling environments that are not included in the update
-    for (let environmentId of updatingEnvironmentIds) {
-      const environment = orgGraph[environmentId] as Model.Environment;
-      if (environment.isSub) {
-        continue;
-      }
-
-      const envParent = orgGraph[environment.envParentId] as Model.EnvParent,
-        envParentEnvironments =
-          getEnvironmentsByEnvParentId(orgGraph)[environment.envParentId] ?? [];
-
-      for (let envParentEnvironment of envParentEnvironments) {
-        if (envParentEnvironment.id == environment.id) {
-          continue;
-        }
-
-        if (
-          R.path(
-            [
-              envParent.id,
-              "environments",
-              envParentEnvironment.id,
-              "inheritanceOverrides",
-              environment.id,
-            ],
-            payload.blobs
-          )
-        ) {
-          continue;
-        }
-
-        // inheritance overrides encrypted blobs
-        const index = `inheritanceOverrides|${envParent.id}|${environment.id}`;
-        hardDeleteSecondaryIndices.push(index);
-        if (envParent.type == "block") {
-          hardDeleteTertiaryIndices.push(index);
-        }
-      }
-    }
-
     const logTargetIds = new Set<string>();
     const updatedGeneratedEnvkeyIds = new Set<string>();
 
@@ -93,20 +49,20 @@ apiAction<
 
       if (environments) {
         for (let environmentId in environments) {
-          const environment = orgGraph[environmentId] as Model.Environment;
+          if (environments[environmentId].env) {
+            const environment = orgGraph[environmentId] as Model.Environment;
 
-          logTargetIds.add(environment.environmentRoleId);
+            logTargetIds.add(environment.environmentRoleId);
 
-          if (environment.isSub) {
-            logTargetIds.add(environmentCompositeId(environment));
-          }
+            if (environment.isSub) {
+              logTargetIds.add(environmentCompositeId(environment));
+            }
 
-          const connectedGeneratedEnvkeys = getConnectedActiveGeneratedEnvkeys(
-            orgGraph,
-            environmentId
-          );
-          for (let { id } of connectedGeneratedEnvkeys) {
-            updatedGeneratedEnvkeyIds.add(id);
+            const connectedGeneratedEnvkeys =
+              getConnectedActiveGeneratedEnvkeys(orgGraph, environmentId);
+            for (let { id } of connectedGeneratedEnvkeys) {
+              updatedGeneratedEnvkeyIds.add(id);
+            }
           }
 
           const update = environments[environmentId];
@@ -163,10 +119,6 @@ apiAction<
     return {
       type: "graphHandlerResult",
       graph: updatedGraph,
-      transactionItems: {
-        hardDeleteSecondaryIndices,
-        hardDeleteTertiaryIndices,
-      },
       logTargetIds: Array.from(logTargetIds),
       updatedGeneratedEnvkeyIds: Array.from(updatedGeneratedEnvkeyIds),
     };
@@ -376,6 +328,7 @@ apiAction<
         id,
         createdAt: now,
         updatedAt: now,
+        "upgradedCrypto-2.1.0": true,
       },
       envParent = orgGraph[environment.envParentId] as Model.EnvParent,
       updatedGraph = {

@@ -14,6 +14,7 @@ import {
   getAppRoleForUserOrInvitee,
   getOrgPermissions,
   getAppPermissions,
+  getConnectedBlockEnvironmentsForApp,
 } from "@core/lib/graph";
 import * as R from "ramda";
 import nacl from "tweetnacl";
@@ -788,7 +789,13 @@ export const authenticate = async <
 
           if (
             !(
-              (env && meta && inherits && (changesets || changesetsById)) ||
+              (env &&
+                meta &&
+                inherits &&
+                (changesets ||
+                  changesetsById ||
+                  (action.type == Api.ActionType.UPDATE_ENVS &&
+                    action.payload.upgradeCrypto))) ||
               inheritanceOverrides
             )
           ) {
@@ -958,7 +965,7 @@ const authorizeEnvUpdate = (
       return false;
     }
 
-    if (update.inheritanceOverrides && update.inheritanceOverrides !== true) {
+    if (update.inheritanceOverrides) {
       if (
         !currentUserPermissions.has("read") ||
         !targetUserPermissions.has("read")
@@ -995,6 +1002,13 @@ const authorizeEnvUpdate = (
           return false;
         }
       }
+    }
+
+    if (
+      action.type != Api.ActionType.UPDATE_ENVS &&
+      !environment["upgradedCrypto-2.1.0"]
+    ) {
+      throw new Api.ApiError("2.1.0 crypto upgrade required", 426);
     }
 
     return true;
@@ -1142,6 +1156,39 @@ const authorizeEnvUpdate = (
     update: Api.Net.GeneratedEnvkeyEncryptedKeyParams | Blob.GeneratedEnvkeySet,
     blockId?: string
   ): boolean => {
+    const appEnvironment = userGraph[
+      keyableParent.environmentId
+    ] as Model.Environment;
+    const parentEnvironment = appEnvironment.isSub
+      ? (userGraph[appEnvironment.parentEnvironmentId] as Model.Environment)
+      : undefined;
+    const blockEnvironment = blockId
+      ? getConnectedBlockEnvironmentsForApp(
+          userGraph,
+          keyableParent.appId,
+          blockId,
+          appEnvironment.id
+        )[0]
+      : undefined;
+    const blockParentEnvironment = blockEnvironment?.isSub
+      ? (userGraph[blockEnvironment.parentEnvironmentId] as Model.Environment)
+      : undefined;
+
+    if (
+      R.any(
+        (environment) =>
+          Boolean(environment && !environment["upgradedCrypto-2.1.0"]),
+        [
+          appEnvironment,
+          parentEnvironment,
+          blockEnvironment,
+          blockParentEnvironment,
+        ]
+      )
+    ) {
+      throw new Api.ApiError("2.1.0 crypto upgrade required", 426);
+    }
+
     const currentUserPermissions = getEnvironmentPermissions(
       userGraph,
       keyableParent.environmentId,
@@ -1160,7 +1207,7 @@ const authorizeEnvUpdate = (
       }
     }
 
-    if (update.inheritanceOverrides && update.inheritanceOverrides !== true) {
+    if (update.inheritanceOverrides) {
       const environmentIds = Array.isArray(update.inheritanceOverrides)
         ? update.inheritanceOverrides
         : Object.keys(update.inheritanceOverrides);

@@ -46,6 +46,7 @@ import { wait } from "@core/lib/utils/wait";
 import { v4 as uuid } from "uuid";
 import { PoolConnection } from "mysql2/promise";
 import produce from "immer";
+import * as semver from "semver";
 
 type ApiActionConfig = Api.ApiActionParams<
   Api.Action.RequestAction,
@@ -144,6 +145,26 @@ export const apiAction = <
         ).catch((err) => {
           throw err;
         });
+
+        if ("keys" in action.payload || "blobs" in action.payload) {
+          if (auth.org.envUpdateRequiresClientVersion) {
+            if (!action.meta.client) {
+              throw new Api.ApiError("client version required", 400);
+            }
+            if (
+              !semver.gte(
+                action.meta.client.clientVersion,
+                auth.org.envUpdateRequiresClientVersion
+              )
+            ) {
+              log("client upgrade required", {
+                clientVersion: action.meta.client.clientVersion ?? "",
+                requiresClientVersion: auth.org.envUpdateRequiresClientVersion,
+              });
+              throw new Api.ApiError("client upgrade required", 426);
+            }
+          }
+        }
 
         actionStart = Date.now();
       }
@@ -1208,20 +1229,33 @@ const apiActions: {
       orgGraph != updatedOrgGraph &&
       action.type != Api.ActionType.FETCH_ENVS
     ) {
-      [beforeUpdateCurrentEncryptedKeys, updatedCurrentEncryptedKeys] =
-        await Promise.all([
-          asyncify("getCurrentEncryptedKeys", getCurrentEncryptedKeys)(
-            orgGraph,
-            handlerEncryptedKeysScope,
-            actionStart,
-            true
-          ),
-          asyncify("getCurrentEncryptedKeys", getCurrentEncryptedKeys)(
-            updatedOrgGraph,
-            handlerEncryptedKeysScope,
-            actionStart
-          ),
-        ]);
+      // [beforeUpdateCurrentEncryptedKeys, updatedCurrentEncryptedKeys] =
+      //   await Promise.all([
+      //     asyncify("getCurrentEncryptedKeys", getCurrentEncryptedKeys)(
+      //       orgGraph,
+      //       handlerEncryptedKeysScope,
+      //       actionStart,
+      //       true
+      //     ),
+      //     asyncify("getCurrentEncryptedKeys", getCurrentEncryptedKeys)(
+      //       updatedOrgGraph,
+      //       handlerEncryptedKeysScope,
+      //       actionStart
+      //     ),
+      //   ]);
+
+      const beforeUpdateCurrentEncryptedKeys = getCurrentEncryptedKeys(
+        orgGraph,
+        handlerEncryptedKeysScope,
+        actionStart,
+        true
+      );
+
+      const updatedCurrentEncryptedKeys = getCurrentEncryptedKeys(
+        updatedOrgGraph,
+        handlerEncryptedKeysScope,
+        actionStart
+      );
 
       logWithElapsed(
         transactionId + " - got current encrypted keys",

@@ -56,6 +56,10 @@ describe("sign in", () => {
 
       let res = await signInPromise;
 
+      if (!res.success) {
+        log("", res.resultAction);
+      }
+
       expect(res.success).toBeTrue();
 
       state = res.state;

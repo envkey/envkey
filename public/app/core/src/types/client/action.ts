@@ -261,6 +261,7 @@ export namespace Action {
         message?: string;
         autoCommit?: true;
         initEnvs?: true;
+        upgradeCrypto?: true;
       };
     };
 
