@@ -122,7 +122,7 @@ apiAction<
       await throttleRequestFn(org, orgStats, license, 0, false);
     }
 
-    const response = getFetchResponse(
+    const { response } = getFetchResponse(
       generatedEnvkey,
       encryptedKeys,
       R.indexBy(getGeneratedEnvkeyEncryptedKeyOrBlobComposite, blobs),

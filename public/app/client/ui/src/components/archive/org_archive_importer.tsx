@@ -127,11 +127,8 @@ export const OrgArchiveImporter: OrgComponent<
         copy = (
           <p>
             {[
-              "This import would exceed your organization's limits of ",
-              <strong>{license.maxDevices} active or pending devices</strong>,
-              " and ",
-              <strong>{license.maxServerEnvkeys} Server ENVKEYs.</strong>,
-              [" Please update your license, then try again."],
+              "This import would exceed your organization's limit of ",
+              <strong>{license.maxUsers} active or pending users</strong>,
             ]}
           </p>
         );

@@ -427,18 +427,19 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
     const numActiveServerEnvkeys = byType.org.serverEnvkeyCount;
 
     if (
-      (license.maxDevices &&
-        license.maxDevices != -1 &&
-        numActiveDevices + archive.orgUsers.length + archive.cliUsers.length >
-          license.maxDevices) ||
-      (license.maxServerEnvkeys &&
-        license.maxServerEnvkeys != -1 &&
-        numActiveServerEnvkeys + archive.servers.length >
-          license.maxServerEnvkeys) ||
-      (license.maxUsers &&
-        license.maxUsers != -1 &&
-        numActiveUserOrInvites &&
-        numActiveUserOrInvites + archive.orgUsers.length > license.maxUsers)
+      // (license.maxDevices &&
+      //   license.maxDevices != -1 &&
+      //   numActiveDevices + archive.orgUsers.length + archive.cliUsers.length >
+      //     license.maxDevices) ||
+      // (license.maxServerEnvkeys &&
+      //   license.maxServerEnvkeys != -1 &&
+      //   numActiveServerEnvkeys + archive.servers.length >
+      //     license.maxServerEnvkeys) ||
+      license.maxUsers &&
+      license.maxUsers != -1 &&
+      importOrgUsers &&
+      numActiveUserOrInvites &&
+      numActiveUserOrInvites + archive.orgUsers.length > license.maxUsers
     ) {
       return dispatchFailure(
         {

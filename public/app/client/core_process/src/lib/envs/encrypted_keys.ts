@@ -677,10 +677,16 @@ const getInheritingKeyableParents = (params: {
   let inheritingKeyableParents: Model.KeyableParent[] = [];
 
   for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
+    const inheritingEnvironment = state.graph[
+      inheritingEnvironmentId
+    ] as Model.Environment;
+
     if (
       !(
         environmentIdsSet.has(inheritingEnvironmentId) ||
-        environmentIdsSet.has(baseEnvironment.id)
+        environmentIdsSet.has(baseEnvironment.id) ||
+        (inheritingEnvironment.isSub &&
+          environmentIdsSet.has(inheritingEnvironment.parentEnvironmentId))
       )
     ) {
       continue;
@@ -734,10 +740,16 @@ const addUserInheritanceOverrides = (params: {
   } = params;
 
   for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
+    const inheritingEnvironment = state.graph[
+      inheritingEnvironmentId
+    ] as Model.Environment;
+
     if (
       !(
         environmentIdsSet.has(inheritingEnvironmentId) ||
-        environmentIdsSet.has(baseEnvironment.id)
+        environmentIdsSet.has(baseEnvironment.id) ||
+        (inheritingEnvironment.isSub &&
+          environmentIdsSet.has(inheritingEnvironment.parentEnvironmentId))
       )
     ) {
       continue;

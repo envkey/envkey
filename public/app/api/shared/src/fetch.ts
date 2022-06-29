@@ -1,3 +1,4 @@
+import { logStderr } from "./../../../core/src/lib/utils/logger";
 import { pick } from "@core/lib/utils/object";
 import * as R from "ramda";
 import { getPubkeyHash } from "@core/lib/client";
@@ -10,7 +11,10 @@ export const getFetchResponse = (
     keys: Api.Db.GeneratedEnvkeyEncryptedKey[],
     blobsByComposite: Record<string, Api.Db.EncryptedBlob>,
     rootPubkeyReplacements: Api.Db.RootPubkeyReplacement[]
-  ): Api.Net.ApiResultTypes["FetchEnvkey"] => {
+  ): {
+    response: Api.Net.ApiResultTypes["FetchEnvkey"];
+    orphanedKeys: Api.Db.GeneratedEnvkeyEncryptedKey[];
+  } => {
     const envEncryptedKey = R.find(
       (key) => !key.blockId && key.envType == "env",
       keys
@@ -56,12 +60,17 @@ export const getFetchResponse = (
 
     const orderIndexByBlockId: { [blockId: string]: number } = {};
 
+    const orphanedKeys: Api.Db.GeneratedEnvkeyEncryptedKey[] = [];
+
     for (let key of keys) {
       const composite = getGeneratedEnvkeyEncryptedKeyOrBlobComposite(key);
       const blob = blobsByComposite[composite];
 
       if (!blob) {
-        throw new Error("Missing blob for key with composite: " + composite);
+        logStderr("Missing blob for key with composite: " + composite, {
+          key,
+        });
+        continue;
       }
 
       if (key.blockId) {
@@ -188,7 +197,7 @@ export const getFetchResponse = (
       )(responseBlocksById) as Fetch.KeyableBlob[];
     }
 
-    return response;
+    return { response, orphanedKeys };
   },
   getTargetIds = (
     generatedEnvkey: Api.Db.GeneratedEnvkey,

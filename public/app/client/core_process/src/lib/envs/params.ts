@@ -247,10 +247,16 @@ export const envParamsForEnvironments = async (params: {
         inheritingEnvironmentIdsByEnvironmentId[baseEnvironment.id];
 
       for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
+        const inheritingEnvironment = state.graph[
+          inheritingEnvironmentId
+        ] as Model.Environment;
+
         if (
           !(
             environmentIdsSet.has(inheritingEnvironmentId) ||
-            environmentIdsSet.has(baseEnvironment.id)
+            environmentIdsSet.has(baseEnvironment.id) ||
+            (inheritingEnvironment.isSub &&
+              environmentIdsSet.has(inheritingEnvironment.parentEnvironmentId))
           )
         ) {
           continue;
@@ -267,7 +273,7 @@ export const envParamsForEnvironments = async (params: {
         if (encryptionKey) {
           environmentKeysByComposite[composite] = encryptionKey;
 
-          const data = JSON.stringify(
+          let overrides =
             getInheritanceOverrides(
               state,
               {
@@ -276,8 +282,24 @@ export const envParamsForEnvironments = async (params: {
                 forInheritsEnvironmentId: baseEnvironment.id,
               },
               pending
-            )[baseEnvironment.id] ?? {}
-          );
+            )[baseEnvironment.id] ?? {};
+
+          if (inheritingEnvironment.isSub) {
+            overrides = {
+              ...overrides,
+              ...(getInheritanceOverrides(
+                state,
+                {
+                  envParentId,
+                  environmentId: inheritingEnvironment.parentEnvironmentId,
+                  forInheritsEnvironmentId: baseEnvironment.id,
+                },
+                pending
+              )[baseEnvironment.id] ?? {}),
+            };
+          }
+
+          const data = JSON.stringify(overrides);
 
           toEncrypt.push([
             [

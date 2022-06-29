@@ -1544,14 +1544,14 @@ export const getUserEncryptedKeys = async (
 
     const { environments, apps, blocks } = graphTypes(orgGraph);
 
-    updatedGraph = queueForReencryption(
-      orgGraph,
-      updatedGraph,
-      blobUserIdSet,
-      [...apps, ...blocks],
-      environments,
-      now
-    );
+    // updatedGraph = queueForReencryption(
+    //   orgGraph,
+    //   updatedGraph,
+    //   blobUserIdSet,
+    //   [...apps, ...blocks],
+    //   environments,
+    //   now
+    // );
 
     const transactionItems: Api.Db.ObjectTransactionItems = {
       softDeleteScopes: userIds.map((userId) => ({

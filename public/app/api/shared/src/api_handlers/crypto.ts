@@ -154,71 +154,72 @@ apiAction<
       }
     }
 
-    updatedGraph = produce(updatedGraph, (draft) => {
-      if (replacingRootId && replacingRootRequestId) {
-        const [currentAuthId, currentPubkey] =
-          auth.type == "tokenAuthContext"
-            ? [auth.orgUserDevice.id, auth.orgUserDevice.pubkey]
-            : [auth.user.id, auth.user.pubkey];
+    // Disabling until root pubkey replacement issue on 6-27-2022 can be fully debugged
+    // updatedGraph = produce(updatedGraph, (draft) => {
+    //   if (replacingRootId && replacingRootRequestId) {
+    //     const [currentAuthId, currentPubkey] =
+    //       auth.type == "tokenAuthContext"
+    //         ? [auth.orgUserDevice.id, auth.orgUserDevice.pubkey]
+    //         : [auth.user.id, auth.user.pubkey];
 
-        // set revoking device as the new root
-        const currentAuthDraft = draft[currentAuthId] as
-          | Api.Db.OrgUserDevice
-          | Api.Db.CliUser;
+    //     // set revoking device as the new root
+    //     const currentAuthDraft = draft[currentAuthId] as
+    //       | Api.Db.OrgUserDevice
+    //       | Api.Db.CliUser;
 
-        currentAuthDraft.isRoot = true;
-        currentAuthDraft.signedTrustedRoot = payload.signedTrustedRoot!;
-        currentAuthDraft.trustedRootUpdatedAt = now;
-        currentAuthDraft.updatedAt = now;
+    //     currentAuthDraft.isRoot = true;
+    //     currentAuthDraft.signedTrustedRoot = payload.signedTrustedRoot!;
+    //     currentAuthDraft.trustedRootUpdatedAt = now;
+    //     currentAuthDraft.updatedAt = now;
 
-        const { orgUserDevices, cliUsers, generatedEnvkeys } =
-          graphTypes(updatedGraph);
+    //     const { orgUserDevices, cliUsers, generatedEnvkeys } =
+    //       graphTypes(updatedGraph);
 
-        const toProcess = (
-          [
-            ...orgUserDevices,
-            ...cliUsers,
-            ...generatedEnvkeys,
-          ] as Graph.GraphObject[]
-        )
-          .filter(
-            R.allPass([
-              R.complement(R.propEq("id", currentAuthId)),
-              ({ deletedAt }) => !deletedAt,
-              ({ deactivatedAt }) => !deactivatedAt,
-            ])
-          )
-          .concat([
-            ...getActiveInvites(updatedGraph, now),
-            ...getActiveDeviceGrants(updatedGraph, now),
-            ...getActiveRecoveryKeys(updatedGraph),
-          ]);
+    //     const toProcess = (
+    //       [
+    //         ...orgUserDevices,
+    //         ...cliUsers,
+    //         ...generatedEnvkeys,
+    //       ] as Graph.GraphObject[]
+    //     )
+    //       .filter(
+    //         R.allPass([
+    //           R.complement(R.propEq("id", currentAuthId)),
+    //           ({ deletedAt }) => !deletedAt,
+    //           ({ deactivatedAt }) => !deactivatedAt,
+    //         ])
+    //       )
+    //       .concat([
+    //         ...getActiveInvites(updatedGraph, now),
+    //         ...getActiveDeviceGrants(updatedGraph, now),
+    //         ...getActiveRecoveryKeys(updatedGraph),
+    //       ]);
 
-        if (toProcess.length > 0) {
-          const rootPubkeyReplacementId = uuid();
-          const rootPubkeyReplacement: Api.Db.RootPubkeyReplacement = {
-            type: "rootPubkeyReplacement",
-            id: rootPubkeyReplacementId,
-            ...graphKey.rootPubkeyReplacement(
-              auth.org.id,
-              rootPubkeyReplacementId
-            ),
-            requestId: replacingRootRequestId,
-            creatorId: currentAuthId,
-            replacingPubkeyId: getPubkeyHash(currentPubkey),
-            replacingPubkey: currentPubkey,
-            signedReplacingTrustChain: payload.replacingRootTrustChain!,
-            excludeFromDeletedGraph: true,
-            createdAt: now,
-            updatedAt: now,
-            processedAtById: R.mergeAll(
-              toProcess.map(({ id }) => ({ [id]: false as false | number }))
-            ),
-          };
-          draft[rootPubkeyReplacementId] = rootPubkeyReplacement;
-        }
-      }
-    });
+    //     if (toProcess.length > 0) {
+    //       const rootPubkeyReplacementId = uuid();
+    //       const rootPubkeyReplacement: Api.Db.RootPubkeyReplacement = {
+    //         type: "rootPubkeyReplacement",
+    //         id: rootPubkeyReplacementId,
+    //         ...graphKey.rootPubkeyReplacement(
+    //           auth.org.id,
+    //           rootPubkeyReplacementId
+    //         ),
+    //         requestId: replacingRootRequestId,
+    //         creatorId: currentAuthId,
+    //         replacingPubkeyId: getPubkeyHash(currentPubkey),
+    //         replacingPubkey: currentPubkey,
+    //         signedReplacingTrustChain: payload.replacingRootTrustChain!,
+    //         excludeFromDeletedGraph: true,
+    //         createdAt: now,
+    //         updatedAt: now,
+    //         processedAtById: R.mergeAll(
+    //           toProcess.map(({ id }) => ({ [id]: false as false | number }))
+    //         ),
+    //       };
+    //       draft[rootPubkeyReplacementId] = rootPubkeyReplacement;
+    //     }
+    //   }
+    // });
 
     // queue requests for deletion
     for (let requestId in payload.byRequestId) {

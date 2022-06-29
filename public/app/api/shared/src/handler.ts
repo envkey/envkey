@@ -625,7 +625,7 @@ export const apiAction = <
       );
 
       (async () => {
-        // give the database a beat to release the transaction
+        // give the database some time to release the transaction
         // so that replication fetches committed results
         await wait(1000);
 
@@ -913,8 +913,9 @@ const apiActions: {
       // if there are any pending root pubkey replacements queued in this user's graph, these must be processed before user can make graph updates (enforced client-side too)
       // * only applies to actions with token or cli auth, not actions with invite, device grant, or recovery key auth
       if (
-        auth.type == "tokenAuthContext" ||
-        auth.type == "cliUserAuthContext"
+        (auth.type == "tokenAuthContext" ||
+          auth.type == "cliUserAuthContext") &&
+        action.type != Api.ActionType.FETCH_ENVS
       ) {
         const { rootPubkeyReplacements } = graphTypes(userGraph);
         if (rootPubkeyReplacements.length > 0) {
@@ -1229,21 +1230,6 @@ const apiActions: {
       orgGraph != updatedOrgGraph &&
       action.type != Api.ActionType.FETCH_ENVS
     ) {
-      // [beforeUpdateCurrentEncryptedKeys, updatedCurrentEncryptedKeys] =
-      //   await Promise.all([
-      //     asyncify("getCurrentEncryptedKeys", getCurrentEncryptedKeys)(
-      //       orgGraph,
-      //       handlerEncryptedKeysScope,
-      //       actionStart,
-      //       true
-      //     ),
-      //     asyncify("getCurrentEncryptedKeys", getCurrentEncryptedKeys)(
-      //       updatedOrgGraph,
-      //       handlerEncryptedKeysScope,
-      //       actionStart
-      //     ),
-      //   ]);
-
       const beforeUpdateCurrentEncryptedKeys = getCurrentEncryptedKeys(
         orgGraph,
         handlerEncryptedKeysScope,

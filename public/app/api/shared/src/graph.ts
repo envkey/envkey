@@ -381,13 +381,13 @@ export const getOrgGraph = async (
         if (target.type == "cliUser") {
           deletedDeviceLike++;
 
-          const pubkeyRevocationRequest = getPubkeyRevocationRequest(
-            auth,
-            target,
-            now
-          );
+          // const pubkeyRevocationRequest = getPubkeyRevocationRequest(
+          //   auth,
+          //   target,
+          //   now
+          // );
 
-          draft[pubkeyRevocationRequest.id] = pubkeyRevocationRequest;
+          // draft[pubkeyRevocationRequest.id] = pubkeyRevocationRequest;
         } else {
           for (let orgUserDevice of orgUserDevices) {
             deletedDeviceLike++;
@@ -396,13 +396,13 @@ export const getOrgGraph = async (
               now;
             (draft[orgUserDevice.id] as Api.Db.OrgUserDevice).updatedAt = now;
 
-            const pubkeyRevocationRequest = getPubkeyRevocationRequest(
-              auth,
-              orgUserDevice,
-              now
-            );
+            // const pubkeyRevocationRequest = getPubkeyRevocationRequest(
+            //   auth,
+            //   orgUserDevice,
+            //   now
+            // );
 
-            draft[pubkeyRevocationRequest.id] = pubkeyRevocationRequest;
+            // draft[pubkeyRevocationRequest.id] = pubkeyRevocationRequest;
           }
         }
       });
@@ -477,12 +477,12 @@ export const getOrgGraph = async (
         (draft[orgUserDevice.id] as Api.Db.OrgUserDevice).deactivatedAt = now;
         (draft[orgUserDevice.id] as Api.Db.OrgUserDevice).updatedAt = now;
 
-        const pubkeyRevocationRequest = getPubkeyRevocationRequest(
-          auth,
-          orgUserDevice,
-          now
-        );
-        draft[pubkeyRevocationRequest.id] = pubkeyRevocationRequest;
+        // const pubkeyRevocationRequest = getPubkeyRevocationRequest(
+        //   auth,
+        //   orgUserDevice,
+        //   now
+        // );
+        // draft[pubkeyRevocationRequest.id] = pubkeyRevocationRequest;
       });
     }
 
