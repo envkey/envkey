@@ -32,7 +32,8 @@ import {
 } from "./org_sockets";
 import { checkUpgradesAvailableLoop, clearUpgradesLoop } from "./upgrades";
 import { refreshSessions } from "./refresh_sessions";
-import { clearCacheLoop, clearCacheLoopTimeout } from "./clear_cache";
+// import { clearCacheLoop, clearCacheLoopTimeout } from "./clear_cache";
+import { killIfIdleLoop, clearKillIfIdleTimeout } from "./idle_kill";
 import { getContext } from "./default_context";
 import open from "open";
 import * as R from "ramda";
@@ -480,14 +481,16 @@ const initReduxStore = async (forceReset?: true) => {
     if (lockoutTimeout) {
       clearTimeout(lockoutTimeout);
     }
-    clearCacheLoopTimeout();
+    // clearCacheLoopTimeout();
+    clearKillIfIdleTimeout();
     clearUpgradesLoop();
   },
   initSocketsAndTimers = async () => {
     if (reduxStore) {
       await resolveOrgSockets(reduxStore, localSocketUpdate, true);
       socketPingLoop();
-      clearCacheLoop(reduxStore, localSocketUpdate);
+      killIfIdleLoop(reduxStore);
+      // clearCacheLoop(reduxStore, localSocketUpdate);
     }
   },
   startSocketServer = (port: number, wsport: number) => {

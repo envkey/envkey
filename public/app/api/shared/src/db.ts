@@ -42,7 +42,7 @@ export const getPoolConn = async () => db_fns.getPoolConn(pool),
     qargs: any[] = []
   ) => db_fns.execQuery(transactionConn ?? pool, qs, qargs),
   transactionQuery = async (qsArg: string, qargs?: any[]) =>
-    db_fns.execQuery(pool, qsArg, qargs),
+    db_fns.transactionQuery(pool, qsArg, qargs),
   // Returns a single row as an object of type T
   getDb = async <T extends Api.Db.DbObject>(
     key: Api.Db.DbKey | SecondaryIndex,

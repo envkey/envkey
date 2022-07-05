@@ -79,7 +79,8 @@ export const setMaxPacketSize = (n: number) => {
     }
 
     try {
-      return transactionConn.query(qs, qargs);
+      const res = await transactionConn.query(qs, qargs);
+      return res;
     } finally {
       transactionConn.release();
     }

@@ -13,21 +13,24 @@ let clearCacheTimeout: NodeJS.Timeout | undefined;
 
 export const clearCacheLoop = async (
   store: Client.ReduxStore,
-  onClear: () => void
+  onClear: () => void,
+  execClear = false
 ) => {
   let procState = store.getState();
   if (procState.locked) {
     return;
   }
 
-  try {
-    await clearExpiredCacheObjects(store, onClear);
-  } catch (err) {
-    log("Error clearing expired cached envs and changesets:", { err });
+  if (execClear) {
+    try {
+      await clearExpiredCacheObjects(store, onClear);
+    } catch (err) {
+      log("Error clearing expired cached envs and changesets:", { err });
+    }
   }
 
   clearCacheTimeout = setTimeout(
-    () => clearCacheLoop(store, onClear),
+    () => clearCacheLoop(store, onClear, true),
     CLEAR_CACHE_INTERVAL
   );
 };
@@ -117,6 +120,7 @@ const clearExpiredCacheObjects = async (
         accountIdOrCliKey: account.userId,
       }
     );
-    onClear();
   }
+
+  onClear();
 };

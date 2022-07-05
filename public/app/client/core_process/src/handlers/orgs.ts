@@ -18,6 +18,7 @@ import { secureRandomAlphanumeric } from "@core/lib/crypto/utils";
 import { fetchRequiredEnvs } from "@core_proc/lib/envs";
 import fs from "fs";
 import { wait } from "@core/lib/utils/wait";
+import { log } from "@core/lib/utils/logger";
 
 clientAction<Client.Action.ClientActions["UpdateUserRoles"]>({
   type: "asyncClientAction",
@@ -371,9 +372,12 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
     await updateStatus("Decrypting and parsing archive");
 
-    let encryptedJson: string;
+    let encrypted: Crypto.EncryptedData;
+    let archiveJson: string;
+    let archive: Client.OrgArchiveV1;
+
     try {
-      encryptedJson = await new Promise<string>((resolve, reject) => {
+      const encryptedJson = await new Promise<string>((resolve, reject) => {
         fs.readFile(filePath, null, (err, data) => {
           if (err) {
             reject(err);
@@ -382,16 +386,34 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           }
         });
       });
+
+      try {
+        encrypted = JSON.parse(encryptedJson) as Crypto.EncryptedData;
+      } catch (err) {
+        log("Error parsing encrypted archive", { err });
+        throw new Error("Error parsing encrypted archive");
+      }
+
+      try {
+        archiveJson = await decryptSymmetricWithKey({
+          encrypted,
+          encryptionKey,
+        });
+      } catch (err) {
+        log("Invalid encryption key", { err });
+        throw new Error("Invalid encryption key");
+      }
+
+      try {
+        archive = JSON.parse(archiveJson) as Client.OrgArchiveV1;
+      } catch (err) {
+        log("Error parsing decrypted archive", { err });
+        throw new Error("Error parsing decrypted archive");
+      }
     } catch (err) {
       return dispatchFailure(err, context);
     }
 
-    const encrypted = JSON.parse(encryptedJson) as Crypto.EncryptedData;
-    const archiveJson = await decryptSymmetricWithKey({
-      encrypted,
-      encryptionKey,
-    });
-    const archive = JSON.parse(archiveJson) as Client.OrgArchiveV1;
     const byType = g.graphTypes(state.graph);
     const license = byType.license;
 
@@ -422,19 +444,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       );
     }
 
-    const numActiveDevices = byType.org.deviceLikeCount;
     const numActiveUserOrInvites = byType.org.activeUserOrInviteCount;
-    const numActiveServerEnvkeys = byType.org.serverEnvkeyCount;
 
     if (
-      // (license.maxDevices &&
-      //   license.maxDevices != -1 &&
-      //   numActiveDevices + archive.orgUsers.length + archive.cliUsers.length >
-      //     license.maxDevices) ||
-      // (license.maxServerEnvkeys &&
-      //   license.maxServerEnvkeys != -1 &&
-      //   numActiveServerEnvkeys + archive.servers.length >
-      //     license.maxServerEnvkeys) ||
       license.maxUsers &&
       license.maxUsers != -1 &&
       importOrgUsers &&
