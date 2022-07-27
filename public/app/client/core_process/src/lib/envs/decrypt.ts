@@ -174,23 +174,33 @@ export const decryptEnvs = async (
               decryptSymmetricWithKey({
                 encryptionKey: decryptedKey,
                 encrypted: encryptedBlob.data,
-              }).then((decryptedBlob) => {
-                const decryptedChangesets = JSON.parse(
-                  decryptedBlob
-                ) as Client.Env.ChangesetPayload[];
-                return decryptedChangesets.map(
-                  (changesetPayload) =>
-                    ({
-                      ...changesetPayload,
-                      createdAt: encryptedBlob.createdAt,
-                      encryptedById: encryptedBlob.encryptedById,
-                      createdById:
-                        encryptedBlob.createdById ??
-                        encryptedBlob.encryptedById,
-                      id: encryptedBlob.changesetId!,
-                    } as Client.Env.Changeset)
-                );
               })
+                .then((decryptedBlob) => {
+                  const decryptedChangesets = JSON.parse(
+                    decryptedBlob
+                  ) as Client.Env.ChangesetPayload[];
+                  return decryptedChangesets.map(
+                    (changesetPayload) =>
+                      ({
+                        ...changesetPayload,
+                        createdAt: encryptedBlob.createdAt,
+                        encryptedById: encryptedBlob.encryptedById,
+                        createdById:
+                          encryptedBlob.createdById ??
+                          encryptedBlob.encryptedById,
+                        id: encryptedBlob.changesetId!,
+                      } as Client.Env.Changeset)
+                  );
+                })
+                .catch((err) => {
+                  log("changeset decryption failed", {
+                    environmentId,
+                    encryptedBlob,
+                    err,
+                  });
+
+                  throw err;
+                })
             )
           );
 

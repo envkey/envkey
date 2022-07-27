@@ -77,6 +77,7 @@ export type PartialAccountState = {
   pendingEnvsUpdatedAt: number | undefined;
 
   fetchSessionError: Client.ClientError | undefined;
+  fetchSessionNotModified: boolean | undefined;
 
   pendingInvites: Client.PendingInvite[];
 
@@ -418,6 +419,7 @@ export const defaultAccountState: PartialAccountState = {
     pendingInvites: [],
 
     fetchSessionError: undefined,
+    fetchSessionNotModified: undefined,
 
     isReencrypting: undefined,
     isReencryptingEnvs: {},

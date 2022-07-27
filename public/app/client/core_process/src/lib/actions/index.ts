@@ -2,6 +2,7 @@ import { getDefaultApiHostUrl } from "../../../../shared/src/env";
 import got from "got";
 import { Api, Client } from "@core/types";
 import { log } from "@core/lib/utils/logger";
+import { wait } from "@core/lib/utils/wait";
 
 // very unaggressive timeouts
 // we want to tolerate slow/weird network conditions, but also not hang too long if server is hopelessly unreachable
@@ -21,15 +22,27 @@ export const postApiAction = async <
   action: ActionType,
   // hostname sans protocol
   hostUrlArg?: string,
-  ipOverride?: string // for testing firewall
-) => {
+  ipOverride?: string, // for testing firewall
+  numRetry = 0
+): Promise<ResponseType> => {
   const start = Date.now();
 
   const hostUrl = "https://" + (hostUrlArg ?? getDefaultApiHostUrl());
   const actionUrl = hostUrl + "/action";
 
   if (process.env.LOG_REQUESTS) {
-    log(`POST action ${action.type} to host: ` + hostUrl);
+    log(
+      `POST action ${action.type} to host: ` +
+        hostUrl +
+        (numRetry > 0 ? ` | retry ${numRetry}` : ``)
+    );
+  }
+
+  if (numRetry > 0) {
+    const retryBackoff = 2 ** (numRetry - 1);
+    if (retryBackoff > 0) {
+      await wait(retryBackoff);
+    }
   }
 
   return got
@@ -58,6 +71,20 @@ export const postApiAction = async <
 
       if (res.statusCode >= 400) {
         let fetchErr: Client.FetchError;
+
+        if (
+          (res.statusCode == 502 ||
+            res.statusCode == 503 ||
+            res.statusCode == 504) &&
+          numRetry < 4
+        ) {
+          if (process.env.LOG_REQUESTS) {
+            log(
+              `ERROR: ${action.type} (${hostUrl}) | ${res.statusCode} error | retrying`
+            );
+            return postApiAction(action, hostUrlArg, ipOverride, numRetry + 1);
+          }
+        }
 
         try {
           const json = JSON.parse(res.body);

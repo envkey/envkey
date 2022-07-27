@@ -515,6 +515,10 @@ describe("apps", () => {
       await fetchAllEnvs();
       await confirmInviteeEnvsAfterUpdate();
       confirmInviteeInheritanceOverrides();
+
+      await updateInviteeOwnLocals();
+      await fetchAllChangesets();
+
       await removeAccess();
     });
 
@@ -531,6 +535,9 @@ describe("apps", () => {
       await fetchAllEnvs();
       await confirmInviteeEnvsAfterUpdate();
       confirmInviteeInheritanceOverrides();
+
+      await updateInviteeOwnLocals();
+      await fetchAllChangesets();
 
       await removeAccess();
     });
@@ -712,18 +719,18 @@ describe("apps", () => {
           ownerId
         );
 
-        dispatch(
-          {
-            type: Client.ActionType.CREATE_ENTRY,
-            payload: {
-              envParentId: app1Id,
-              environmentId: [app1Id, inviteeId].join("|"),
-              entryKey: "INVITEE_LOCALS_KEY",
-              val: { val: "invitee-locals-val" },
-            },
-          },
-          ownerId
-        );
+        // dispatch(
+        //   {
+        //     type: Client.ActionType.CREATE_ENTRY,
+        //     payload: {
+        //       envParentId: app1Id,
+        //       environmentId: [app1Id, inviteeId].join("|"),
+        //       entryKey: "INVITEE_LOCALS_KEY",
+        //       val: { val: "invitee-locals-val" },
+        //     },
+        //   },
+        //   ownerId
+        // );
 
         dispatch(
           {
@@ -777,7 +784,7 @@ describe("apps", () => {
           ownerId
         );
 
-        return dispatch(
+        await dispatch(
           {
             type: Client.ActionType.COMMIT_ENVS,
             payload: { message: "commit message" },
@@ -794,6 +801,24 @@ describe("apps", () => {
                 (agg, id) => ({
                   ...agg,
                   [id]: { envs: true },
+                }),
+                {}
+              ),
+            },
+          },
+          ownerId
+        );
+      },
+      fetchAllChangesets = async () => {
+        await loadAccount(ownerId);
+        await dispatch(
+          {
+            type: Client.ActionType.FETCH_ENVS,
+            payload: {
+              byEnvParentId: [app1Id, app2Id, app3Id, block1Id].reduce(
+                (agg, id) => ({
+                  ...agg,
+                  [id]: { changesets: true },
                 }),
                 {}
               ),
@@ -1133,17 +1158,17 @@ describe("apps", () => {
           ]
         ).toBeUndefined();
 
-        expect(
-          getEnvWithMeta(state, {
-            envParentId: app1Id,
-            environmentId: [app1Id, inviteeId].join("|"),
-          })
-        ).toEqual({
-          inherits: {},
-          variables: {
-            INVITEE_LOCALS_KEY: { val: "invitee-locals-val" },
-          },
-        });
+        // expect(
+        //   getEnvWithMeta(state, {
+        //     envParentId: app1Id,
+        //     environmentId: [app1Id, inviteeId].join("|"),
+        //   })
+        // ).toEqual({
+        //   inherits: {},
+        //   variables: {
+        //     INVITEE_LOCALS_KEY: { val: "invitee-locals-val" },
+        //   },
+        // });
 
         expect(
           getEnvWithMeta(state, {
@@ -1452,6 +1477,30 @@ describe("apps", () => {
             BLOCK_INHERITANCE: { val: "inheritance-val" },
           },
         });
+      },
+      updateInviteeOwnLocals = async () => {
+        await loadAccount(inviteeId);
+
+        dispatch(
+          {
+            type: Client.ActionType.CREATE_ENTRY,
+            payload: {
+              envParentId: app1Id,
+              environmentId: [app1Id, inviteeId].join("|"),
+              entryKey: "INVITEE_LOCALS_KEY",
+              val: { val: "invitee-locals-val-updated" },
+            },
+          },
+          inviteeId
+        );
+
+        await dispatch(
+          {
+            type: Client.ActionType.COMMIT_ENVS,
+            payload: { message: "commit message" },
+          },
+          inviteeId
+        );
       };
   });
 });

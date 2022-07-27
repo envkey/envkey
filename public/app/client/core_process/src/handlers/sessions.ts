@@ -210,6 +210,7 @@ clientAction<
   actionType: Client.ActionType.GET_SESSION,
   stateProducer: (draft) => {
     draft.isFetchingSession = true;
+    delete draft.fetchSessionNotModified;
   },
   failureStateProducer: (draft, { payload }) => {
     draft.fetchSessionError = payload;
@@ -219,6 +220,7 @@ clientAction<
   },
   successStateProducer: (draft, action) => {
     delete draft.fetchSessionError;
+    draft.fetchSessionNotModified = action.payload.notModified ?? false;
     return decryptedEnvsStateProducer(draft, action);
   },
   successHandler: async (state, action, res, context) => {

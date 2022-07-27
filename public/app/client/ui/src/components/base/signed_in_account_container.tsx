@@ -206,7 +206,8 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       (!props.core.graphUpdatedAt ||
         !props.core.graph[props.ui.loadedAccountId]) &&
       !props.core.isFetchingSession &&
-      !props.core.fetchSessionError
+      !props.core.fetchSessionError &&
+      !props.core.fetchSessionNotModified
   );
 
   useLayoutEffect(() => {
