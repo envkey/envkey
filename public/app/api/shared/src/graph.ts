@@ -144,15 +144,22 @@ export const getOrgGraph = async (
   setEnvsUpdatedFields = (
     auth: Auth.UserAuthContext,
     orgGraph: Api.Graph.OrgGraph,
-    blobs: Api.Net.EnvParams["blobs"],
+    action: Api.Action.RequestActions["UpdateEnvs" | "ReencryptEnvs"],
     now: number
   ) => {
+    const { payload } = action;
+    const { blobs } = payload;
+    const localsReinit =
+      "localsReinit" in payload ? payload.localsReinit : undefined;
+
     const encryptedById =
       auth.type == "tokenAuthContext" ? auth.orgUserDevice.id : auth.user.id;
     const updatingEnvironmentIds = new Set<string>();
     const updatingEnvParentIds = new Set<string>();
 
     const updatedGraph = produce(orgGraph, (draft) => {
+      const orgDraft = getOrg(draft);
+
       for (let envParentId in blobs) {
         const envParent = draft[envParentId] as Model.App | Model.Block;
 
@@ -186,8 +193,13 @@ export const getOrgGraph = async (
           envParent.envsOrLocalsUpdatedAt = now;
           envParent.localsEncryptedBy[localsUserId] = encryptedById;
           envParent.updatedAt = now;
+          envParent.localsRequireReinit = false;
 
           updatingEnvParentIds.add(envParentId);
+
+          if (localsReinit) {
+            orgDraft.reinitializedLocals = true;
+          }
         }
       }
 
@@ -197,7 +209,7 @@ export const getOrgGraph = async (
           graphTypes(draft).environments
         )
       ) {
-        (draft[auth.org.id] as Api.Db.Org)["upgradedCrypto-2.1.0"] = true;
+        orgDraft["upgradedCrypto-2.1.0"] = true;
       }
     });
 
@@ -497,7 +509,9 @@ export const getOrgGraph = async (
     now: number
   ): [Api.Graph.OrgGraph, Api.Db.ObjectTransactionItems] => {
     // delete blobs and clear localsUpdatedAt for any users that previously had access and no longer do
-    const hardDeleteEncryptedBlobParams: Api.Db.ObjectTransactionItems["hardDeleteEncryptedBlobParams"] =
+    const hardDeleteSecondaryIndices: Api.Db.ObjectTransactionItems["hardDeleteSecondaryIndices"] =
+      [];
+    const hardDeleteTertiaryIndices: Api.Db.ObjectTransactionItems["hardDeleteTertiaryIndices"] =
       [];
 
     const { apps, blocks, org } = graphTypes(orgGraph);
@@ -545,19 +559,19 @@ export const getOrgGraph = async (
             delete envParentDraft.localsUpdatedAtByUserId[localsUserId];
             delete envParentDraft.localsEncryptedBy[localsUserId];
             envParentDraft.updatedAt = now;
+            const idx = `localOverrides|${localsUserId}|${envParent.id}`;
 
-            hardDeleteEncryptedBlobParams.push({
-              orgId: org.id,
-              envParentId: envParent.id,
-              blobType: "env",
-              environmentId: envParent.id + "|" + localsUserId,
-            });
+            hardDeleteSecondaryIndices.push(idx);
+            hardDeleteTertiaryIndices.push(idx);
           }
         }
       }
     });
 
-    return [updatedOrgGraph, { hardDeleteEncryptedBlobParams }];
+    return [
+      updatedOrgGraph,
+      { hardDeleteSecondaryIndices, hardDeleteTertiaryIndices },
+    ];
   };
 
 const getPubkeyRevocationRequest = (

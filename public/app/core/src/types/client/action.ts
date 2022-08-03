@@ -262,6 +262,7 @@ export namespace Action {
         autoCommit?: true;
         initEnvs?: true;
         upgradeCrypto?: true;
+        localsReinit?: boolean;
       };
     };
 

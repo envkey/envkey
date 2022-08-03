@@ -2,7 +2,12 @@ import { pick } from "@core/lib/utils/object";
 import { Draft } from "immer";
 import * as R from "ramda";
 import { Client, Model } from "@core/types";
-import { getEnvironmentOrLocalsAutoCommitEnabled } from "@core/lib/graph";
+import {
+  getEnvironmentOrLocalsAutoCommitEnabled,
+  graphTypes,
+  getOrg,
+  authz,
+} from "@core/lib/graph";
 import {
   getEnvWithMeta,
   getPendingEnvWithMeta,
@@ -298,4 +303,59 @@ export const envUpdateAction = <
         payload: { ...action.payload, reverse },
       };
     });
+  },
+  initLocalsIfNeeded = async (
+    state: Client.State,
+    currentUserId: string,
+    context: Client.Context,
+    localsReinit?: boolean
+  ) => {
+    if (localsReinit) {
+      const org = getOrg(state.graph);
+      if (org.reinitializedLocals) {
+        return;
+      }
+    }
+
+    const envParentIds = [
+      ...graphTypes(state.graph).apps,
+      ...graphTypes(state.graph).blocks,
+    ].map(R.prop("id"));
+
+    const userIds = graphTypes(state.graph).orgUsers.map(R.prop("id"));
+
+    const localIds = R.flatten(
+      envParentIds.map((envParentId) => {
+        const envParent = state.graph[envParentId] as Model.EnvParent;
+
+        return userIds
+          .filter(
+            (userId) =>
+              authz.canReadLocals(state.graph, userId, envParentId, userId) &&
+              authz.canUpdateLocals(
+                state.graph,
+                currentUserId,
+                envParentId,
+                userId
+              ) &&
+              (!envParent.localsUpdatedAtByUserId[userId] ||
+                envParent.localsRequireReinit)
+          )
+          .map((userId) => `${envParentId}|${userId}`);
+      })
+    );
+
+    if (localIds.length > 0) {
+      await dispatch<Client.Action.ClientActions["CommitEnvs"]>(
+        {
+          type: Client.ActionType.COMMIT_ENVS,
+          payload: {
+            pendingEnvironmentIds: localIds,
+            initEnvs: true,
+            localsReinit,
+          },
+        },
+        context
+      );
+    }
   };

@@ -14,6 +14,7 @@ import { encryptedKeyParamsForEnvironments } from ".";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import set from "lodash.set";
 import { log } from "@core/lib/utils/logger";
+import { createPatch } from "rfc6902";
 
 export const envParamsForEnvironments = async (params: {
   state: Client.State;
@@ -99,6 +100,7 @@ export const envParamsForEnvironments = async (params: {
       },
       pending
     );
+    const envIsEmpty = R.isEmpty(env);
     const envComposite = getUserEncryptedKeyOrBlobComposite({ environmentId });
     const envSymmetricKey =
       environmentKeysByComposite[envComposite] ?? state.envs[envComposite].key;
@@ -171,7 +173,7 @@ export const envParamsForEnvironments = async (params: {
       changesetKeysByEnvironmentId[environmentId] = changesetsSymmetricKey;
     }
 
-    if (reencryptChangesets || initEnvs) {
+    if (reencryptChangesets || (initEnvs && envIsEmpty)) {
       if (!initEnvs) {
         ensureChangesetsFetched(state, envParentId);
       }
@@ -213,20 +215,49 @@ export const envParamsForEnvironments = async (params: {
       if (changesets.length == 0) {
         addPaths.push([[...blobBasePath, "changesetsById"], {}]);
       }
-    } else if (pending) {
+    } else if (pending || (initEnvs && !envIsEmpty)) {
       if (!changesetsSymmetricKey) {
         throw new Error("Missing changeset encryption key");
       }
 
-      const changeset: Client.Env.ChangesetPayload = {
-        actions: getPendingActionsByEnvironmentId(state)[environmentId].map(
-          (action) => ({
-            ...action,
-            meta: R.omit(["pendingAt"], action.meta),
-          })
-        ),
-        message,
-      };
+      const changeset: Client.Env.ChangesetPayload = initEnvs
+        ? {
+            actions: [
+              {
+                type: Client.ActionType.IMPORT_ENVIRONMENT,
+                payload: {
+                  diffs: createPatch(
+                    {
+                      inherits: {},
+                      variables: {},
+                    },
+                    { inherits: {}, variables: env }
+                  ),
+                  reverse: createPatch(
+                    { inherits: {}, variables: env },
+                    {
+                      inherits: {},
+                      variables: {},
+                    }
+                  ),
+                },
+                meta: {
+                  envParentId,
+                  environmentId,
+                  entryKeys: Object.keys(env),
+                },
+              },
+            ],
+          }
+        : {
+            actions: getPendingActionsByEnvironmentId(state)[environmentId].map(
+              (action) => ({
+                ...action,
+                meta: R.omit(["pendingAt"], action.meta),
+              })
+            ),
+            message,
+          };
 
       toEncrypt.push([
         [...blobBasePath, "changesets"],

@@ -32,11 +32,12 @@ apiAction<
   graphAction: true,
   authenticated: true,
   // no graphAuthorizer needed here since blob updates are authorized at the handler level
-  graphHandler: async ({ payload }, orgGraph, auth, now) => {
+  graphHandler: async (action, orgGraph, auth, now) => {
+    const { payload } = action;
     const { updatedGraph, updatingEnvironmentIds } = setEnvsUpdatedFields(
       auth,
       orgGraph,
-      payload.blobs,
+      action,
       now
     );
 

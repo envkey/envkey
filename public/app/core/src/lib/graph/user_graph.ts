@@ -55,10 +55,12 @@ export const getUserGraph = (
             "deviceLikeCount",
             "activeUserOrInviteCount",
 
+            "upgradedCrypto-2.1.0",
+            "reinitializedLocals",
+
             // these may filtered out in permitted_graph.ts depending on permissions
             "localIpsAllowed",
             "environmentRoleIpsAllowed",
-            "upgradedCrypto-2.1.0",
           ],
           obj
         );
@@ -187,6 +189,7 @@ export const getUserGraph = (
             "envsUpdatedAt",
             "envsOrLocalsUpdatedAt",
             "localsReencryptionRequiredAt",
+            "localsRequireReinit",
             "settings",
 
             // these may filtered out in permitted_graph.ts depending on permissions
@@ -207,6 +210,7 @@ export const getUserGraph = (
             "envsUpdatedAt",
             "envsOrLocalsUpdatedAt",
             "localsReencryptionRequiredAt",
+            "localsRequireReinit",
             "settings",
           ],
           obj

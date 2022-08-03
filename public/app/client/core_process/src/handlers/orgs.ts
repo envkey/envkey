@@ -19,6 +19,7 @@ import { fetchRequiredEnvs } from "@core_proc/lib/envs";
 import fs from "fs";
 import { wait } from "@core/lib/utils/wait";
 import { log } from "@core/lib/utils/logger";
+import { initLocalsIfNeeded } from "../lib/envs";
 
 clientAction<Client.Action.ClientActions["UpdateUserRoles"]>({
   type: "asyncClientAction",
@@ -50,6 +51,14 @@ clientAction<Client.Action.ClientActions["UpdateUserRoles"]>({
       payload: pick(["id", "orgRoleId"], payload),
     },
   }),
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    await initLocalsIfNeeded(state, auth.userId, context);
+  },
 });
 
 clientAction<Api.Action.RequestActions["UpdateUserRole"]>({
@@ -865,17 +874,11 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
 
-          const createdOrgUsers = g
-            .graphTypes(res.state.graph)
-            .orgUsers.filter(R.propEq("createdAt", res.state.graphUpdatedAt));
-
-          const createdOrgUsersByEmail = R.indexBy(
-            R.prop("email"),
-            createdOrgUsers
-          );
+          const orgUsers = g.graphTypes(res.state.graph).orgUsers;
+          const orgUsersByEmail = R.indexBy(R.prop("email"), orgUsers);
 
           for (let archiveOrgUser of batch) {
-            const created = createdOrgUsersByEmail[archiveOrgUser.email];
+            const created = orgUsersByEmail[archiveOrgUser.email];
             idMap[archiveOrgUser.id] = created.id;
           }
         } else {
@@ -902,9 +905,12 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         if (res.success) {
           state = res.state;
 
-          const created = g
-            .graphTypes(res.state.graph)
-            .cliUsers.find(R.propEq("createdAt", res.state.graphUpdatedAt))!;
+          const created = R.last(
+            R.sortBy(
+              R.prop("createdAt"),
+              g.graphTypes(res.state.graph).cliUsers
+            )
+          )!;
 
           idMap[archiveCliUser.id] = created.id;
         } else {

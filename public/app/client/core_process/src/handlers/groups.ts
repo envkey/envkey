@@ -4,6 +4,7 @@ import { clientAction } from "../handler";
 import { stripEmptyRecursive, pick } from "@core/lib/utils/object";
 import { removeObjectProducers, reorderStatusProducers } from "../lib/status";
 import { deleteProposer } from "../lib/graph";
+import { getAuth } from "@core/lib/client";
 import * as g from "@core/lib/graph";
 import {
   getOrgAccessScopeForGroupMembership,
@@ -12,6 +13,7 @@ import {
   mergeAccessScopes,
 } from "@core/lib/graph";
 import { log } from "@core/lib/utils/logger";
+import { initLocalsIfNeeded } from "../lib/envs";
 
 clientAction<Client.Action.ClientActions["CreateGroupMemberships"]>({
   type: "asyncClientAction",
@@ -65,6 +67,14 @@ clientAction<Client.Action.ClientActions["CreateGroupMemberships"]>({
       payload: pick(["groupId", "objectId", "orderIndex"], payload),
     },
   }),
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    await initLocalsIfNeeded(state, auth.userId, context);
+  },
 });
 
 clientAction<Api.Action.RequestActions["CreateGroupMembership"]>({

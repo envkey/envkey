@@ -7,6 +7,7 @@ import {
   updateObjectProducers,
   updateSettingsProducers,
 } from "../lib/status";
+import { getAuth } from "@core/lib/client";
 import { stripEmptyRecursive, pick } from "@core/lib/utils/object";
 import { deleteProposer } from "../lib/graph";
 import {
@@ -14,6 +15,7 @@ import {
   getUpdateAppRoleProducer,
   getUpdateEnvironmentRoleProducer,
 } from "@core/lib/graph";
+import { initLocalsIfNeeded } from "../lib/envs";
 
 clientAction<Client.Action.ClientActions["RbacUpdateOrgRole"]>({
   type: "asyncClientAction",
@@ -26,6 +28,14 @@ clientAction<Client.Action.ClientActions["RbacUpdateOrgRole"]>({
       payload,
     },
   }),
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    await initLocalsIfNeeded(state, auth.userId, context);
+  },
 });
 
 clientAction<Client.Action.ClientActions["RbacUpdateAppRole"]>({
@@ -39,6 +49,14 @@ clientAction<Client.Action.ClientActions["RbacUpdateAppRole"]>({
       payload,
     },
   }),
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    await initLocalsIfNeeded(state, auth.userId, context);
+  },
 });
 
 clientAction<Client.Action.ClientActions["RbacUpdateEnvironmentRole"]>({

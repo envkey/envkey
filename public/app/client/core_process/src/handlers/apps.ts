@@ -19,10 +19,12 @@ import {
   getOrgAccessScopeForGroupMembers,
   graphTypes,
   getEnvironmentsByEnvParentId,
+  authz,
 } from "@core/lib/graph";
 import { log } from "@core/lib/utils/logger";
 import fs from "fs";
 import path from "path";
+import { initLocalsIfNeeded } from "../lib/envs";
 
 clientAction<Client.Action.ClientActions["CreateApp"]>({
   type: "asyncClientAction",
@@ -81,6 +83,11 @@ clientAction<Client.Action.ClientActions["CreateApp"]>({
   },
 
   successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
     const app = R.last(
       R.sortBy(R.prop("createdAt"), graphTypes(state.graph).apps)
     )!;
@@ -89,11 +96,17 @@ clientAction<Client.Action.ClientActions["CreateApp"]>({
       getEnvironmentsByEnvParentId(state.graph)[app.id] ?? []
     ).map(R.prop("id"));
 
+    const localIds = graphTypes(state.graph)
+      .orgUsers.filter((user) =>
+        authz.canUpdateLocals(state.graph, auth.userId, app.id, user.id)
+      )
+      .map((user) => `${app.id}|${user.id}`);
+
     await dispatch<Client.Action.ClientActions["CommitEnvs"]>(
       {
         type: Client.ActionType.COMMIT_ENVS,
         payload: {
-          pendingEnvironmentIds: environmentIds,
+          pendingEnvironmentIds: environmentIds.concat(localIds),
           initEnvs: true,
         },
       },
@@ -276,6 +289,14 @@ clientAction<Client.Action.ClientActions["GrantAppsAccess"]>({
         ),
       },
     };
+  },
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    await initLocalsIfNeeded(state, auth.userId, context);
   },
 });
 

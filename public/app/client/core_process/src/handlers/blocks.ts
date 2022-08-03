@@ -17,7 +17,9 @@ import {
   mergeAccessScopes,
   graphTypes,
   getEnvironmentsByEnvParentId,
+  authz,
 } from "@core/lib/graph";
+import { initLocalsIfNeeded } from "../lib/envs";
 
 clientAction<Client.Action.ClientActions["CreateBlock"]>({
   type: "asyncClientAction",
@@ -50,6 +52,11 @@ clientAction<Client.Action.ClientActions["CreateBlock"]>({
   },
 
   successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
     const block = R.last(
       R.sortBy(R.prop("createdAt"), graphTypes(state.graph).blocks)
     )!;
@@ -58,11 +65,17 @@ clientAction<Client.Action.ClientActions["CreateBlock"]>({
       getEnvironmentsByEnvParentId(state.graph)[block.id] ?? []
     ).map(R.prop("id"));
 
+    const localIds = graphTypes(state.graph)
+      .orgUsers.filter((user) =>
+        authz.canUpdateLocals(state.graph, auth.userId, block.id, user.id)
+      )
+      .map((user) => `${block.id}|${user.id}`);
+
     await dispatch<Client.Action.ClientActions["CommitEnvs"]>(
       {
         type: Client.ActionType.COMMIT_ENVS,
         payload: {
-          pendingEnvironmentIds: environmentIds,
+          pendingEnvironmentIds: environmentIds.concat(localIds),
           initEnvs: true,
         },
       },
@@ -230,6 +243,14 @@ clientAction<Client.Action.ClientActions["ConnectBlocks"]>({
         ),
       },
     };
+  },
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    await initLocalsIfNeeded(state, auth.userId, context);
   },
 });
 

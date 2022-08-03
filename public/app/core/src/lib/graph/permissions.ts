@@ -483,12 +483,8 @@ export const getOrgPermissions = memoize(
           accessParams
         );
 
-        // return new Set(Rbac.DEFAULT_APP_ADMIN_PERMISSIONS);
-
         return appRole ? getAppPermissions(graph, appRole.id) : new Set();
       } else {
-        // return new Set(Rbac.DEFAULT_APP_ADMIN_PERMISSIONS);
-
         return getConnectedAppPermissionsIntersectionForBlock(
           graph,
           envParentId,

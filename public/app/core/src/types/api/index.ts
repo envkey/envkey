@@ -94,8 +94,6 @@ namespace Api {
       | {
           type: "graphHandlerResult";
           graph: Graph.OrgGraph;
-          deleteBlobs?: Blob.KeySet;
-          requireBlobs?: Blob.KeySet;
           envs?: HandlerEnvsResponse;
           changesets?: HandlerEnvsResponse;
           signedTrustedRoot?: Crypto.SignedData;

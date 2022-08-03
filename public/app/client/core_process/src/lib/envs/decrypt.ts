@@ -61,7 +61,10 @@ export const decryptEnvs = async (
       Object.keys(encryptedBlobs)
     );
     if (missingBlobs.length) {
-      log("missing blobs:", missingBlobs);
+      log("missing blobs:", {
+        missingBlobs,
+        keys: R.pick(missingBlobs, encryptedKeys),
+      });
       throw new Error("Missing blob keys");
     }
 

@@ -28,6 +28,8 @@ import { removeObjectProducers } from "../lib/status";
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 import { decode as decodeBase58 } from "bs58";
+import { initLocalsIfNeeded } from "../lib/envs";
+import { log } from "@core/lib/utils/logger";
 
 clientAction<
   Client.Action.ClientActions["InviteUsers"],
@@ -135,6 +137,14 @@ clientAction<
         context
       );
     }
+  },
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    await initLocalsIfNeeded(state, auth.userId, context);
   },
 });
 

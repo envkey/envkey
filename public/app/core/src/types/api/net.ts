@@ -1022,6 +1022,7 @@ export namespace Net {
     [ActionType.UPDATE_ENVS]: EnvParamsSchema.merge(
       z.object({
         upgradeCrypto: z.boolean().optional(),
+        localsReinit: z.boolean().optional(),
       })
     ),
     [ActionType.FETCH_ENVS]: FetchEnvsParamsSchema,

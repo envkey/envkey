@@ -9,12 +9,15 @@ import {
   signPublicKey,
   signJson,
 } from "@core/lib/crypto/proxy";
+import { graphTypes } from "@core/lib/graph";
 import { secureRandomAlphanumeric, sha256 } from "@core/lib/crypto/utils";
 import {
   encryptedKeyParamsForDeviceOrInvitee,
   fetchEnvsForUserOrAccessParams,
 } from "../lib/envs";
 import { renameObjectProducers, removeObjectProducers } from "../lib/status";
+import { initLocalsIfNeeded } from "../lib/envs";
+import * as R from "ramda";
 
 clientAction<
   Client.Action.ClientActions["CreateCliUser"],
@@ -110,6 +113,15 @@ clientAction<
         context
       );
     }
+  },
+
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    await initLocalsIfNeeded(state, auth.userId, context);
   },
 });
 

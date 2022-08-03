@@ -4,6 +4,7 @@ import {
   fetchLoadedEnvs,
   fetchPendingEnvs,
   fetchRequiredEnvs,
+  initLocalsIfNeeded,
 } from "../lib/envs";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -146,6 +147,9 @@ clientAction<
       if (upgradeCryptoRes && !upgradeCryptoRes.success) {
         throw new Error("Error upgrading to latest crypto version");
       }
+
+      // this will pre-fill / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
+      await initLocalsIfNeeded(state, auth.userId, context, true);
     } catch (error) {
       return dispatchFailure({ type: "clientError", error }, context);
     }
@@ -321,6 +325,9 @@ clientAction<
       if (upgradeCryptoRes && !upgradeCryptoRes.success) {
         throw new Error("Error upgrading to latest crypto version");
       }
+
+      // this will init / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
+      await initLocalsIfNeeded(state, auth.userId, context, true);
     } catch (error) {
       return dispatchFailure({ type: "clientError", error }, context);
     }

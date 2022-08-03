@@ -75,6 +75,8 @@ export namespace Model {
         .optional(),
 
       "upgradedCrypto-2.1.0": z.boolean().optional(),
+
+      reinitializedLocals: z.boolean().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -344,6 +346,7 @@ export namespace Model {
       localsEncryptedBy: z.record(z.string()),
       localsReencryptionRequiredAt: z.record(z.number()),
       envsOrLocalsUpdatedAt: z.number().optional(),
+      localsRequireReinit: z.boolean().optional(),
     })
     .merge(TimestampsSchema);
 

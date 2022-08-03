@@ -335,7 +335,7 @@ describe("fetching logs", () => {
       Api.ActionType.UPDATE_ENVS,
       Api.ActionType.FETCH_ENVS,
       Api.ActionType.CREATE_INVITE,
-      Api.ActionType.LOAD_INVITE,
+      Api.ActionType.UPDATE_ENVS,
     ]);
 
     // update filters - ensure that logs get cleared
@@ -434,10 +434,10 @@ describe("fetching logs", () => {
     ).toEqual([
       Api.ActionType.FETCH_ENVS,
       Api.ActionType.CREATE_INVITE,
+      Api.ActionType.UPDATE_ENVS,
       Api.ActionType.LOAD_INVITE,
       Api.ActionType.ACCEPT_INVITE,
       Api.ActionType.CREATE_LOCAL_KEY,
-      Api.ActionType.GENERATE_KEY,
     ]);
 
     // time range deleted graph
@@ -480,8 +480,8 @@ describe("fetching logs", () => {
       )
     ).toEqual([
       Api.ActionType.CREATE_INVITE,
+      Api.ActionType.UPDATE_ENVS,
       Api.ActionType.LOAD_INVITE,
-      Api.ActionType.ACCEPT_INVITE,
     ]);
 
     await dispatch(

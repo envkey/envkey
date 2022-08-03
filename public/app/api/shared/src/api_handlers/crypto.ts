@@ -242,8 +242,10 @@ apiAction<
   authenticated: true,
   graphAction: true,
   // no graphAuthorizer needed here since blob updates are authorized at the handler level
-  graphHandler: async ({ payload: { blobs } }, orgGraph, auth, now) => {
-    let { updatedGraph } = setEnvsUpdatedFields(auth, orgGraph, blobs, now);
+  graphHandler: async (action, orgGraph, auth, now) => {
+    const { blobs } = action.payload;
+
+    let { updatedGraph } = setEnvsUpdatedFields(auth, orgGraph, action, now);
 
     updatedGraph = produce(updatedGraph, (draft) => {
       for (let envParentId in blobs) {

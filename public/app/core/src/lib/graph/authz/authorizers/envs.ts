@@ -190,7 +190,7 @@ export const canUpdateEnv = (
       envParent.type == "block" &&
       currentOrgPermissions.has("blocks_write_envs_all");
 
-    const envParentPermissions = getEnvParentPermissions(
+    const currentUserEnvParentPermissions = getEnvParentPermissions(
       graph,
       envParentId,
       currentUserId
@@ -198,7 +198,7 @@ export const canUpdateEnv = (
 
     return (
       currentUserCanWriteOrgBlock ||
-      envParentPermissions.has("app_write_user_locals")
+      currentUserEnvParentPermissions.has("app_write_user_locals")
     );
   },
   canReadLocals = (
@@ -221,10 +221,6 @@ export const canUpdateEnv = (
       return false;
     }
 
-    if (currentUserId == localsUserId) {
-      return true;
-    }
-
     const currentUserCanReadOrgBlock =
       envParent.type == "block" && currentOrgPermissions.has("blocks_read_all");
 
@@ -233,6 +229,13 @@ export const canUpdateEnv = (
       envParentId,
       currentUserId
     );
+
+    if (currentUserId == localsUserId) {
+      return (
+        currentUserCanReadOrgBlock ||
+        envParentPermissions.has("app_read_own_locals")
+      );
+    }
 
     return (
       currentUserCanReadOrgBlock ||
@@ -259,10 +262,6 @@ export const canUpdateEnv = (
       return false;
     }
 
-    if (currentUserId == localsUserId) {
-      return true;
-    }
-
     const currentUserCanReadOrgBlock =
       envParent.type == "block" && currentOrgPermissions.has("blocks_read_all");
 
@@ -271,6 +270,13 @@ export const canUpdateEnv = (
       envParentId,
       currentUserId
     );
+
+    if (currentUserId == localsUserId) {
+      return (
+        currentUserCanReadOrgBlock ||
+        envParentPermissions.has("app_read_own_locals")
+      );
+    }
 
     return (
       currentUserCanReadOrgBlock ||
