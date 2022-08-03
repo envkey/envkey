@@ -46,7 +46,7 @@ if [ -f $ENV_DIR/ENVKEY ]; then
   export "ENVKEY=$(cat $ENV_DIR/ENVKEY)"
   echo $($ENVKEY_DIR/envkey-source) > $BP_DIR/export
   echo "EnvKey variables exported to subsequent buildpacks" | indent
-  mkdir $BUILD_DIR/.profile.d
+  mkdir -p $BUILD_DIR/.profile.d
   cat > $BUILD_DIR/.profile.d/envkey.sh << EOF
 export -p > ./envkey-runtime-env.sh
 $(cat $BP_DIR/export)
