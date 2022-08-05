@@ -27,13 +27,17 @@ export const IndexRedirect: Component = (props) => {
         accountId: redirectAccountId,
         loadedAccountId: undefined,
       });
-      console.log("redirecting to org:", `/org/${account.orgId}`);
+      console.log(
+        new Date().toISOString(),
+        "redirecting to org:",
+        `/org/${account.orgId}`
+      );
       props.history.replace(
         props.core.uiLastSelectedUrl ?? `/org/${account.orgId}`
       );
     } else {
       if (props.core.uiLastSelectedAccountId) {
-        console.log("clearing last selected");
+        console.log(new Date().toISOString(), "clearing last selected");
 
         props.dispatch(
           {
@@ -53,7 +57,7 @@ export const IndexRedirect: Component = (props) => {
         );
       }
 
-      console.log("redirecting home");
+      console.log(new Date().toISOString(), "redirecting home");
       props.history.replace("/home");
     }
   }, []);

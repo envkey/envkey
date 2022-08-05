@@ -216,7 +216,6 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         if (document.documentElement.classList.contains("loaded")) {
           document.documentElement.classList.remove("loaded");
         }
-        console.log("fetching session");
         const res = await props.dispatch({
           type: Client.ActionType.GET_SESSION,
         });
@@ -377,6 +376,10 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     props.ui.loadedAccountId,
   ]);
 
+  if (shouldRedirectPath) {
+    console.log({ shouldRedirectPath });
+  }
+
   useLayoutEffect(() => {
     if (shouldRedirectPath) {
       return;
@@ -418,6 +421,10 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         ? getUiTree(props.core, auth!.userId, props.ui.now)
         : null;
 
+    if (tree) {
+      console.log(new Date().toISOString(), "rendered ui tree");
+    }
+
     return tree;
   }, [
     props.ui.loadedAccountId,
@@ -440,6 +447,11 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       const pendingUpdateDetails = getPendingUpdateDetails(props.core, params);
       const pendingConflicts = getAllPendingConflicts(props.core);
       const numPendingConflicts = getNumPendingConflicts(props.core);
+
+      console.log(
+        new Date().toISOString(),
+        "got pending update and conflicts info"
+      );
 
       return {
         pendingUpdateDetails,
@@ -506,7 +518,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
   const sessionRetry = useCallback(() => {
     (async () => {
       if (auth && props.core.fetchSessionError) {
-        console.log("Retry GET_SESSION");
+        console.log(new Date().toISOString(), "Retry GET_SESSION");
         const res = await props.dispatch({
           type: Client.ActionType.GET_SESSION,
         });
@@ -525,14 +537,14 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
 
   useEffect(() => {
     if (auth && props.core.fetchSessionError) {
-      console.log("GET_SESSION error", {
+      console.log(new Date().toISOString(), "GET_SESSION error", {
         err: props.core.fetchSessionError,
       });
 
       if (sessionRetryTimeout) {
         clearTimeout(sessionRetryTimeout);
       }
-      console.log("start GET_SESSION retry loop");
+      console.log(new Date().toISOString(), "start GET_SESSION retry loop");
       sessionRetry();
     } else if (sessionRetryTimeout) {
       clearTimeout(sessionRetryTimeout);
@@ -561,6 +573,11 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
   }, [shouldRender]);
 
   if (auth && props.core.fetchSessionError) {
+    console.log(
+      new Date().toISOString(),
+      "fetchSessionError",
+      props.core.fetchSessionError
+    );
     return (
       <div className={styles.ErrorState}>
         <div>

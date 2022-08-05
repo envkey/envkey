@@ -962,14 +962,23 @@ export const clientAction = <
 
     // log(reduxAction.type);
 
-    // log("dispatching " + reduxAction.type);
-    // const start = Date.now();
+    let start = BigInt(0);
+    if (process.env.LOG_ALL_ACTIONS) {
+      log("dispatching " + reduxAction.type);
+      start = process.hrtime.bigint();
+    }
 
     store.dispatch(reduxAction);
 
-    // log(
-    //   "dispatched " + reduxAction.type + ": " + (Date.now() - start).toString()
-    // );
+    if (process.env.LOG_ALL_ACTIONS) {
+      const elapsedNs = process.hrtime.bigint() - start;
+      const elapsedMs = Number(elapsedNs) / 1000000;
+      log(
+        "dispatched " +
+          reduxAction.type +
+          ` - ${elapsedMs.toFixed(3)}ms elapsed`
+      );
+    }
   };
 
 const getHandleSuccess =

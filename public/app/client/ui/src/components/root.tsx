@@ -79,6 +79,7 @@ const clientParams: Client.ClientParams<"app"> = {
           !state.lastActiveAt ||
           state.lastActiveAt > coreStateRef.current.lastActiveAt
         ) {
+          console.log(new Date().toISOString(), "updating core state");
           coreStateRef.current = state;
           _setCoreState(state);
         }
@@ -86,6 +87,8 @@ const clientParams: Client.ClientParams<"app"> = {
       [uiState, _setLocalUiState] = useState(defaultLocalState),
       uiStateRef = useRef(uiState),
       setLocalUiState = (update: Partial<LocalUiState>) => {
+        console.log(new Date().toISOString(), "updating UI state");
+
         const updatedState = {
           ...uiStateRef.current,
           ...update,
@@ -113,6 +116,7 @@ const clientParams: Client.ClientParams<"app"> = {
       fetchingStateRef = useRef(false),
       queueFetchStateRef = useRef(false),
       updateState = (state: Client.State, forceUpdate = false) => {
+        console.log(new Date().toISOString(), "updating state");
         setCoreStateIfLatest(state, forceUpdate);
         const accountId = uiStateRef.current.accountId;
         const loadedAccountId = uiStateRef.current.loadedAccountId;
@@ -143,6 +147,10 @@ const clientParams: Client.ClientParams<"app"> = {
       fetchCoreState = async (forceUpdate = false) => {
         fetchingStateRef.current = true;
         const accountId = uiStateRef.current.accountId;
+
+        console.log(new Date().toISOString(), "fetching core state", {
+          accountId,
+        });
 
         await fetchState(accountId)
           .then(async (state) => {
@@ -176,6 +184,8 @@ const clientParams: Client.ClientParams<"app"> = {
         hostUrlOverride?: string,
         skipStateUpdate?: true
       ) => {
+        console.log(new Date().toISOString(), "dispatch:", action.type);
+
         const res = await dispatchCore(
           action,
           clientParams,
@@ -183,8 +193,15 @@ const clientParams: Client.ClientParams<"app"> = {
           hostUrlOverride
         );
 
+        console.log(new Date().toISOString(), "core result:", action.type);
+
         let newState: Client.State | undefined;
         if (!skipStateUpdate && res.diffs && res.diffs.length > 0) {
+          console.log(
+            new Date().toISOString(),
+            action.type,
+            `${res.diffs.length} diffs to apply`
+          );
           newState = R.clone(coreStateRef.current!);
           applyPatch(newState, res.diffs);
           setCoreStateIfLatest(newState);
@@ -206,12 +223,19 @@ const clientParams: Client.ClientParams<"app"> = {
       }
 
       window.addEventListener("beforeunload", () => {
-        console.log("window beforeunload event--disconnecting client");
+        console.log(
+          new Date().toISOString(),
+          "window beforeunload event--disconnecting client"
+        );
         if (coreState && !coreState.locked) {
           dispatch({ type: Client.ActionType.DISCONNECT_CLIENT });
         }
       });
-      const client = new ReconnectingWebSocket("ws://localhost:19048");
+      const client = new ReconnectingWebSocket(
+        "ws://localhost:19048",
+        undefined,
+        { debug: true }
+      );
       client.addEventListener("open", onSocketUpdate);
       client.addEventListener("message", (e) => {
         (async () => {
@@ -225,6 +249,7 @@ const clientParams: Client.ClientParams<"app"> = {
             setCoreStateIfLatest(newState);
           } else {
             console.log(
+              new Date().toISOString(),
               "Received unknown socket message for core proc: ",
               e.data
             );
@@ -266,8 +291,12 @@ const clientParams: Client.ClientParams<"app"> = {
 
     const upgradeProgressHandler = useCallback(
       (progress: UpgradeProgress) => {
-        console.log("Root - upgrade progress", { progress });
-        console.log("Root - clientUpgrade progress", { clientUpgradeProgress });
+        console.log(new Date().toISOString(), "Root - upgrade progress", {
+          progress,
+        });
+        console.log(new Date().toISOString(), "Root - clientUpgrade progress", {
+          clientUpgradeProgress,
+        });
         setClientUpgradeProgress({
           ...clientUpgradeProgress,
           [progress.clientProject]: progress,
@@ -282,13 +311,21 @@ const clientParams: Client.ClientParams<"app"> = {
 
     useEffect(() => {
       window.electron.registerUpgradeAvailableHandler((availableUpgrade) => {
-        console.log("Root - upgrade available", availableUpgrade);
+        console.log(
+          new Date().toISOString(),
+          "Root - upgrade available",
+          availableUpgrade
+        );
         setAvailableClientUpgrade(availableUpgrade);
       });
 
       window.electron.registerNewerUpgradeAvailableHandler(
         (availableUpgrade) => {
-          console.log("Root - newer upgrade available", availableUpgrade);
+          console.log(
+            new Date().toISOString(),
+            "Root - newer upgrade available",
+            availableUpgrade
+          );
           alert("A newer upgrade is available.");
           setAvailableClientUpgrade(availableUpgrade);
         }
@@ -298,7 +335,7 @@ const clientParams: Client.ClientParams<"app"> = {
       // (just CLI or envkey-source), otherwise the app will
       // restart with the latest version
       window.electron.registerUpgradeCompleteHandler(() => {
-        console.log("Root - upgrade complete");
+        console.log(new Date().toISOString(), "Root - upgrade complete");
 
         setTimeout(() => {
           setClientUpgradeProgress({});
@@ -308,7 +345,7 @@ const clientParams: Client.ClientParams<"app"> = {
       });
 
       window.electron.registerUpgradeErrorHandler(() => {
-        console.log("Root - upgrade error");
+        console.log(new Date().toISOString(), "Root - upgrade error");
         alert(
           "There was a problem downloading the upgrade. This might mean that a new upgrade is available. Please try again."
         );
