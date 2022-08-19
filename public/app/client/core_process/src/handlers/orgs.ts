@@ -1,3 +1,4 @@
+import { getTempStore } from "../redux_store";
 import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import { pick, stripNullsRecursive } from "@core/lib/utils/object";
 import { getAuth, getEnvWithMeta } from "@core/lib/client";
@@ -57,7 +58,14 @@ clientAction<Client.Action.ClientActions["UpdateUserRoles"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context);
+    initLocalsIfNeeded(state, auth.userId, {
+      ...context,
+      store: getTempStore(context.store),
+    }).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    await dispatch({ type: Client.ActionType.CLEAR_CACHED }, context);
   },
 });
 

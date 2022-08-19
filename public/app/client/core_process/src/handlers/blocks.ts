@@ -1,3 +1,4 @@
+import { getTempStore } from "../redux_store";
 import { deleteProposer } from "../lib/graph";
 import * as R from "ramda";
 import { Client, Api, Model } from "@core/types";
@@ -250,7 +251,14 @@ clientAction<Client.Action.ClientActions["ConnectBlocks"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context);
+    initLocalsIfNeeded(state, auth.userId, {
+      ...context,
+      store: getTempStore(context.store),
+    }).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    await dispatch({ type: Client.ActionType.CLEAR_CACHED }, context);
   },
 });
 

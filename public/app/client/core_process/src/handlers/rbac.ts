@@ -1,6 +1,7 @@
+import { getTempStore } from "../redux_store";
 import * as R from "ramda";
 import { Client, Api } from "@core/types";
-import { clientAction } from "../handler";
+import { clientAction, dispatch } from "../handler";
 import {
   statusProducers,
   removeObjectProducers,
@@ -16,6 +17,7 @@ import {
   getUpdateEnvironmentRoleProducer,
 } from "@core/lib/graph";
 import { initLocalsIfNeeded } from "../lib/envs";
+import { log } from "@core/lib/utils/logger";
 
 clientAction<Client.Action.ClientActions["RbacUpdateOrgRole"]>({
   type: "asyncClientAction",
@@ -34,7 +36,14 @@ clientAction<Client.Action.ClientActions["RbacUpdateOrgRole"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context);
+    initLocalsIfNeeded(state, auth.userId, {
+      ...context,
+      store: getTempStore(context.store),
+    }).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    await dispatch({ type: Client.ActionType.CLEAR_CACHED }, context);
   },
 });
 
@@ -55,7 +64,14 @@ clientAction<Client.Action.ClientActions["RbacUpdateAppRole"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context);
+    initLocalsIfNeeded(state, auth.userId, {
+      ...context,
+      store: getTempStore(context.store),
+    }).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    await dispatch({ type: Client.ActionType.CLEAR_CACHED }, context);
   },
 });
 

@@ -79,7 +79,9 @@ const clientParams: Client.ClientParams<"app"> = {
           !state.lastActiveAt ||
           state.lastActiveAt > coreStateRef.current.lastActiveAt
         ) {
-          console.log(new Date().toISOString(), "updating core state");
+          console.log(new Date().toISOString(), "updating core state", {
+            bytes: Buffer.byteLength(JSON.stringify(state), "utf8"),
+          });
           coreStateRef.current = state;
           _setCoreState(state);
         }
@@ -116,7 +118,6 @@ const clientParams: Client.ClientParams<"app"> = {
       fetchingStateRef = useRef(false),
       queueFetchStateRef = useRef(false),
       updateState = (state: Client.State, forceUpdate = false) => {
-        console.log(new Date().toISOString(), "updating state");
         setCoreStateIfLatest(state, forceUpdate);
         const accountId = uiStateRef.current.accountId;
         const loadedAccountId = uiStateRef.current.loadedAccountId;

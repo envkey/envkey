@@ -11,7 +11,7 @@ import { Client, Auth, Api, Blob } from "@core/types";
 import * as R from "ramda";
 import produce from "immer";
 import { Reducer } from "redux";
-import { getDefaultStore } from "./redux_store";
+import { getDefaultStore, getTempStore } from "./redux_store";
 import { pick } from "@core/lib/utils/pick";
 import { applyPatch } from "rfc6902";
 import { log } from "@core/lib/utils/logger";
@@ -1009,6 +1009,7 @@ const getHandleSuccess =
       contextParams = successAccountId
         ? {
             ...apiSuccessContext,
+            store,
             accountIdOrCliKey: successAccountId,
           }
         : apiSuccessContext;

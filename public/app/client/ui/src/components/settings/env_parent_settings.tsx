@@ -321,9 +321,7 @@ const getComponent = (envParentType: "app" | "block") => {
                   });
               }}
             >
-              {isDeleting
-                ? `Deleting ${envParentTypeLabel}...`
-                : `Delete ${envParentTypeLabel}`}
+              {isDeleting ? <SmallLoader /> : `Delete ${envParentTypeLabel}`}
             </button>
           </div>
         );

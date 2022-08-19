@@ -10,7 +10,11 @@ import {
 import { Client, Api, Crypto, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
 import { signJson, signPublicKey } from "@core/lib/crypto/proxy";
-import { envParamsForEnvironments, fetchRequiredEnvs } from "../lib/envs";
+import {
+  envParamsForEnvironments,
+  fetchRequiredEnvs,
+  clearNonPendingEnvsProducer,
+} from "../lib/envs";
 import { verifyRootPubkeyReplacement } from "../lib/trust";
 import {
   getSignedByKeyableIds,

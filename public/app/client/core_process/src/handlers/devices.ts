@@ -1,3 +1,4 @@
+import { clearNonPendingEnvsProducer } from "./../lib/envs/updates";
 import * as R from "ramda";
 import { Client, Api, Crypto, Trust, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -51,6 +52,7 @@ clientAction<
   },
   endStateProducer: (draft, { meta: { tempId } }) => {
     delete draft.generatingDeviceGrants[tempId];
+    clearNonPendingEnvsProducer(draft);
   },
   handler: async (
     state,

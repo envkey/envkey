@@ -1,3 +1,4 @@
+import { getTempStore } from "../redux_store";
 import { Draft } from "immer";
 import { deleteProposer } from "../lib/graph";
 import { stripEmptyRecursive, pickDefined } from "@core/lib/utils/object";
@@ -296,7 +297,14 @@ clientAction<Client.Action.ClientActions["GrantAppsAccess"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context);
+    initLocalsIfNeeded(state, auth.userId, {
+      ...context,
+      store: getTempStore(context.store),
+    }).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    await dispatch({ type: Client.ActionType.CLEAR_CACHED }, context);
   },
 });
 

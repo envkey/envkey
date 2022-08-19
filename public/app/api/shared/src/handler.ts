@@ -1331,22 +1331,23 @@ const apiActions: {
 
     if (hasGraphTransactionItems) {
       if (toDeleteEncryptedKeys && !keySetEmpty(toDeleteEncryptedKeys)) {
-        const queueBlobsForReencryptionRes =
-          queueBlobsForReencryptionFromToDeleteEncryptedKeys(
-            auth,
-            toDeleteEncryptedKeys,
-            updatedOrgGraph,
-            actionStart
-          );
+        // temporarily disable reencryption until rare edge case bugs can be worked out
+        // const queueBlobsForReencryptionRes =
+        //   queueBlobsForReencryptionFromToDeleteEncryptedKeys(
+        //     auth,
+        //     toDeleteEncryptedKeys,
+        //     updatedOrgGraph,
+        //     actionStart
+        //   );
 
-        if (queueBlobsForReencryptionRes) {
-          updatedOrgGraph = queueBlobsForReencryptionRes;
-          graphTransactionItems = getGraphTransactionItems(
-            orgGraph,
-            updatedOrgGraph,
-            actionStart
-          );
-        }
+        // if (queueBlobsForReencryptionRes) {
+        //   updatedOrgGraph = queueBlobsForReencryptionRes;
+        //   graphTransactionItems = getGraphTransactionItems(
+        //     orgGraph,
+        //     updatedOrgGraph,
+        //     actionStart
+        //   );
+        // }
 
         const deleteEncryptedKeysTransactionItems =
           await getDeleteEncryptedKeysTransactionItems(

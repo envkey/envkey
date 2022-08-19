@@ -1,3 +1,5 @@
+import { getTempStore } from "../redux_store";
+import { clearNonPendingEnvsProducer } from "./../lib/envs/updates";
 import {
   processRootPubkeyReplacementsIfNeeded,
   verifyCurrentUser,
@@ -47,10 +49,12 @@ clientAction<
       error: payload,
       payload: rootAction.payload,
     };
+    clearNonPendingEnvsProducer(draft);
   },
   successStateProducer: (draft, { payload }) => {
     draft.generatedInvites = [...draft.generatedInvites, ...payload];
     draft.pendingInvites = [];
+    // non pending envs are cleared in successHandler, not here
   },
   endStateProducer: (draft, { meta: { tempId } }) => {
     delete draft.generatingInvites[tempId];
@@ -144,7 +148,14 @@ clientAction<
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context);
+    initLocalsIfNeeded(state, auth.userId, {
+      ...context,
+      store: getTempStore(context.store),
+    }).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    await dispatch({ type: Client.ActionType.CLEAR_CACHED }, context);
   },
 });
 

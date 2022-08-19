@@ -6,7 +6,7 @@ import * as g from "@core/lib/graph";
 import * as R from "ramda";
 import { simpleDurationString, twitterShortTs } from "@core/lib/utils/date";
 import * as styles from "@styles";
-import { SvgImage } from "@images";
+import { SmallLoader, SvgImage } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import copy from "copy-text-to-clipboard";
@@ -521,11 +521,13 @@ const getDevicesComponent = (isTopLevel?: true) => {
               );
             }}
           >
-            {generatingGrant
-              ? `Authorizing Device...`
-              : `Authorize ${
-                  generatedGrants.length > 0 ? " Another" : " A New"
-                } Device`}
+            {generatingGrant ? (
+              <SmallLoader />
+            ) : (
+              `Authorize ${
+                generatedGrants.length > 0 ? " Another" : " A New"
+              } Device`
+            )}
           </button>
         </div>
       );

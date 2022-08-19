@@ -1,6 +1,7 @@
+import { getTempStore } from "../redux_store";
 import * as R from "ramda";
 import { Client, Api, Model, Rbac } from "@core/types";
-import { clientAction } from "../handler";
+import { clientAction, dispatch } from "../handler";
 import { stripEmptyRecursive, pick } from "@core/lib/utils/object";
 import { removeObjectProducers, reorderStatusProducers } from "../lib/status";
 import { deleteProposer } from "../lib/graph";
@@ -73,7 +74,14 @@ clientAction<Client.Action.ClientActions["CreateGroupMemberships"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context);
+    initLocalsIfNeeded(state, auth.userId, {
+      ...context,
+      store: getTempStore(context.store),
+    }).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    await dispatch({ type: Client.ActionType.CLEAR_CACHED }, context);
   },
 });
 

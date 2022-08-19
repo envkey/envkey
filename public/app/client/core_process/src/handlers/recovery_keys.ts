@@ -16,6 +16,7 @@ import {
   decryptChangesets,
   encryptedKeyParamsForDeviceOrInvitee,
   fetchEnvsForUserOrAccessParams,
+  clearNonPendingEnvsProducer,
 } from "../lib/envs";
 import {
   verifyKeypair,
@@ -46,6 +47,7 @@ clientAction<
   },
   endStateProducer: (draft) => {
     delete draft.isGeneratingRecoveryKey;
+    clearNonPendingEnvsProducer(draft);
   },
   handler: async (
     state,

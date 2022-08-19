@@ -7,7 +7,7 @@ import * as R from "ramda";
 import * as ui from "@ui";
 import { cliUserRoute } from "./helpers";
 import * as styles from "@styles";
-import { SvgImage } from "@images";
+import { SmallLoader, SvgImage } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import { logAndAlertError } from "@ui_lib/errors";
@@ -270,7 +270,7 @@ export const NewCliUser: OrgComponent<{
           onClick={onSubmit}
           disabled={!canSubmit || generating}
         >
-          {generating ? "Generating..." : "Generate CLI Key"}
+          {generating ? <SmallLoader /> : "Generate CLI Key"}
         </button>
       </div>
     </div>

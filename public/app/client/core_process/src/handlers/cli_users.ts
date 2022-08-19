@@ -1,3 +1,4 @@
+import { getTempStore } from "../redux_store";
 import { getDefaultApiHostUrl } from "./../../../shared/src/env";
 import { Client, Api, Crypto, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -18,6 +19,7 @@ import {
 import { renameObjectProducers, removeObjectProducers } from "../lib/status";
 import { initLocalsIfNeeded } from "../lib/envs";
 import * as R from "ramda";
+import { log } from "@core/lib/utils/logger";
 
 clientAction<
   Client.Action.ClientActions["CreateCliUser"],
@@ -121,7 +123,14 @@ clientAction<
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context);
+    initLocalsIfNeeded(state, auth.userId, {
+      ...context,
+      store: getTempStore(context.store),
+    }).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    await dispatch({ type: Client.ActionType.CLEAR_CACHED }, context);
   },
 });
 

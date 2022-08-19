@@ -1,3 +1,4 @@
+import { clearNonPendingEnvsProducer } from "./../lib/envs/updates";
 import { Client, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
 import os from "os";
@@ -204,53 +205,7 @@ clientAction<Client.Action.ClientActions["SetUiLastSelectedUrl"]>({
 clientAction<Client.Action.ClientActions["ClearCached"]>({
   type: "clientAction",
   actionType: Client.ActionType.CLEAR_CACHED,
-  stateProducer: (draft) => {
-    // clear cached envs/changesets unless there are
-    // env update actions pending for that app/block
-
-    const pendingUpdate = getPendingUpdateDetails(draft);
-
-    for (let composite in draft.envs) {
-      const { environmentId } = parseUserEncryptedKeyOrBlobComposite(composite);
-      let envParentId: string;
-      const environment = draft.graph[environmentId] as
-        | Model.Environment
-        | undefined;
-      if (environment) {
-        envParentId = environment.envParentId;
-      } else {
-        [envParentId] = environmentId.split("|");
-      }
-
-      if (
-        !pendingUpdate.apps.has(envParentId) &&
-        !pendingUpdate.blocks.has(envParentId)
-      ) {
-        delete draft.envs[composite];
-        delete draft.envsFetchedAt[envParentId];
-      }
-    }
-
-    for (let environmentId in draft.changesets) {
-      let envParentId: string;
-      const environment = draft.graph[environmentId] as
-        | Model.Environment
-        | undefined;
-      if (environment) {
-        envParentId = environment.envParentId;
-      } else {
-        [envParentId] = environmentId.split("|");
-      }
-
-      if (
-        !pendingUpdate.apps.has(envParentId) &&
-        !pendingUpdate.blocks.has(envParentId)
-      ) {
-        delete draft.changesets[environmentId];
-        delete draft.changesetsFetchedAt[envParentId];
-      }
-    }
-  },
+  stateProducer: clearNonPendingEnvsProducer,
 });
 
 clientAction<Client.Action.ClientActions["AccountActive"]>({

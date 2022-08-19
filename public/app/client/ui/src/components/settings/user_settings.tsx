@@ -360,9 +360,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
               }
               onClick={onDelete}
             >
-              {isDeleting
-                ? `Deleting ${userTypeLabel}...`
-                : `Delete ${userTypeLabel}`}
+              {isDeleting ? <SmallLoader /> : `Delete ${userTypeLabel}`}
             </button>
           </div>
         );
@@ -479,7 +477,7 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                   });
               }}
             >
-              {isRegenerating ? "Regenerating..." : "Regenerate Invitation"}
+              {isRegenerating ? <SmallLoader /> : "Regenerate Invitation"}
             </button>
           </div>
         );

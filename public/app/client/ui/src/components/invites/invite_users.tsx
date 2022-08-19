@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useState } from "react";
 import { OrgComponent } from "@ui_types";
 import { Link } from "react-router-dom";
 import { Auth, Client, Model, Rbac } from "@core/types";
-import { SvgImage } from "@images";
+import { SmallLoader, SvgImage } from "@images";
 import { inviteRoute } from "./helpers";
 import * as styles from "@styles";
 import { MIN_ACTION_DELAY_MS } from "@constants";
@@ -174,9 +174,11 @@ export const InviteUsers: OrgComponent<{ appId?: string }> = (props) => {
         disabled={isInviting && !hadInviteErrors}
         onClick={onSubmit}
       >
-        {isInviting && !hadInviteErrors
-          ? `Sending Invitation${pendingInvites.length > 1 ? "s" : ""}...`
-          : `Send Invitation${pendingInvites.length > 1 ? "s" : ""}`}
+        {isInviting && !hadInviteErrors ? (
+          <SmallLoader />
+        ) : (
+          `Send Invitation${pendingInvites.length > 1 ? "s" : ""}`
+        )}
       </button>
     </div>
   );

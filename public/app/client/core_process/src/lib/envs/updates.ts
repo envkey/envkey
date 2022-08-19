@@ -14,12 +14,14 @@ import {
   getEnvInheritsForVariables,
   getEnvWithMetaForActions,
   getPendingEnvironmentIds,
+  getPendingUpdateDetails,
 } from "@core/lib/client";
 import { dispatch, clientAction } from "../../handler";
 import { createPatch, Operation } from "rfc6902";
 import { Action } from "redux";
 import stableStringify from "fast-json-stable-stringify";
 import { log } from "@core/lib/utils/logger";
+import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 
 export const envUpdateAction = <
     T extends Client.Action.EnvUpdateAction
@@ -359,3 +361,51 @@ export const envUpdateAction = <
       );
     }
   };
+
+export const clearNonPendingEnvsProducer = (draft: Draft<Client.State>) => {
+  // clear cached envs/changesets unless there are
+  // env update actions pending for that app/block
+
+  const pendingUpdate = getPendingUpdateDetails(draft);
+
+  for (let composite in draft.envs) {
+    const { environmentId } = parseUserEncryptedKeyOrBlobComposite(composite);
+    let envParentId: string;
+    const environment = draft.graph[environmentId] as
+      | Model.Environment
+      | undefined;
+    if (environment) {
+      envParentId = environment.envParentId;
+    } else {
+      [envParentId] = environmentId.split("|");
+    }
+
+    if (
+      !pendingUpdate.apps.has(envParentId) &&
+      !pendingUpdate.blocks.has(envParentId)
+    ) {
+      delete draft.envs[composite];
+      delete draft.envsFetchedAt[envParentId];
+    }
+  }
+
+  for (let environmentId in draft.changesets) {
+    let envParentId: string;
+    const environment = draft.graph[environmentId] as
+      | Model.Environment
+      | undefined;
+    if (environment) {
+      envParentId = environment.envParentId;
+    } else {
+      [envParentId] = environmentId.split("|");
+    }
+
+    if (
+      !pendingUpdate.apps.has(envParentId) &&
+      !pendingUpdate.blocks.has(envParentId)
+    ) {
+      delete draft.changesets[environmentId];
+      delete draft.changesetsFetchedAt[envParentId];
+    }
+  }
+};

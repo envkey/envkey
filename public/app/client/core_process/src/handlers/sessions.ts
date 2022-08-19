@@ -1,3 +1,4 @@
+import { getTempStore } from "../redux_store";
 import * as R from "ramda";
 import {
   decryptedEnvsStateProducer,
@@ -40,6 +41,16 @@ clientAction<
   },
   failureStateProducer: (draft, { payload }) => {
     draft.createSessionError = payload;
+  },
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+    // this will init / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
+    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
+      log("Error initializing locals", { err });
+    });
   },
   handler: async (
     initialState,
@@ -147,9 +158,6 @@ clientAction<
       if (upgradeCryptoRes && !upgradeCryptoRes.success) {
         throw new Error("Error upgrading to latest crypto version");
       }
-
-      // this will pre-fill / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
-      await initLocalsIfNeeded(state, auth.userId, context, true);
     } catch (error) {
       return dispatchFailure({ type: "clientError", error }, context);
     }
@@ -238,6 +246,15 @@ clientAction<
       },
       context
     );
+
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+    // this will init / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
+    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
+      log("Error initializing locals", { err });
+    });
   },
   handler: async (
     initialState,
@@ -325,9 +342,6 @@ clientAction<
       if (upgradeCryptoRes && !upgradeCryptoRes.success) {
         throw new Error("Error upgrading to latest crypto version");
       }
-
-      // this will init / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
-      await initLocalsIfNeeded(state, auth.userId, context, true);
     } catch (error) {
       return dispatchFailure({ type: "clientError", error }, context);
     }

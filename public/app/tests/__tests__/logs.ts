@@ -222,7 +222,7 @@ describe("fetching logs", () => {
         type: Api.ActionType.FETCH_LOGS,
         payload: {
           pageNum: 0,
-          pageSize: 9,
+          pageSize: 8,
           scope: <const>"org",
           loggableTypes: Logs.ORG_LOGGABLE_TYPES,
         },
@@ -242,11 +242,11 @@ describe("fetching logs", () => {
 
     expect(state.isFetchingLogs).toBeUndefined();
     expect(state.fetchLogParams).toEqual({
-      pageSize: 9,
+      pageSize: 8,
       scope: <const>"org",
       loggableTypes: Logs.ORG_LOGGABLE_TYPES,
     });
-    expect(state.loggedActionsWithTransactionIds.length).toBe(9);
+    expect(state.loggedActionsWithTransactionIds.length).toBe(8);
 
     expect(state.logsTotalCount).toBeNumber();
     expect(Object.keys(state.deletedGraph).length).toBeGreaterThan(0);
@@ -264,7 +264,6 @@ describe("fetching logs", () => {
       Api.ActionType.UPDATE_ENVS,
       Api.ActionType.DELETE_APP,
       Api.ActionType.CREATE_APP,
-      Api.ActionType.UPDATE_ENVS,
     ]);
 
     const secondPagePromise = dispatch(
@@ -272,7 +271,7 @@ describe("fetching logs", () => {
         type: Api.ActionType.FETCH_LOGS,
         payload: {
           pageNum: 1,
-          pageSize: 9,
+          pageSize: 8,
           scope: <const>"org",
           loggableTypes: Logs.ORG_LOGGABLE_TYPES,
         },
@@ -285,7 +284,7 @@ describe("fetching logs", () => {
     expect(state.isFetchingLogs).toBeTrue();
     expect(state.logsTotalCount).toBeNumber();
     expect(state.fetchLogParams).toEqual({
-      pageSize: 9,
+      pageSize: 8,
       scope: <const>"org",
       loggableTypes: Logs.ORG_LOGGABLE_TYPES,
     });
@@ -303,7 +302,6 @@ describe("fetching logs", () => {
       Api.ActionType.UPDATE_ENVS,
       Api.ActionType.DELETE_APP,
       Api.ActionType.CREATE_APP,
-      Api.ActionType.UPDATE_ENVS,
     ]);
 
     const secondPageRes = await secondPagePromise;
@@ -311,7 +309,7 @@ describe("fetching logs", () => {
     state = getState(ownerId);
 
     expect(state.isFetchingLogs).toBeUndefined();
-    expect(state.loggedActionsWithTransactionIds.length).toBe(18);
+    expect(state.loggedActionsWithTransactionIds.length).toBe(16);
 
     expect(
       state.loggedActionsWithTransactionIds.flatMap(([, actions]) =>
@@ -334,8 +332,6 @@ describe("fetching logs", () => {
       Api.ActionType.UPDATE_ENVS,
       Api.ActionType.UPDATE_ENVS,
       Api.ActionType.FETCH_ENVS,
-      Api.ActionType.CREATE_INVITE,
-      Api.ActionType.UPDATE_ENVS,
     ]);
 
     // update filters - ensure that logs get cleared
@@ -416,7 +412,7 @@ describe("fetching logs", () => {
         type: Api.ActionType.FETCH_LOGS,
         payload: {
           pageNum: 0,
-          pageSize: 6,
+          pageSize: 4,
           scope: <const>"org",
           loggableTypes: Logs.ORG_LOGGABLE_TYPES,
           startsAt: time1,
@@ -434,10 +430,8 @@ describe("fetching logs", () => {
     ).toEqual([
       Api.ActionType.FETCH_ENVS,
       Api.ActionType.CREATE_INVITE,
-      Api.ActionType.UPDATE_ENVS,
       Api.ActionType.LOAD_INVITE,
-      Api.ActionType.ACCEPT_INVITE,
-      Api.ActionType.CREATE_LOCAL_KEY,
+      Api.ActionType.UPDATE_ENVS,
     ]);
 
     // time range deleted graph
@@ -480,8 +474,8 @@ describe("fetching logs", () => {
       )
     ).toEqual([
       Api.ActionType.CREATE_INVITE,
-      Api.ActionType.UPDATE_ENVS,
       Api.ActionType.LOAD_INVITE,
+      Api.ActionType.UPDATE_ENVS,
     ]);
 
     await dispatch(
@@ -489,7 +483,7 @@ describe("fetching logs", () => {
         type: Api.ActionType.FETCH_LOGS,
         payload: {
           pageNum: 0,
-          pageSize: 4,
+          pageSize: 3,
           scope: <const>"org",
           loggableTypes: ["fetchMetaAction"],
           userIds: [ownerId, inviteeId],
@@ -507,7 +501,6 @@ describe("fetching logs", () => {
       Api.ActionType.LOAD_DEVICE_GRANT,
       Api.ActionType.FETCH_ENVS,
       Api.ActionType.LOAD_INVITE,
-      Api.ActionType.GET_SESSION,
     ]);
 
     // device
@@ -559,7 +552,7 @@ describe("fetching logs", () => {
       )
     ).toEqual([
       Api.ActionType.LOAD_INVITE,
-      Api.ActionType.GET_SESSION,
+      Api.ActionType.LOAD_INVITE,
       Api.ActionType.GET_SESSION,
     ]);
 
