@@ -20,7 +20,6 @@ import * as R from "ramda";
 import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 import { pick } from "@core/lib/utils/object";
-import { validate as uuidValidate } from "uuid";
 import { mustGetScimProvider } from "./models/provisioning";
 import { wait } from "@core/lib/utils/wait";
 import { PoolConnection } from "mysql2/promise";
@@ -490,8 +489,7 @@ export const authenticate = async <
     transactionConn: PoolConnection
   ): Promise<Api.Db.ExternalAuthSession | undefined> => {
     // in this func, guard against unknown inputs scraping data from pkey
-
-    if (!uuidValidate(externalAuthSessionId)) {
+    if (externalAuthSessionId.length != 36) {
       const err = new Error(
         `Invalid externalAuthSessionId`
       ) as NodeJS.ErrnoException;

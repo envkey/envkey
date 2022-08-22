@@ -9,7 +9,7 @@
     "build": "../../../../../node_modules/.bin/webpack",
     "db:migrate": "node -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/db_migrate.ts",
     "db:migrate:down": "node -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/db_migrate_down.ts",
-    "db:migrate:rollback": "node -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/db_migrate_rollback.ts",
+    "__db:migrate:rollback": "node -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/db_migrate_rollback.ts",
     "db:migrate:unlock": "node -r ts-node/register/transpile-only -r tsconfig-paths/register scripts/db_migrate_unlock.ts"
   },
   "devDependencies": {},
