@@ -25,8 +25,7 @@ import {
   getEnvParentPermissions,
   getOrgPermissions,
   getOrg,
-  getActiveInvitesByInviteeId,
-  getActiveDeviceGrantsByGranteeId,
+  authz,
 } from "@core/lib/graph";
 import { v4 as uuid } from "uuid";
 import { objectDifference } from "@core/lib/utils/object";
@@ -149,8 +148,6 @@ export const getOrgGraph = async (
   ) => {
     const { payload } = action;
     const { blobs } = payload;
-    const localsReinit =
-      "localsReinit" in payload ? payload.localsReinit : undefined;
 
     const encryptedById =
       auth.type == "tokenAuthContext" ? auth.orgUserDevice.id : auth.user.id;
@@ -196,10 +193,6 @@ export const getOrgGraph = async (
           envParent.localsRequireReinit = false;
 
           updatingEnvParentIds.add(envParentId);
-
-          if (localsReinit) {
-            orgDraft.reinitializedLocals = true;
-          }
         }
       }
 
@@ -531,20 +524,13 @@ export const getOrgGraph = async (
           let shouldClear = false;
 
           if (localsUser && !localsUser.deletedAt) {
-            const orgPermissions = getOrgPermissions(
-              orgGraph,
-              localsUser.orgRoleId
-            );
-
-            const envParentPermissions = getEnvParentPermissions(
-              orgGraph,
-              envParent.id,
-              localsUserId
-            );
-
             if (
-              !orgPermissions.has("blocks_read_all") &&
-              !envParentPermissions.has("app_read_own_locals")
+              !authz.canReadLocals(
+                orgGraph,
+                localsUserId,
+                envParent.id,
+                localsUserId
+              )
             ) {
               shouldClear = true;
             }

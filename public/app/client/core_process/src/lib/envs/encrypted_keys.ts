@@ -16,6 +16,7 @@ import {
   getLocalKeysByLocalsComposite,
   getConnectedAppsForBlock,
   getEnvironmentsByEnvParentId,
+  authz,
 } from "@core/lib/graph";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import { encrypt } from "@core/lib/crypto/proxy";
@@ -186,11 +187,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
         );
 
         if (
-          (userId == localsUserId &&
-            targetUserEnvParentPermissions.has("app_read_own_locals")) ||
-          (envParent.type == "block" &&
-            targetUserOrgPermissions.has("blocks_read_all")) ||
-          targetUserEnvParentPermissions.has("app_read_user_locals")
+          authz.canReadLocals(state.graph, userId, envParentId, localsUserId)
         ) {
           for (let deviceId of deviceIds) {
             const pubkey = pubkeysByDeviceId[deviceId];
@@ -239,11 +236,12 @@ export const encryptedKeyParamsForEnvironments = async (params: {
             }
 
             if (
-              (userId == localsUserId &&
-                targetUserEnvParentPermissions.has("app_read_own_locals")) ||
-              (envParent.type == "block" &&
-                targetUserOrgPermissions.has("blocks_read_all")) ||
-              targetUserEnvParentPermissions.has("app_read_user_locals_history")
+              authz.canReadLocalsVersions(
+                state.graph,
+                userId,
+                envParent.id,
+                localsUserId
+              )
             ) {
               if (
                 (pending || initEnvs) &&

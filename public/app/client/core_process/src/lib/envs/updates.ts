@@ -309,16 +309,8 @@ export const envUpdateAction = <
   initLocalsIfNeeded = async (
     state: Client.State,
     currentUserId: string,
-    context: Client.Context,
-    localsReinit?: boolean
+    context: Client.Context
   ) => {
-    if (localsReinit) {
-      const org = getOrg(state.graph);
-      if (org.reinitializedLocals) {
-        return;
-      }
-    }
-
     const envParentIds = [
       ...graphTypes(state.graph).apps,
       ...graphTypes(state.graph).blocks,
@@ -354,7 +346,6 @@ export const envUpdateAction = <
           payload: {
             pendingEnvironmentIds: localIds,
             initEnvs: true,
-            localsReinit,
           },
         },
         context

@@ -182,6 +182,11 @@ export const canUpdateEnv = (
       return false;
     }
 
+    // ensure locals user can read their own locals
+    if (!canReadLocals(graph, localsUserId, envParentId, localsUserId)) {
+      return false;
+    }
+
     if (currentUserId == localsUserId) {
       return true;
     }
@@ -259,6 +264,11 @@ export const canUpdateEnv = (
       presence(graph[envParentId] as Model.Block, "block");
 
     if (!envParent) {
+      return false;
+    }
+
+    // ensure locals user can read their own locals
+    if (!canReadLocals(graph, localsUserId, envParentId, localsUserId)) {
       return false;
     }
 

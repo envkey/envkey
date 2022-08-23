@@ -1740,22 +1740,12 @@ const getQueueForReencryptionPaths = (
                 continue;
               }
 
-              const orgPermissions = getOrgPermissions(
-                updatedOrgGraph,
-                localsUser.orgRoleId
-              );
-
-              const envParentPermissions = getEnvParentPermissions(
-                updatedOrgGraph,
-                envParentId,
-                localsUserId
-              );
-
               if (
-                !(
-                  (envParent.type == "block" &&
-                    orgPermissions.has("blocks_read_all")) ||
-                  envParentPermissions.has("app_read_own_locals")
+                !authz.canReadLocals(
+                  updatedOrgGraph,
+                  localsUserId,
+                  envParentId,
+                  localsUserId
                 )
               ) {
                 continue;

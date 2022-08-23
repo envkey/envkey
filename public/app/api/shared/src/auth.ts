@@ -15,6 +15,7 @@ import {
   getOrgPermissions,
   getAppPermissions,
   getConnectedBlockEnvironmentsForApp,
+  authz,
 } from "@core/lib/graph";
 import * as R from "ramda";
 import nacl from "tweetnacl";

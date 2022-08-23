@@ -111,21 +111,6 @@ export const getRequiredBlobPathsForDeleteEncryptedKeys = (
                 continue;
               }
 
-              const orgPermissions = getOrgPermissions(
-                graph,
-                localsUser.orgRoleId
-              );
-
-              if (
-                !(
-                  (envParent.type == "block" &&
-                    orgPermissions.has("blocks_read_all")) ||
-                  envParentPermissions.has("app_read_own_locals")
-                )
-              ) {
-                continue;
-              }
-
               if (
                 authz.canUpdateLocals(graph, userId, envParentId, localsUserId)
               ) {
