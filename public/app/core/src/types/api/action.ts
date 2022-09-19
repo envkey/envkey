@@ -215,6 +215,26 @@ export namespace Action {
       Net.ApiParamTypes["FetchOrgStats"]
     >;
 
+    CloudBillingFetchInvoices: RequestActionType<
+      ActionType.CLOUD_BILLING_FETCH_INVOICES,
+      {
+        loggableType: "authAction";
+        loggableType2: "billingAction";
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["CloudBillingFetchInvoices"]
+    >;
+
+    CloudBillingCheckPromotionCode: RequestActionType<
+      ActionType.CLOUD_BILLING_CHECK_PROMOTION_CODE,
+      {
+        loggableType: "authAction";
+        loggableType2: "billingAction";
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["CloudBillingCheckPromotionCode"]
+    >;
+
     UnsubscribeCloudLifecycleEmails: RequestActionType<
       ActionType.UNSUBSCRIBE_CLOUD_LIFECYCLE_EMAILS,
       {
@@ -229,8 +249,6 @@ export namespace Action {
       type: ActionType.CHECK_SCIM_PROVIDER;
       payload: Net.ApiParamTypes["CheckScimProvider"];
       meta: {
-        // seems that due to some unknown requirement for other auth types
-        // on "orgAction" we cannot use it
         loggableType: "scimAction";
         auth: Auth.BearerTokenAuthParams;
         client?: undefined;
@@ -1168,7 +1186,7 @@ export namespace Action {
       {
         graphUpdatedAt: number;
         loggableType: "orgAction";
-        loggableType2: "authAction";
+        loggableType2: "billingAction";
         auth: Auth.DefaultAuthParams;
       },
       Net.ApiParamTypes["UpdateLicense"]
@@ -1262,6 +1280,97 @@ export namespace Action {
       },
       Net.ApiParamTypes["FinishedOrgImport"]
     >;
+
+    CloudBillingSubscribeProduct: RequestActionType<
+      ActionType.CLOUD_BILLING_SUBSCRIBE_PRODUCT,
+      {
+        loggableType: "orgAction";
+        loggableType2: "billingAction";
+
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["CloudBillingSubscribeProduct"]
+    >;
+
+    CloudBillingUpdateSubscriptionQuantity: RequestActionType<
+      ActionType.CLOUD_BILLING_UPDATE_SUBSCRIPTION_QUANTITY,
+      {
+        loggableType: "orgAction";
+        loggableType2: "billingAction";
+
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["CloudBillingUpdateSubscriptionQuantity"]
+    >;
+
+    CloudBillingCancelSubscription: RequestActionType<
+      ActionType.CLOUD_BILLING_CANCEL_SUBSCRIPTION,
+      {
+        loggableType: "orgAction";
+        loggableType2: "billingAction";
+
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["CloudBillingCancelSubscription"]
+    >;
+
+    CloudBillingUpdateSettings: RequestActionType<
+      ActionType.CLOUD_BILLING_UPDATE_SETTINGS,
+      {
+        loggableType: "orgAction";
+        loggableType2: "billingAction";
+
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["CloudBillingUpdateSettings"]
+    >;
+
+    CloudBillingUpdatePaymentMethod: RequestActionType<
+      ActionType.CLOUD_BILLING_UPDATE_PAYMENT_METHOD,
+      {
+        loggableType: "orgAction";
+        loggableType2: "billingAction";
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["CloudBillingUpdatePaymentMethod"]
+    >;
+  };
+
+  export type BillingWebhookActions = {
+    CloudBillingInvoiceCreated: RequestActionType<
+      ActionType.CLOUD_BILLING_INVOICE_CREATED,
+      {
+        loggableType: "billingWebhookAction";
+        loggableType2: "billingAction";
+      },
+      Net.ApiParamTypes["CloudBillingInvoiceCreated"]
+    >;
+
+    CloudBillingPaymentSucceeded: RequestActionType<
+      ActionType.CLOUD_BILLING_PAYMENT_SUCCEEDED,
+      {
+        loggableType: "billingWebhookAction";
+        loggableType2: "billingAction";
+      },
+      Net.ApiParamTypes["CloudBillingPaymentSucceeded"]
+    >;
+
+    CloudBillingPaymentFailed: RequestActionType<
+      ActionType.CLOUD_BILLING_PAYMENT_FAILED,
+      {
+        loggableType: "billingWebhookAction";
+        loggableType2: "billingAction";
+      },
+      Net.ApiParamTypes["CloudBillingPaymentFailed"]
+    >;
+    CloudBillingUpdateSubscription: RequestActionType<
+      ActionType.CLOUD_BILLING_UPDATE_SUBSCRIPTION,
+      {
+        loggableType: "billingWebhookAction";
+        loggableType2: "billingAction";
+      },
+      Net.ApiParamTypes["CloudBillingUpdateSubscription"]
+    >;
   };
 
   export type BulkGraphAction = {
@@ -1282,7 +1391,8 @@ export namespace Action {
     ScimProvisioningActions &
     FetchActions &
     FetchEnvkeyActions &
-    GraphActions;
+    GraphActions &
+    BillingWebhookActions;
 
   export type HostAction = HostActions[keyof HostActions];
   export type AuthAction = AuthActions[keyof AuthActions];
@@ -1290,6 +1400,8 @@ export namespace Action {
     ScimProvisioningActions[keyof ScimProvisioningActions];
   export type FetchAction = FetchActions[keyof FetchActions];
   export type GraphAction = GraphActions[keyof GraphActions];
+  export type BillingWebhookAction =
+    BillingWebhookActions[keyof BillingWebhookActions];
 
   export type RequestAction =
     | RequestActions[keyof RequestActions]

@@ -162,6 +162,10 @@ const getRouterTree = (): RouterTree => [
 
       // remaining org routes
       {
+        routerPath: `/billing/subscription`,
+        component: ui.UpdateCloudSubscription,
+      },
+      {
         routerPath: `/billing`,
         component: ui.BillingUI,
       },

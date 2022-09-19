@@ -44,7 +44,7 @@ export const FontFaces = () => {
 };
 
 // static requires to ensure that webpack includes all the fonts we need
-const FONT_REQUIRES: Record<string, string> = {
+export const FONT_REQUIRES: Record<string, string> = {
   "nimbus-sans-novus-light": require("../fonts/nimbus-sans-novus-light.woff2")
     .default,
 

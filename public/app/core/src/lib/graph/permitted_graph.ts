@@ -58,20 +58,20 @@ export const getPermittedGraphObjects = (
       environments: [],
       variableGroups: [],
       generatedEnvkeys: [],
-      ...pick(
-        [
-          "recoveryKeys",
-          "orgRoles",
-          "appRoles",
-          "environmentRoles",
-          "appRoleEnvironmentRoles",
-          "externalAuthProviders",
-          "scimProvisioningProviders",
-        ],
-        byType
-      ),
+      recoveryKeys: [],
+      orgRoles: [],
+      appRoles: [],
+      environmentRoles: [],
+      appRoleEnvironmentRoles: [],
+      externalAuthProviders: [],
+      scimProvisioningProviders: [],
       pubkeyRevocationRequests: [],
       rootPubkeyReplacements: [],
+      products: [],
+      prices: [],
+      customer: undefined,
+      subscription: undefined,
+      paymentSource: undefined,
     };
   }
 
@@ -98,10 +98,16 @@ export const getPermittedGraphObjects = (
       ...permittedCliUsers.map(R.prop("id")),
     ]);
 
-  const [permittedOrgUserDevices, permittedDeviceGrants, permittedInvites] = [
+  const [
+      permittedOrgUserDevices,
+      permittedDeviceGrants,
+      permittedInvites,
+      permittedRecoveryKeys,
+    ] = [
       byType.orgUserDevices,
       byType.deviceGrants,
       byType.invites,
+      byType.recoveryKeys,
     ],
     // app-level associations based on permitted apps
     [
@@ -253,6 +259,7 @@ export const getPermittedGraphObjects = (
     cliUsers: permittedCliUsers,
     deviceGrants: permittedDeviceGrants,
     invites: permittedInvites,
+    recoveryKeys: permittedRecoveryKeys,
     appUserGrants: permittedAppUserGrants,
     appBlocks: permittedAppBlocks,
     groupMemberships: permittedGroupMembers,
@@ -271,7 +278,6 @@ export const getPermittedGraphObjects = (
     generatedEnvkeys: permittedGeneratedEnvkeys,
     ...pick(
       [
-        "recoveryKeys",
         "orgRoles",
         "appRoles",
         "environmentRoles",
@@ -290,7 +296,6 @@ export const getPermittedGraphObjects = (
           request.targetId
         )
     ),
-
     rootPubkeyReplacements: byType.rootPubkeyReplacements.filter(
       (
         replacement: Model.RootPubkeyReplacement | Api.Db.RootPubkeyReplacement
@@ -300,6 +305,21 @@ export const getPermittedGraphObjects = (
           : true;
       }
     ),
+    products: currentOrgPermissions.has("org_manage_billing")
+      ? byType.products
+      : [],
+    prices: currentOrgPermissions.has("org_manage_billing")
+      ? byType.prices
+      : [],
+    customer: currentOrgPermissions.has("org_manage_billing")
+      ? byType.customer
+      : undefined,
+    subscription: currentOrgPermissions.has("org_manage_billing")
+      ? byType.subscription
+      : undefined,
+    paymentSource: currentOrgPermissions.has("org_manage_billing")
+      ? byType.paymentSource
+      : undefined,
   };
 
   return permitted;

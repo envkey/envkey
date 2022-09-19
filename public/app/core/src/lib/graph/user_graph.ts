@@ -61,6 +61,9 @@ export const getUserGraph = (
             // these may filtered out in permitted_graph.ts depending on permissions
             "localIpsAllowed",
             "environmentRoleIpsAllowed",
+
+            "billingSettings",
+            "customLicense",
           ],
           obj
         );
@@ -433,6 +436,62 @@ export const getUserGraph = (
       case "scimProvisioningProvider":
         return pick(
           [...baseProps, "orgId", "nickname", "authScheme", "endpointBaseUrl"],
+          obj
+        );
+
+      case "product":
+        return pick(
+          [
+            ...baseProps,
+            "name",
+            "maxUsers",
+            "maxEnvkeyWatchers",
+            "adjustableQuantity",
+            "ssoEnabled",
+            "teamsEnabled",
+            "customRbacEnabled",
+            "isCloudBasics",
+          ],
+          obj
+        );
+
+      case "price":
+        return pick(
+          [...baseProps, "name", "productId", "interval", "amount"],
+          obj
+        );
+
+      case "customer":
+        return pick([...baseProps, "billingEmail"], obj);
+
+      case "subscription":
+        return pick(
+          [
+            ...baseProps,
+            "productId",
+            "priceId",
+            "quantity",
+            "status",
+            "canceledAt",
+            "currentPeriodStartsAt",
+            "currentPeriodEndsAt",
+            "promotionCode",
+            "amountOff",
+            "percentOff",
+          ],
+          obj
+        );
+
+      case "paymentSource":
+        return pick(
+          [
+            ...baseProps,
+            "paymentType",
+            "brand",
+            "last4",
+            "expMonth",
+            "expYear",
+          ],
           obj
         );
     }

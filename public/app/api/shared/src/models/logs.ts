@@ -561,6 +561,23 @@ export const getLogTransactionStatement = ({
           .fetchServiceVersion
       ),
     };
+  } else if (action.meta.loggableType == "billingWebhookAction") {
+    if (!handlerContext || !("orgId" in handlerContext)) {
+      throw new Api.ApiError(
+        "handlerContext required for logging billingWebhookAction",
+        500
+      );
+    }
+
+    loggedAction = {
+      ...loggedActionBase,
+      actionType: action.type as Api.Action.BillingWebhookAction["type"],
+      loggableType: <const>"billingWebhookAction",
+      loggableType2: <const>"billingAction",
+      orgId: handlerContext.orgId,
+      deviceId: undefined,
+      actorId: undefined,
+    };
   } else {
     if (!auth) {
       throw new Api.ApiError("auth required", 500);
@@ -1780,6 +1797,33 @@ const getSummary = (
 
     case Api.ActionType.FINISHED_ORG_IMPORT:
       return `+finish+ org import`;
+
+    case Api.ActionType.CLOUD_BILLING_SUBSCRIBE_PRODUCT:
+      const product = previousOrgGraph![
+        action.payload.productId
+      ] as Api.Db.Product;
+
+      return `+subscribe+ to the ${product.name.replace("v2 ", "")} plan`;
+    case Api.ActionType.CLOUD_BILLING_UPDATE_PAYMENT_METHOD:
+      return `+set+ a new payment method`;
+    case Api.ActionType.CLOUD_BILLING_INVOICE_CREATED:
+      return `+create+ a new invoice`;
+    case Api.ActionType.CLOUD_BILLING_PAYMENT_SUCCEEDED:
+      return `+pay+ an invoice successfully`;
+    case Api.ActionType.CLOUD_BILLING_PAYMENT_FAILED:
+      return `+fail+ to pay an invoice`;
+    case Api.ActionType.CLOUD_BILLING_UPDATE_SUBSCRIPTION:
+      return `+update+ subscription status`;
+    case Api.ActionType.CLOUD_BILLING_UPDATE_SUBSCRIPTION_QUANTITY:
+      return `+updated+ subscription quantity`;
+    case Api.ActionType.CLOUD_BILLING_CANCEL_SUBSCRIPTION:
+      return `+cancel+ subscription`;
+    case Api.ActionType.CLOUD_BILLING_FETCH_INVOICES:
+      return `+fetch+ invoices`;
+    case Api.ActionType.CLOUD_BILLING_UPDATE_SETTINGS:
+      return `+updated+ billing settings`;
+    case Api.ActionType.CLOUD_BILLING_CHECK_PROMOTION_CODE:
+      return `+verify+ promotion code`;
 
     case Api.ActionType.UPDATE_ENVS:
       return null; // handled by LogEnvsUpdated component

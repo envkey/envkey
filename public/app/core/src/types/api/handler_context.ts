@@ -1,6 +1,7 @@
 import { default as ActionType } from "./action_type";
 import { Db } from "./db";
 import { Net } from "./net";
+import { Action } from "./action";
 
 export type HandlerContext =
   | {
@@ -110,4 +111,8 @@ export type HandlerContext =
   | {
       type: ActionType.AUTHENTICATE_CLI_KEY;
       cliUser: Db.CliUser;
+    }
+  | {
+      type: Action.BillingWebhookAction["type"];
+      orgId: string;
     };

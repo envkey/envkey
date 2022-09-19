@@ -148,6 +148,11 @@ export const getObjectName = (graph: Graph.Graph, id: string): string => {
     case "appRoleEnvironmentRole":
     case "pubkeyRevocationRequest":
     case "rootPubkeyReplacement":
+    case "product":
+    case "price":
+    case "customer":
+    case "subscription":
+    case "paymentSource":
       return "";
   }
 };

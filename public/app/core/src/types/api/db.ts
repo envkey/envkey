@@ -4,7 +4,9 @@ import { Model } from "../model";
 import { Blob } from "../blob";
 import { Logs } from "../logs";
 import * as Rbac from "../rbac";
+import * as Billing from "../billing";
 import { PoolConnection } from "mysql2/promise";
+import { TimestampsSchema } from "../timestamps";
 import * as z from "zod";
 import * as utils from "../utils";
 
@@ -71,7 +73,7 @@ export namespace Db {
         .optional(),
       excludeFromDeletedGraph: z.literal(true).optional(),
     })
-    .merge(Model.TimestampsSchema)
+    .merge(TimestampsSchema)
     .merge(DbKeySchema);
 
   export type Scope = { pkey: string; pkeyPrefix?: true; scope?: string };
@@ -603,4 +605,54 @@ export namespace Db {
   export type EncryptedBlob = z.infer<typeof EncryptedBlobSchema>;
   export const EncryptedBlobSchema =
     Blob.EncryptedBlobSchema.merge(DbObjectSchema);
+
+  export type Customer = z.infer<typeof CustomerSchema>;
+  export const CustomerSchema = Billing.CustomerSchema.merge(
+    z.object({
+      stripeId: z.string(),
+    })
+  ).merge(DbObjectSchema);
+
+  export type Product = z.infer<typeof ProductSchema>;
+  export const ProductSchema = Billing.ProductSchema.merge(
+    z.object({
+      stripeId: z.string(),
+      plan: Billing.PlanTypeSchema,
+    })
+  ).merge(DbObjectSchema);
+
+  export type Price = z.infer<typeof PriceSchema>;
+  export const PriceSchema = Billing.PriceSchema.merge(
+    z.object({
+      stripeId: z.string(),
+      stripeProductId: z.string(),
+    })
+  ).merge(DbObjectSchema);
+
+  export type Subscription = z.infer<typeof SubscriptionSchema>;
+  export const SubscriptionSchema = Billing.SubscriptionSchema.merge(
+    z.object({
+      stripeId: z.string(),
+      stripeProductId: z.string(),
+      stripePriceId: z.string(),
+    })
+  ).merge(DbObjectSchema);
+
+  export type SubscriptionPointer = z.infer<typeof SubscriptionPointerSchema>;
+  export const SubscriptionPointerSchema = z
+    .object({
+      type: z.literal("subscriptionPointer"),
+      subscriptionId: z.string(),
+      productId: z.string(),
+      priceId: z.string(),
+      orgId: z.string(),
+    })
+    .merge(DbObjectSchema);
+
+  export type Invoice = z.infer<typeof InvoiceSchema>;
+  export const InvoiceSchema = Billing.InvoiceSchema.merge(DbObjectSchema);
+
+  export type PaymentSource = z.infer<typeof PaymentSourceSchema>;
+  export const PaymentSourceSchema =
+    Billing.PaymentSourceSchema.merge(DbObjectSchema);
 }

@@ -167,31 +167,48 @@ export const setMaxPacketSize = (n: number) => {
     },
     nonBaseScopes?: string[]
   ) =>
-    query<Api.Graph.GraphObject>({
-      pkey: orgId,
-      scope: nonBaseScopes
-        ? ["g|org$"]
-            .concat(Api.Graph.baseScopeTypes.map((scope) => `g|${scope}|`))
-            .concat(nonBaseScopes)
-        : "g|",
-      sortBy: "orderIndex,createdAt",
-      ...readOpts,
-    }),
+    Promise.all([
+      query<Api.Db.Product | Api.Db.Price>({
+        pkey: "billing",
+        ...readOpts,
+      }),
+
+      query<Api.Graph.GraphObject>({
+        pkey: orgId,
+        scope: nonBaseScopes
+          ? ["g|org$"]
+              .concat(Api.Graph.baseScopeTypes.map((scope) => `g|${scope}|`))
+              .concat(nonBaseScopes)
+          : "g|",
+        sortBy: "orderIndex,createdAt",
+        ...readOpts,
+      }),
+    ]).then(R.flatten),
   getDeletedOrgGraphObjects = async (
     orgId: string,
     startsAt: number,
     endsAt: number,
     transactionConnOrPool: PoolConnection | Pool
   ) =>
-    query<Api.Graph.GraphObject>({
-      pkey: orgId,
-      scope: "g|",
-      deletedAfter: startsAt - 1,
-      createdBefore: endsAt + 1,
-      deleted: true,
-      deletedGraphQuery: true,
-      transactionConnOrPool,
-    }),
+    Promise.all([
+      query<Api.Db.Product | Api.Db.Price>({
+        pkey: "billing",
+        deletedAfter: startsAt - 1,
+        createdBefore: endsAt + 1,
+        deleted: true,
+        deletedGraphQuery: true,
+        transactionConnOrPool,
+      }),
+      query<Api.Graph.GraphObject>({
+        pkey: orgId,
+        scope: "g|",
+        deletedAfter: startsAt - 1,
+        createdBefore: endsAt + 1,
+        deleted: true,
+        deletedGraphQuery: true,
+        transactionConnOrPool,
+      }),
+    ]).then(R.flatten),
   query = async <T extends Api.Db.DbObject>(
     params: Omit<Api.Db.QueryParams, "transactionConn"> & {
       transactionConnOrPool: PoolConnection | Pool;

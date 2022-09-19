@@ -3,17 +3,13 @@ import { Auth } from "../auth";
 import { Trust } from "../trust";
 import Client from "../client";
 import { Blob } from "../blob";
+import { TimestampsSchema } from "../timestamps";
+import * as Billing from "../billing";
 import * as z from "zod";
 import * as utils from "../utils";
 import * as R from "ramda";
 
 export namespace Model {
-  export const TimestampsSchema = z.object({
-    createdAt: z.number(),
-    updatedAt: z.number(),
-    deletedAt: z.number().optional(),
-  });
-
   export const KeyableSchema = z.object({
     pubkey: Crypto.PubkeySchema,
     pubkeyId: z.string(),
@@ -50,6 +46,7 @@ export namespace Model {
       rbacUpdatedAt: z.number().optional(),
       graphUpdatedAt: z.number(),
       settings: OrgSettingsSchema,
+      billingSettings: Billing.BillingSettingsSchema.optional(),
       serverEnvkeyCount: z.number(),
       activeUserOrInviteCount: z.number().optional(), // optional for backward compatibility
       deviceLikeCount: z.number(),
@@ -77,6 +74,8 @@ export namespace Model {
       "upgradedCrypto-2.1.0": z.boolean().optional(),
 
       reinitializedLocals: z.boolean().optional(),
+
+      customLicense: z.boolean().optional(),
     })
     .merge(TimestampsSchema);
 

@@ -15,13 +15,26 @@ import { getApiUserGraph } from "../graph";
 import { getPubkeyHash } from "@core/lib/client";
 import { PoolConnection } from "mysql2/promise";
 
-let initOrgStatsFn: (
-  orgId: string,
-  now: number,
-  transactionConn: PoolConnection
-) => Promise<void> | undefined;
+let initOrgStatsFn:
+  | ((
+      orgId: string,
+      now: number,
+      transactionConn: PoolConnection
+    ) => Promise<void>)
+  | undefined;
 export const registerInitOrgStatsFn = (fn: typeof initOrgStatsFn) => {
   initOrgStatsFn = fn;
+};
+
+let initBillingFn:
+  | ((
+      org: Api.Db.Org,
+      orgUser: Api.Db.OrgUser,
+      now: number
+    ) => Promise<Api.Db.ObjectTransactionItems>)
+  | undefined;
+export const registerInitBillingFn = (fn: typeof initBillingFn) => {
+  initBillingFn = fn;
 };
 
 apiAction<
@@ -496,6 +509,13 @@ apiAction<
 
     if (initOrgStatsFn) {
       await initOrgStatsFn(orgId, now, transactionConn);
+    }
+
+    if (initBillingFn && !payload.test) {
+      transactionItems = mergeObjectTransactionItems([
+        transactionItems,
+        await initBillingFn(org, user, now),
+      ]);
     }
 
     return {

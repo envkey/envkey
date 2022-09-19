@@ -2,7 +2,6 @@ import { log, logStderr } from "@core/lib/utils/logger";
 import { ensureEnv, env } from "../../../shared/src/env";
 import express from "express";
 import initRoutes from "./routes";
-import bodyParser from "body-parser";
 import { runMigrationsIfNeeded } from "./migrate";
 import { resolveMaxPacketSize } from "../../../shared/src/db";
 
@@ -14,7 +13,14 @@ require("../../../shared/src/fetch_handlers");
 const app = express();
 const port = env.EXPRESS_PORT ? parseInt(env.EXPRESS_PORT) : 3000;
 
-app.use(bodyParser.json({ limit: "200mb" }));
+app.use(
+  express.json({
+    limit: "200mb",
+    verify: (req, res, buf) => {
+      (req as any).rawBody = buf;
+    },
+  })
+);
 
 export default (
   injectHandlers: (app: express.Application) => void,

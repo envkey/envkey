@@ -25,6 +25,10 @@ import { scimCandidateDbKey } from "../models/provisioning";
 import { getDeleteUsersWithTransactionItems } from "../blob";
 import { env } from "../env";
 import { LIFECYCLE_EMAILS_ENABLED } from "../email";
+import {
+  getCanAutoUpgradeLicenseFn,
+  getResolveProductAndQuantityFn,
+} from "../billing";
 
 apiAction<
   Api.Action.RequestActions["CreateInvite"],
@@ -52,9 +56,11 @@ apiAction<
       return false;
     }
 
+    const canAutoUpgradeLicenseFn = getCanAutoUpgradeLicenseFn();
     if (
       auth.license.maxUsers != -1 &&
-      numActiveUsers >= auth.license.maxUsers!
+      numActiveUsers >= auth.license.maxUsers! &&
+      (!canAutoUpgradeLicenseFn || !canAutoUpgradeLicenseFn(orgGraph))
     ) {
       return false;
     }
@@ -302,6 +308,22 @@ apiAction<
         now
       ));
 
+    const resolveProductAndQuantityFn = getResolveProductAndQuantityFn();
+    if (resolveProductAndQuantityFn) {
+      const productAndQuantityRes = await resolveProductAndQuantityFn(
+        transactionConn,
+        auth,
+        updatedGraph,
+        "add-user",
+        now
+      );
+      updatedGraph = productAndQuantityRes[0];
+      transactionItems = mergeObjectTransactionItems([
+        transactionItems,
+        productAndQuantityRes[1],
+      ]);
+    }
+
     transactionItems = mergeObjectTransactionItems([
       transactionItems,
       deleteActiveTransactionItems,
@@ -449,17 +471,39 @@ apiAction<
     auth,
     now
   ) => authz.canRevokeInvite(userGraph, auth.user.id, id, now),
-  graphHandler: async (action, orgGraph, auth, now) => {
+  graphHandler: async (
+    action,
+    orgGraph,
+    auth,
+    now,
+    requestParams,
+    transactionConn
+  ) => {
     const invite = orgGraph[action.payload.id] as Api.Db.Invite;
 
-    const { transactionItems, updatedGraph } =
-      getDeleteUsersWithTransactionItems(
+    let { transactionItems, updatedGraph } = getDeleteUsersWithTransactionItems(
+      auth,
+      orgGraph,
+      orgGraph,
+      [invite.inviteeId],
+      now
+    );
+
+    const resolveProductAndQuantityFn = getResolveProductAndQuantityFn();
+    if (resolveProductAndQuantityFn) {
+      const productAndQuantityRes = await resolveProductAndQuantityFn(
+        transactionConn,
         auth,
-        orgGraph,
-        orgGraph,
-        [invite.inviteeId],
+        updatedGraph,
+        "remove-user",
         now
       );
+      updatedGraph = productAndQuantityRes[0];
+      transactionItems = mergeObjectTransactionItems([
+        transactionItems,
+        productAndQuantityRes[1],
+      ]);
+    }
 
     return {
       type: "graphHandlerResult",

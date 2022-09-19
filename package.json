@@ -72,6 +72,7 @@
     "marked-plaintext": "^0.0.2",
     "memoizee": "^0.4.15",
     "mkdirp": "^1.0.4",
+    "moment": "^2.29.1",
     "mysql2": "^2.2.5",
     "node-fetch": "^2.6.1",
     "nodemailer": "^6.4.16",

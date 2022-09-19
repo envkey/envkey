@@ -57,6 +57,8 @@ export const graphTypes = memoize((graph: Graph.Graph) => {
           "rootPubkeyReplacements",
           "externalAuthProviders",
           "scimProvisioningProviders",
+          "products",
+          "prices",
         ],
         grouped
       )
@@ -96,6 +98,12 @@ export const graphTypes = memoize((graph: Graph.Graph) => {
     rootPubkeyReplacements: Model.RootPubkeyReplacement[];
     externalAuthProviders: Model.ExternalAuthProvider[];
     scimProvisioningProviders: Model.ScimProvisioningProvider[];
+
+    products: Billing.Product[];
+    prices: Billing.Price[];
+    customer?: Billing.Customer;
+    subscription?: Billing.Subscription;
+    paymentSource?: Billing.PaymentSource;
   };
 
   if (grouped.orgs) {
@@ -103,6 +111,18 @@ export const graphTypes = memoize((graph: Graph.Graph) => {
   }
   if (grouped.licenses) {
     byType.license = grouped.licenses[0];
+  }
+
+  if (grouped.customers) {
+    byType.customer = grouped.customers[0];
+  }
+
+  if (grouped.subscriptions) {
+    byType.subscription = grouped.subscriptions[0];
+  }
+
+  if (grouped.paymentSources) {
+    byType.paymentSource = grouped.paymentSources[0];
   }
 
   byType.environments = R.sortBy((environment) => {

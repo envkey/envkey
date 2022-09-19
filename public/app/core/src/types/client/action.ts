@@ -116,7 +116,10 @@ export namespace Action {
   export type ClientActions = EnvUpdateActions & {
     Register: {
       type: ActionType.REGISTER;
-      payload: Pick<Api.Net.ApiParamTypes["Register"], "user" | "org"> & {
+      payload: Pick<
+        Api.Net.ApiParamTypes["Register"],
+        "user" | "org" | "test"
+      > & {
         device: Pick<Api.Net.DeviceParams, "name">;
       } & (
           | ({
@@ -782,6 +785,14 @@ export namespace Action {
     SetMissingEnvs: {
       type: ActionType.SET_MISSING_ENVS;
       payload: State["envs"];
+    };
+
+    DownloadInvoice: {
+      type: ActionType.DOWNLOAD_INVOICE;
+      payload: {
+        invoiceId: string;
+        filePath: string;
+      };
     };
   };
 

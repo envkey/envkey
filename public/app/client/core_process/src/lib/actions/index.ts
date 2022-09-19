@@ -8,8 +8,8 @@ import { wait } from "@core/lib/utils/wait";
 // we want to tolerate slow/weird network conditions, but also not hang too long if server is hopelessly unreachable
 const TIMEOUTS = {
   lookup: 1500,
-  connect: 3000,
-  secureConnect: 3000,
+  connect: 5000,
+  secureConnect: 5000,
   request: 120 * 1000,
 };
 

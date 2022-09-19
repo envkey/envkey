@@ -53,6 +53,9 @@ const config: webpack.Configuration = {
   },
   entry: {
     index: [path.resolve(__dirname, "src") + "/index.tsx"],
+    stripe_form: [
+      path.resolve(__dirname, "src", "stripe") + "/stripe_form.tsx",
+    ],
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],

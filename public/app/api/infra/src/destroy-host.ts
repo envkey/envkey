@@ -15,6 +15,8 @@ import {
   dangerouslyDeleteSecretsWithConfirm,
   deleteDeployTag,
   getAwsAccountId,
+  getTagFinder,
+  getTagFilters,
   listCodebuildProjects,
 } from "./aws-helpers";
 import {
@@ -74,11 +76,8 @@ export const destroyHost = async (params: {
 
   const awsAccountId = await getAwsAccountId(profile);
 
-  const tagFinder = (tag: EC2.Tag) =>
-    tag.Key == "envkey-deployment" && tag.Value == deploymentTag;
-  const tagFilters = [
-    { Name: "tag:envkey-deployment", Values: [deploymentTag] },
-  ];
+  const tagFinder = getTagFinder(deploymentTag);
+  const tagFilters = getTagFilters(deploymentTag);
 
   const deleteStackAndWait = async (
     cf: CF,

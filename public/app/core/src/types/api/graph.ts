@@ -34,7 +34,12 @@ export namespace Graph {
     | Db.PubkeyRevocationRequest
     | Db.RootPubkeyReplacement
     | Db.ExternalAuthProvider
-    | Db.ScimProvisioningProvider;
+    | Db.ScimProvisioningProvider
+    | Db.Product
+    | Db.Price
+    | Db.Customer
+    | Db.Subscription
+    | Db.PaymentSource;
 
   export type OrgGraph = {
     [id: string]: GraphObject;

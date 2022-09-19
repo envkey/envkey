@@ -386,6 +386,31 @@ export type PartialClientState = {
   importOrgStatus: string | undefined;
   importOrgError: Client.ClientError | undefined;
 
+  cloudBillingIsSubscribingProduct: true | undefined;
+  cloudBillingSubscribeProductError: Client.ClientError | undefined;
+  cloudBillingIsUpdatingSubscriptionQuantity: true | undefined;
+  cloudBillingUpdateSubscriptionQuantityError: Client.ClientError | undefined;
+  cloudBillingIsCancelingSubscription: true | undefined;
+  cloudBillingCancelSubscriptionError: Client.ClientError | undefined;
+  cloudBillingIsUpdatingPaymentMethod: true | undefined;
+  cloudBillingUpdatePaymentMethodError: Client.ClientError | undefined;
+  cloudBillingIsUpdatingSettings: true | undefined;
+  cloudBillingUpdateSettingsError: Client.ClientError | undefined;
+  cloudBillingIsCheckingPromotionCode: true | undefined;
+  cloudBillingCheckPromotionCodeError: Client.ClientError | undefined;
+  cloudBillingIsFetchingInvoices: true | undefined;
+  cloudBillingFetchInvoicesError: Client.ClientError | undefined;
+
+  cloudBillingInvoices: Client.CloudBillingInvoice[];
+
+  cloudBillingPromotionCode:
+    | {
+        code: string;
+        amountOff?: number;
+        percentOff?: number;
+      }
+    | undefined;
+
   throttleError: Client.FetchError | undefined;
 };
 
@@ -649,6 +674,31 @@ export const defaultAccountState: PartialAccountState = {
     isImportingOrg: undefined,
     importOrgError: undefined,
     importOrgStatus: undefined,
+
+    cloudBillingIsSubscribingProduct: undefined,
+    cloudBillingSubscribeProductError: undefined,
+
+    cloudBillingIsUpdatingSubscriptionQuantity: undefined,
+    cloudBillingUpdateSubscriptionQuantityError: undefined,
+
+    cloudBillingIsCancelingSubscription: undefined,
+    cloudBillingCancelSubscriptionError: undefined,
+
+    cloudBillingIsUpdatingPaymentMethod: undefined,
+    cloudBillingUpdatePaymentMethodError: undefined,
+
+    cloudBillingIsUpdatingSettings: undefined,
+    cloudBillingUpdateSettingsError: undefined,
+
+    cloudBillingIsCheckingPromotionCode: undefined,
+    cloudBillingCheckPromotionCodeError: undefined,
+
+    cloudBillingIsFetchingInvoices: undefined,
+    cloudBillingFetchInvoicesError: undefined,
+
+    cloudBillingInvoices: [],
+
+    cloudBillingPromotionCode: undefined,
 
     throttleError: undefined,
   },

@@ -1,3 +1,4 @@
+import { getResolveProductAndQuantityFn } from "./../billing";
 import {
   authz,
   getLocalKeysByUserId,
@@ -8,7 +9,7 @@ import { pick } from "@core/lib/utils/pick";
 import { apiAction } from "../handler";
 import { Api, Auth } from "@core/types";
 import { v4 as uuid } from "uuid";
-import { getDb } from "../db";
+import { getDb, mergeObjectTransactionItems } from "../db";
 import * as graphKey from "../graph_key";
 import { getPubkeyHash } from "@core/lib/client";
 import { getOrgGraph, getApiUserGraph } from "../graph";
@@ -146,17 +147,39 @@ apiAction<
   shouldClearOrphanedLocals: true,
   graphAuthorizer: async ({ payload: { id } }, orgGraph, userGraph, auth) =>
     authz.canDeleteCliUser(userGraph, auth.user.id, id),
-  graphHandler: async (action, orgGraph, auth, now) => {
+  graphHandler: async (
+    action,
+    orgGraph,
+    auth,
+    now,
+    requestParams,
+    transactionConn
+  ) => {
     const userId = action.payload.id;
 
-    const { updatedGraph, transactionItems } =
-      getDeleteUsersWithTransactionItems(
+    let { updatedGraph, transactionItems } = getDeleteUsersWithTransactionItems(
+      auth,
+      orgGraph,
+      orgGraph,
+      [userId],
+      now
+    );
+
+    const resolveProductAndQuantityFn = getResolveProductAndQuantityFn();
+    if (resolveProductAndQuantityFn) {
+      const productAndQuantityRes = await resolveProductAndQuantityFn(
+        transactionConn,
         auth,
-        orgGraph,
-        orgGraph,
-        [userId],
+        updatedGraph,
+        "remove-user",
         now
       );
+      updatedGraph = productAndQuantityRes[0];
+      transactionItems = mergeObjectTransactionItems([
+        transactionItems,
+        productAndQuantityRes[1],
+      ]);
+    }
 
     const clearEnvkeySockets = (
       getLocalKeysByUserId(orgGraph)[userId] ?? []

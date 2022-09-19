@@ -1,7 +1,5 @@
-import { getTempStore } from "../redux_store";
 import * as R from "ramda";
 import {
-  decryptedEnvsStateProducer,
   fetchLoadedEnvs,
   fetchPendingEnvs,
   fetchRequiredEnvs,
@@ -233,7 +231,6 @@ clientAction<
   successStateProducer: (draft, action) => {
     delete draft.fetchSessionError;
     draft.fetchSessionNotModified = action.payload.notModified ?? false;
-    return decryptedEnvsStateProducer(draft, action);
   },
   successHandler: async (state, action, res, context) => {
     if (res.notModified) {
@@ -262,6 +259,7 @@ clientAction<
     { context, dispatchSuccess, dispatchFailure }
   ) => {
     let state = initialState;
+
     let auth = getAuth<Client.ClientUserAuth>(state, context.accountIdOrCliKey);
     if (!auth) {
       throw new Error("Action requires authentication and decrypted privkey");

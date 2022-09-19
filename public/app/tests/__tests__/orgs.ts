@@ -163,6 +163,7 @@ describe("orgs", () => {
     );
 
     state = getState(ownerId);
+
     const [invite1Params, invite2Params] = state.generatedInvites,
       invitee1Id = invite1Params.user.id,
       approveDeviceParams = [{ granteeId: ownerId }];

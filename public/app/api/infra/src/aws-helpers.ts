@@ -1,4 +1,5 @@
 import S3 from "aws-sdk/clients/s3";
+import EC2 from "aws-sdk/clients/ec2";
 import { SecretsManager, SharedIniFileCredentials } from "aws-sdk";
 import { parameterStoreDeploymentKey, Region } from "./stack-constants";
 import IAM from "aws-sdk/clients/iam";
@@ -158,6 +159,12 @@ export const getAwsAccountId = async (profile?: string) => {
 
   return awsAccountId;
 };
+
+export const getTagFinder = (deploymentTag: string) => (tag: EC2.Tag) =>
+  tag.Key == "envkey-deployment" && tag.Value == deploymentTag;
+export const getTagFilters = (deploymentTag: string) => [
+  { Name: "tag:envkey-deployment", Values: [deploymentTag] },
+];
 
 export const validateDomain = async (
   profile: string | undefined,

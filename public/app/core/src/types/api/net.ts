@@ -7,8 +7,8 @@ import { Logs } from "../logs";
 import Client from "../client";
 import { Fetch } from "../fetch";
 import { Trust } from "../trust";
+import * as Billing from "../billing";
 import ActionType from "./action_type";
-import Api from ".";
 import { Db } from "./db";
 import { Patch } from "rfc6902";
 import * as z from "zod";
@@ -26,6 +26,13 @@ export namespace Net {
     };
   };
 
+  export type StripeErrorResult = {
+    type: "stripeError";
+    error: true;
+    errorStatus: 422;
+    errorReason: string;
+  };
+
   export type ErrorResult =
     | {
         type: "error";
@@ -36,7 +43,8 @@ export namespace Net {
     | ValidationErrorResult
     | RequiresEmailAuthResult
     | RequiresExternalAuthResult
-    | SignInWrongProviderErrorResult;
+    | SignInWrongProviderErrorResult
+    | StripeErrorResult;
 
   export type SignedUserTrustedPubkeys = string;
 
@@ -428,7 +436,7 @@ export namespace Net {
     type: "loadedInvite";
     orgId: string;
     invite: Pick<
-      Api.Db.Invite,
+      Db.Invite,
       | "id"
       | "encryptedPrivkey"
       | "pubkey"
@@ -446,7 +454,7 @@ export namespace Net {
     type: "loadedDeviceGrant";
     orgId: string;
     deviceGrant: Pick<
-      Api.Db.DeviceGrant,
+      Db.DeviceGrant,
       | "id"
       | "encryptedPrivkey"
       | "pubkey"
@@ -464,7 +472,7 @@ export namespace Net {
     type: "loadedRecoveryKey";
     orgId: string;
     recoveryKey: Pick<
-      Api.Db.RecoveryKey,
+      Db.RecoveryKey,
       "encryptedPrivkey" | "pubkey" | "userId" | "deviceId" | "creatorDeviceId"
     >;
   };
@@ -484,6 +492,7 @@ export namespace Net {
         name: true,
         settings: true,
       }),
+      test: z.boolean().optional(),
     }),
     z.union([
       utils.intersection(
@@ -1375,13 +1384,98 @@ export namespace Net {
     [ActionType.STARTED_ORG_IMPORT]: z.object({}),
     [ActionType.FINISHED_ORG_IMPORT]: z.object({}),
 
+    [ActionType.CLOUD_BILLING_SUBSCRIBE_PRODUCT]: z.object({
+      productId: z.string(),
+      priceId: z.string(),
+      quantity: z.number(),
+      promotionCode: z.string().optional(),
+    }),
+    [ActionType.CLOUD_BILLING_UPDATE_SUBSCRIPTION_QUANTITY]: z.object({
+      quantity: z.number(),
+    }),
+    [ActionType.CLOUD_BILLING_CANCEL_SUBSCRIPTION]: z.object({}),
+    [ActionType.CLOUD_BILLING_UPDATE_SETTINGS]: Billing.BillingSettingsSchema,
+    [ActionType.CLOUD_BILLING_UPDATE_PAYMENT_METHOD]: z.object({
+      token: z.string(),
+    }),
+    [ActionType.CLOUD_BILLING_INVOICE_CREATED]: z
+      .object({
+        stripeSubscriptionId: z.string(),
+      })
+      .merge(
+        Billing.InvoiceSchema.pick({
+          stripeId: true,
+          stripeChargeId: true,
+          nextPaymentAttempt: true,
+          periodStart: true,
+          periodEnd: true,
+          amountDue: true,
+          attemptCount: true,
+          attempted: true,
+          status: true,
+          paid: true,
+          subtotal: true,
+          total: true,
+          tax: true,
+          refNumber: true,
+        })
+      ),
+    [ActionType.CLOUD_BILLING_PAYMENT_SUCCEEDED]: z
+      .object({
+        stripeSubscriptionId: z.string(),
+      })
+      .merge(
+        Billing.InvoiceSchema.pick({
+          stripeId: true,
+          stripeChargeId: true,
+          nextPaymentAttempt: true,
+          amountDue: true,
+          attemptCount: true,
+          attempted: true,
+          status: true,
+          paid: true,
+        })
+      ),
+    [ActionType.CLOUD_BILLING_PAYMENT_FAILED]: z
+      .object({
+        stripeSubscriptionId: z.string(),
+      })
+      .merge(
+        Billing.InvoiceSchema.pick({
+          stripeId: true,
+          nextPaymentAttempt: true,
+          attemptCount: true,
+          attempted: true,
+          status: true,
+          paid: true,
+        })
+      ),
+    [ActionType.CLOUD_BILLING_UPDATE_SUBSCRIPTION]: Db.SubscriptionSchema.pick({
+      stripeId: true,
+      status: true,
+      canceledAt: true,
+      currentPeriodStartsAt: true,
+      currentPeriodEndsAt: true,
+    }),
+
+    [ActionType.CLOUD_BILLING_CHECK_PROMOTION_CODE]: z.object({
+      code: z.string(),
+    }),
+
+    [ActionType.CLOUD_BILLING_FETCH_INVOICES]: z.object({}),
+
     // BULK_GRAPH_ACTION schema isn't used anywhere as bulk actions are validated individually,
     // but it makes this object exhaustive so the compiler's happy
     [ActionType.BULK_GRAPH_ACTION]: z.any(),
   };
 
+  let additionalSchemas: Record<string, z.ZodTypeAny> = {};
+  export const addSchemas = (schemas: Record<string, z.ZodTypeAny>) => {
+    additionalSchemas = { ...additionalSchemas, ...schemas };
+  };
+
   export const getSchema = (t: ActionType) =>
-    ApiParamSchemas[t] as z.ZodTypeAny | undefined;
+    (ApiParamSchemas[t] ?? additionalSchemas) as z.ZodTypeAny | undefined;
 
   export type ApiParamTypes = {
     Register: z.infer<typeof ApiParamSchemas[ActionType.REGISTER]>;
@@ -1702,6 +1796,40 @@ export namespace Net {
     FinishedOrgImport: z.infer<
       typeof ApiParamSchemas[ActionType.FINISHED_ORG_IMPORT]
     >;
+
+    CloudBillingSubscribeProduct: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_SUBSCRIBE_PRODUCT]
+    >;
+    CloudBillingUpdateSubscriptionQuantity: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_UPDATE_SUBSCRIPTION_QUANTITY]
+    >;
+    CloudBillingCancelSubscription: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_CANCEL_SUBSCRIPTION]
+    >;
+    CloudBillingUpdateSettings: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_UPDATE_SETTINGS]
+    >;
+    CloudBillingUpdatePaymentMethod: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_UPDATE_PAYMENT_METHOD]
+    >;
+    CloudBillingUpdateSubscription: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_UPDATE_SUBSCRIPTION]
+    >;
+    CloudBillingInvoiceCreated: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_INVOICE_CREATED]
+    >;
+    CloudBillingPaymentSucceeded: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_PAYMENT_SUCCEEDED]
+    >;
+    CloudBillingPaymentFailed: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_PAYMENT_FAILED]
+    >;
+    CloudBillingFetchInvoices: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_FETCH_INVOICES]
+    >;
+    CloudBillingCheckPromotionCode: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_CHECK_PROMOTION_CODE]
+    >;
   };
 
   export type ApiResultTypes = {
@@ -1923,10 +2051,28 @@ export namespace Net {
     UnsubscribeCloudLifecycleEmails: OkResult;
     StartedOrgImport: OkResult;
     FinishedOrgImport: OkResult;
+    CloudBillingSubscribeProduct: GraphDiffsResult;
+    CloudBillingUpdateSubscriptionQuantity: GraphDiffsResult;
+    CloudBillingCancelSubscription: GraphDiffsResult;
+    CloudBillingUpdateSettings: GraphDiffsResult;
+    CloudBillingUpdateSubscription: OkResult;
+    CloudBillingUpdatePaymentMethod: GraphDiffsResult | StripeErrorResult;
+    CloudBillingInvoiceCreated: OkResult;
+    CloudBillingPaymentSucceeded: OkResult;
+    CloudBillingPaymentFailed: OkResult;
+    CloudBillingFetchInvoices: {
+      type: "fetchInvoices";
+      invoices: Client.CloudBillingInvoice[];
+    };
+    CloudBillingCheckPromotionCode: {
+      type: "promotionCode";
+      exists: boolean;
+      amountOff?: number;
+      percentOff?: number;
+    };
   };
 
   export type ApiParams = ApiParamTypes[keyof ApiParamTypes];
-
   export type ApiResult = ApiResultTypes[keyof ApiResultTypes];
   export type ScimApiResult =
     | ApiResultTypes["CheckScimProvider"]

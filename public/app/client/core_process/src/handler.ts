@@ -111,6 +111,17 @@ export const clientAction = <
       );
     }
 
+    if (
+      action.type == Client.ActionType.GET_SESSION &&
+      accountState.isFetchingSession
+    ) {
+      await waitForStateCondition(
+        store,
+        context,
+        (state) => !state.isFetchingSession
+      );
+    }
+
     const handleSuccess = getHandleSuccess(actionParams, action, store, tempId),
       handleFailure = getHandleFailure(actionParams, action, store, tempId);
 

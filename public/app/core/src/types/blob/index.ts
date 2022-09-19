@@ -1,7 +1,7 @@
 import { Crypto } from "../crypto";
 import Api from "../api";
-import { Model } from "../model";
 import { Trust } from "../trust";
+import { TimestampsSchema } from "../timestamps";
 import * as z from "zod";
 
 export namespace Blob {
@@ -22,7 +22,7 @@ export namespace Blob {
       data: Crypto.EncryptedDataSchema,
       encryptedById: z.string(),
     })
-    .merge(Model.TimestampsSchema);
+    .merge(TimestampsSchema);
 
   export type UserEncryptedKey = z.infer<typeof UserEncryptedKeySchema>;
   export const UserEncryptedKeySchema = EncryptedKeyBaseSchema.extend({
@@ -70,7 +70,7 @@ export namespace Blob {
       envType: EnvTypeSchema.optional(),
       envPart: EnvPartSchema.optional(),
     })
-    .merge(Model.TimestampsSchema);
+    .merge(TimestampsSchema);
 
   export type GeneratedEnvkeySet = z.infer<typeof GeneratedEnvkeySetSchema>;
   const GeneratedEnvkeySetSchema = z.object({

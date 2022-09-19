@@ -2,6 +2,7 @@ import * as Rbac from "../rbac";
 import ActionType from "../api/action_type";
 import { Model } from "../model";
 import { Blob } from "../blob";
+import { TimestampsSchema } from "../timestamps";
 import * as z from "zod";
 import * as utils from "../utils";
 
@@ -27,6 +28,8 @@ export namespace Logs {
       "reencryptEnvsAction",
       "scimAction",
       "updateFirewallAction",
+      "billingAction",
+      "billingWebhookAction",
     ]),
     allLoggableTypesSchema = z.union([
       hostLoggableTypesSchema,
@@ -156,6 +159,20 @@ export namespace Logs {
     isFailoverRequest: z.literal(true).optional(),
   });
 
+  export type LoggedBillingWebhookActionProps = z.infer<
+    typeof LoggedBillingWebhookActionPropsSchema
+  >;
+  export const LoggedBillingWebhookActionPropsSchema = z.object({
+    loggableType: z.literal("billingWebhookAction"),
+    loggableType2: z.literal("billingAction"),
+    loggableType3: z.undefined(),
+    loggableType4: z.undefined(),
+    actionType: z.string(),
+    orgId: z.union([z.string(), z.undefined()]),
+    actorId: z.undefined(),
+    deviceId: z.undefined(),
+  });
+
   export type LoggedAction = z.infer<typeof LoggedActionSchema>;
 
   export const LoggedActionSchema = utils.intersection(
@@ -175,7 +192,7 @@ export namespace Logs {
 
         summary: z.string().optional(),
       })
-      .merge(Model.TimestampsSchema),
+      .merge(TimestampsSchema),
     z.union([
       LoggedHostActionPropsSchema,
       LoggedAuthActionPropsSchema,
@@ -183,6 +200,7 @@ export namespace Logs {
       LoggedOrgActionPropsSchema,
       LoggedFetchActionPropsSchema,
       LoggedFetchEnvkeyActionPropsSchema,
+      LoggedBillingWebhookActionPropsSchema,
     ])
   );
 
@@ -198,6 +216,8 @@ export namespace Logs {
       "orgAction",
       "updateEnvsAction",
       "scimAction",
+      "updateFirewallAction",
+      "billingAction",
     ],
     ALL_LOGGABLE_TYPES = [...HOST_LOGGABLE_TYPES, ...ORG_LOGGABLE_TYPES];
 

@@ -3,6 +3,7 @@ import { Store as _Store } from "redux";
 import { Graph as _Graph } from "./graph";
 import { Action as _Action } from "./action";
 import { Logs } from "../logs";
+import * as Billing from "../billing";
 import { default as _ActionType } from "./action_type";
 import { Env as _Env } from "./envs";
 import {
@@ -607,6 +608,26 @@ namespace Client {
   export type CoreDispatchResult = Omit<DispatchResult, "state"> & {
     diffs: Patch;
     status: number;
+  };
+
+  export type CloudBillingInvoice = Pick<
+    Billing.Invoice,
+    | "id"
+    | "createdAt"
+    | "productName"
+    | "refNumber"
+    | "periodString"
+    | "pdf"
+    | "numActiveUsers"
+    | "maxUsers"
+    | "total"
+    | "status"
+  >;
+
+  export type CloudBillingStripeFormParams = {
+    data: {
+      error?: string;
+    };
   };
 }
 

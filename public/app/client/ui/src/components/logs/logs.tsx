@@ -426,7 +426,8 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
   const renderActionSummary = (
     summary: string,
     actor: Logs.Actor | undefined,
-    pastTense?: true
+    pastTense?: true,
+    stripe?: true
   ) => {
     const verbMatches = summary.match(/\+.*?\+/g);
     const idMatches = summary.match(/%.*?%/g);
@@ -444,6 +445,8 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
           actor.id
         )}</span>`;
       }
+    } else if (stripe) {
+      actorName = `<span class="actor">Stripe</span>`;
     } else {
       actorName = `<span class="actor">unknown</span>`;
     }
@@ -1205,7 +1208,10 @@ export const LogManager: OrgComponent<RouteProps> = (props) => {
           ),
         ];
       }
+    } else if (logged.loggableType == "billingWebhookAction") {
+      performedBy = "Stripe";
     }
+
     if (logged.deviceId) {
       const device = (graph[logged.deviceId] ??
         props.core.deletedGraph[logged.deviceId]) as Model.OrgUserDevice;

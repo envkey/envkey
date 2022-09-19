@@ -70,7 +70,10 @@ export enum CfStack {
   ENVKEY_WAF_API = "envkey-waf-api",
   ENVKEY_WAF_FAILOVER = "envkey-waf-failover",
   ENVKEY_WAF_SECONDARY = "envkey-waf-secondary",
+  ENVKEY_CLOUD_BILLING = "envkey-cloud-billing",
 }
+
+export const CAPABILITIES = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"];
 
 export const getFargateStackName = (deploymentTag: string) =>
   [CfStack.ENVKEY_FARGATE_API, deploymentTag].join("-");

@@ -1,9 +1,9 @@
 import { Api } from "@core/types";
 
 // default env
-export const env = process.env as any as Api.Env;
+export const env = (<any>process.env) as Api.Env;
 
-export const ensureEnv = (...addKeys: (keyof Api.Env)[]) => {
+export const ensureEnv = <T extends Api.Env>(...addKeys: (keyof T)[]) => {
   for (let k of <const>[
     "NODE_ENV",
     "SENDER_EMAIL",
@@ -12,7 +12,7 @@ export const ensureEnv = (...addKeys: (keyof Api.Env)[]) => {
     "DATABASE_CREDENTIALS_JSON",
     ...addKeys,
   ]) {
-    if (env[k] === undefined) {
+    if ((env as any)[k] === undefined) {
       const msg = `${k} environment variable is required`;
       console.log(msg);
       throw new Error(msg);

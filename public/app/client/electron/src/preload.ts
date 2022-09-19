@@ -4,6 +4,7 @@ import {
   AvailableClientUpgrade,
   UpgradeProgress,
 } from "@core/types/electron";
+import Client from "@core/types/client";
 
 const { dialog, app } = remote;
 
@@ -85,6 +86,24 @@ const exposeInterface: ElectronWindow["electron"] = {
     }),
 
   downloadAndInstallUpgrades: () => ipcRenderer.send("install-update"),
+
+  openStripeForm: (params: Client.CloudBillingStripeFormParams) =>
+    ipcRenderer.send(
+      "open-stripe-form",
+      encodeURIComponent(JSON.stringify(params))
+    ),
+
+  closeStripeForm: () => {
+    ipcRenderer.send("close-stripe-form");
+  },
+
+  registerCloseStripeFormHandler: (handler) => {
+    ipcRenderer.on("close-stripe-form", handler);
+  },
+
+  deregisterCloseStripeFormHandler: (handler) => {
+    ipcRenderer.off("close-stripe-form", handler);
+  },
 };
 
 contextBridge.exposeInMainWorld("electron", exposeInterface);

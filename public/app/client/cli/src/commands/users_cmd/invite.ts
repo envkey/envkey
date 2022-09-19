@@ -1,6 +1,6 @@
 import * as z from "zod";
 import chalk from "chalk";
-import { Api, Client, Model } from "@core/types";
+import { Api, Client, Model, Billing } from "@core/types";
 import { Graph } from "@core/types/client/graph";
 import { exit } from "../../lib/process";
 import { Argv } from "yargs";
@@ -104,13 +104,18 @@ export const handler = async (
         })),
       };
 
-  const { license, org } = graphTypes(state.graph);
+  const { license, org, subscription } = graphTypes(state.graph);
+
+  const currentPrice = subscription
+    ? (state.graph[subscription.priceId] as Billing.Price)
+    : undefined;
 
   const licenseExpired = license.expiresAt != -1 && now > license.expiresAt;
 
   const exceededDeviceLimit =
     license.maxDevices != -1 && org.deviceLikeCount >= license.maxDevices;
   const exeededActiveUserLimit =
+    !(currentPrice && currentPrice.interval == "month") &&
     license.maxUsers &&
     license.maxUsers != -1 &&
     org.activeUserOrInviteCount &&

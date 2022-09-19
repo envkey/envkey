@@ -76,4 +76,9 @@ export const org = (orgId: string) => graphKey(orgId, "org"),
   pubkeyRevocationRequest = (orgId: string, id: string) =>
     graphKey(orgId, "pubkeyRevocationRequest", id),
   rootPubkeyReplacement = (orgId: string, id: string) =>
-    graphKey(orgId, "rootPubkeyReplacement", id);
+    graphKey(orgId, "rootPubkeyReplacement", id),
+  customer = (orgId: string) => graphKey(orgId, "customer"),
+  subscription = (orgId: string, id: string) =>
+    graphKey(orgId, "subscription", id),
+  paymentSource = (orgId: string, id: string) =>
+    graphKey(orgId, "paymentSource", id);

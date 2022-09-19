@@ -1,6 +1,6 @@
 import { pick } from "@core/lib/utils/object";
 import { apiAction } from "../handler";
-import { Api, Rbac } from "@core/types";
+import { Api, Rbac, Auth } from "@core/types";
 import * as R from "ramda";
 import {
   graphTypes,
@@ -19,13 +19,17 @@ import {
   getDeleteEncryptedKeysTransactionItems,
   getDeleteUsersWithTransactionItems,
 } from "../blob";
-import { getDb } from "../db";
+import { getDb, mergeObjectTransactionItems } from "../db";
 import { scimCandidateDbKey } from "../models/provisioning";
 import { getOrg } from "../models/orgs";
 import produce, { Draft } from "immer";
 import { isValidIPOrCIDR, ipMatchesAny } from "@core/lib/utils/ip";
 import { log } from "@core/lib/utils/logger";
 import { env } from "../env";
+import {
+  getResolveProductAndQuantityFn,
+  getCancelSubscriptionFn,
+} from "../billing";
 
 apiAction<
   Api.Action.RequestActions["UpdateOrgSettings"],
@@ -311,14 +315,29 @@ apiAction<
       ({ keyableParentId }) => localKeyIdsSet.has(keyableParentId)
     );
 
-    const { transactionItems, updatedGraph } =
-      getDeleteUsersWithTransactionItems(
+    let { transactionItems, updatedGraph } = getDeleteUsersWithTransactionItems(
+      auth,
+      orgGraph,
+      orgGraph,
+      [userId],
+      now
+    );
+
+    const resolveProductAndQuantityFn = getResolveProductAndQuantityFn();
+    if (resolveProductAndQuantityFn) {
+      const productAndQuantityRes = await resolveProductAndQuantityFn(
+        transactionConn,
         auth,
-        orgGraph,
-        orgGraph,
-        [userId],
+        updatedGraph,
+        "remove-user",
         now
       );
+      updatedGraph = productAndQuantityRes[0];
+      transactionItems = mergeObjectTransactionItems([
+        transactionItems,
+        productAndQuantityRes[1],
+      ]);
+    }
 
     return {
       type: "graphHandlerResult",
@@ -445,6 +464,20 @@ apiAction<
       keySet = getCurrentEncryptedKeys(orgGraph, "all", now, true),
       { hardDeleteKeys, hardDeleteEncryptedKeyParams } =
         await getDeleteEncryptedKeysTransactionItems(auth, orgGraph, keySet);
+
+    const cancelSubscriptionFn = getCancelSubscriptionFn();
+    const customer = graphTypes(orgGraph).customer as
+      | Api.Db.Customer
+      | undefined;
+    const subscription = graphTypes(orgGraph).subscription as
+      | Api.Db.Subscription
+      | undefined;
+    if (cancelSubscriptionFn && customer && subscription) {
+      await cancelSubscriptionFn({
+        stripeCustomerId: customer.stripeId,
+        stripeSubscriptionId: subscription.stripeId,
+      });
+    }
 
     return {
       type: "handlerResult",

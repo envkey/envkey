@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { env } from "./env";
 import { log, logStderr } from "@core/lib/utils/logger";
 import { newMemoryQueue } from "./memory_queue";
+import * as R from "ramda";
 
 // workaround for mismatched marked module typings
 import { marked as markedImport } from "marked";
@@ -15,6 +16,7 @@ type CustomEmail = {
   from?: string;
   subject: string;
   bodyMarkdown: string;
+  attachments?: Mail["options"]["attachments"];
 };
 
 const PlainTextRenderer = require("marked-plaintext");
@@ -85,13 +87,14 @@ export const getCommunityTransporter = () => {
 
 // sendEmail will immediately attempt to send the mail, then queue retries if it fails
 export const sendEmail = async (email: CustomEmail) => {
-  const { to, subject, bodyMarkdown } = email;
+  const { to, subject, bodyMarkdown, attachments } = email;
   const emailData: Mail.Options = {
     to,
     from: email.from ?? `EnvKey <${process.env.SENDER_EMAIL}>`,
     subject,
     text: marked(bodyMarkdown, { renderer: plainTextRenderer }),
     html: marked(bodyMarkdown),
+    attachments,
   };
 
   if (!transporter) {
@@ -100,7 +103,7 @@ export const sendEmail = async (email: CustomEmail) => {
     }
 
     console.log("Not sending email in dev mode. Data:");
-    console.log(JSON.stringify(emailData, null, 2));
+    console.log(JSON.stringify(R.omit(["attachments"], emailData), null, 2));
     return;
   }
 
@@ -119,13 +122,14 @@ export const sendEmail = async (email: CustomEmail) => {
 
 // sendBulkEmail will put the email into the bulk outgoing queue to be delivered serially
 export const sendBulkEmail = async (email: CustomEmail) => {
-  const { to, subject, bodyMarkdown } = email;
+  const { to, subject, bodyMarkdown, attachments } = email;
   const emailData = {
     to,
     from: `EnvKey <${process.env.SENDER_EMAIL}>`,
     subject,
     text: marked(bodyMarkdown, { renderer: plainTextRenderer }),
     html: marked(bodyMarkdown),
+    attachments,
   };
 
   if (!transporter) {

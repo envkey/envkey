@@ -1,4 +1,4 @@
-import { waitForStateCondition } from "./../lib/state/index";
+import { waitForStateCondition } from "../lib/state";
 import * as R from "ramda";
 import {
   getAuth,

@@ -10,6 +10,9 @@ const pastTenseExceptions: Record<string, string> = {
   visit: "visited",
   connect: "connected",
   accept: "accepted",
+  pay: "paid",
+  set: "set",
+  verify: "verified",
 };
 
 // grammatically predictable rules

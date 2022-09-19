@@ -69,6 +69,7 @@ export const getEmailToken = async (
         {
           type: Client.ActionType.REGISTER,
           payload: {
+            test: true,
             user: {
               firstName: firstName ?? "Test",
               lastName: lastName ?? "User",

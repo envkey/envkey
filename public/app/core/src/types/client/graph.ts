@@ -36,8 +36,13 @@ export namespace Graph {
     | Model.PubkeyRevocationRequest
     | Model.RootPubkeyReplacement
     | Model.ExternalAuthProvider
+    | Model.ScimProvisioningProvider
     | Billing.License
-    | Model.ScimProvisioningProvider;
+    | Billing.Product
+    | Billing.Price
+    | Billing.Customer
+    | Billing.Subscription
+    | Billing.PaymentSource;
 
   export type UserGraph = { [id: string]: UserGraphObject };
 }

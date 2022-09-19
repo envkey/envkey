@@ -52,7 +52,7 @@ clientAction<
       Api.Action.RequestActions["Register"]["payload"],
       "org" | "user" | "device"
     > = {
-      ...pick(["org", "user"], payload),
+      ...pick(["org", "user", "test"], payload),
       device: {
         name: payload.device.name,
         pubkey,

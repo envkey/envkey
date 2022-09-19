@@ -30,6 +30,7 @@ const SvgComponents = {
   info: require("./info.svg").default,
   folder: require("./folder.svg").default,
   reset: require("./reset.svg").default,
+  "powered-by-stripe": require("./powered-by-stripe.svg").default,
 } as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>;
 
 const UseOwnDefaultViewBox = new Set<keyof typeof SvgComponents>([
@@ -43,6 +44,7 @@ const UseOwnDefaultViewBox = new Set<keyof typeof SvgComponents>([
   "revert",
   "copy",
   "info",
+  "powered-by-stripe",
 ]);
 
 type SvgComponentType = keyof typeof SvgComponents;

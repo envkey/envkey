@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { OrgComponent } from "@ui_types";
-import { Rbac, Model, Client, Auth, Api } from "@core/types";
+import { Rbac, Model, Client, Auth, Api, Billing } from "@core/types";
 import * as g from "@core/lib/graph";
 import * as R from "ramda";
 import { inviteRoute } from "./helpers";
@@ -95,13 +95,14 @@ export const InviteForm: OrgComponent<{
       ];
     }, [graphUpdatedAt, currentUserId]);
 
-  const [
+  const {
     license,
     org,
+    currentPrice,
     numActiveDevicesOrPendingInvites,
     numActiveUsersOrPendingInvites,
-  ] = useMemo(() => {
-    const { license, org } = g.graphTypes(graph);
+  } = useMemo(() => {
+    const { license, org, subscription } = g.graphTypes(graph);
 
     const numActiveDevices = org.deviceLikeCount;
     const numActiveUsers = org.activeUserOrInviteCount;
@@ -112,12 +113,15 @@ export const InviteForm: OrgComponent<{
       ? numActiveUsers + numPendingInvites
       : undefined;
 
-    return [
+    return {
       license,
       org,
+      currentPrice: subscription
+        ? (graph[subscription.priceId] as Billing.Price)
+        : undefined,
       numActiveDevicesOrPendingInvites,
       numActiveUsersOrPendingInvites,
-    ];
+    };
   }, [
     graphUpdatedAt,
     props.core.pendingInvites.length,
@@ -415,12 +419,14 @@ export const InviteForm: OrgComponent<{
     license.expiresAt != -1 && props.ui.now > license.expiresAt;
 
   const userLimitExceeded =
+    !(currentPrice && currentPrice.interval == "month") &&
     license.maxUsers &&
     numActiveUsersOrPendingInvites &&
     license.maxUsers != -1 &&
     numActiveUsersOrPendingInvites >= license.maxUsers;
 
   const deviceLimitExceeded =
+    !(currentPrice && currentPrice.interval == "month") &&
     license.maxDevices != -1 &&
     numActiveDevicesOrPendingInvites >= license.maxDevices;
 

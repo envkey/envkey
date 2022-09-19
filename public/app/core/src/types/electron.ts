@@ -1,3 +1,5 @@
+import Client from "./client";
+
 export type ClientUpgrade = {
   currentVersion: string | false;
   nextVersion: string;
@@ -55,5 +57,13 @@ export interface ElectronWindow extends Window {
     registerUpgradeErrorHandler: (handler: () => void) => void;
 
     downloadAndInstallUpgrades: () => void;
+
+    openStripeForm: (params: Client.CloudBillingStripeFormParams) => void;
+
+    closeStripeForm: () => void;
+
+    registerCloseStripeFormHandler: (handler: () => void) => void;
+
+    deregisterCloseStripeFormHandler: (handler: () => void) => void;
   };
 }

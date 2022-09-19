@@ -1,6 +1,7 @@
 import { style } from "typestyle";
 import * as colors from "../colors";
 import * as fonts from "../fonts";
+import { multi } from "../helpers";
 import { OrgContainer } from "./org_container";
 
 export const Billing =
@@ -72,6 +73,94 @@ export const Billing =
       },
       ".field.billing-tier span strong": {
         color: colors.DARK_BLUE,
+      },
+
+      ".billing-settings .field > span": {
+        fontSize: "14px",
+        color: "rgba(0,0,0,0.5)",
+      },
+
+      ".invoices": {
+        width: "100%",
+        $nest: {
+          ".invoice-list": {
+            width: 800,
+            borderCollapse: "collapse",
+            marginBottom: 40,
+            $nest: {
+              tr: {
+                borderBottom: "1px solid rgba(0,0,0,0.07)",
+              },
+              ...multi(["th", "td"], {
+                padding: "12px 10px",
+                textAlign: "center",
+
+                $nest: {
+                  "&:is(th)": {
+                    textTransform: "uppercase",
+                    fontWeight: 600,
+                    color: "rgba(0,0,0,0.3)",
+                    fontSize: "12px",
+                  },
+                  "&:is(td)": {
+                    fontSize: "14px",
+                    verticalAlign: "middle",
+                    $nest: {
+                      a: {
+                        display: "inline-block",
+                        width: 60,
+                        color: colors.DARK_BLUE,
+                        $nest: {
+                          "&:hover": {
+                            fontWeight: 600,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
+            },
+          },
+        },
+      },
+
+      "&.stripe-form": {
+        height: "100%",
+        width: "100%",
+        boxSizing: "border-box",
+        margin: "auto 0",
+        $nest: {
+          h3: {
+            width: "100%",
+            marginBottom: 40,
+          },
+          form: {
+            margin: "0 auto",
+          },
+          ".buttons": {
+            marginTop: 40,
+          },
+          "p:not(.error)": {
+            fontSize: "14px",
+            color: "rgba(0,0,0,0.4)",
+            textAlign: "center",
+            width: "100%",
+            marginBottom: 10,
+          },
+          ".stripe-logo": {
+            textAlign: "center",
+            width: "100%",
+          },
+        },
+      },
+
+      "&.choose-plan": {
+        $nest: {
+          ".field": {
+            marginBottom: 20,
+          },
+        },
       },
     },
   });

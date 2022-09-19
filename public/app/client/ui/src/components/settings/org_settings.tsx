@@ -4,12 +4,10 @@ import { Model, Api } from "@core/types";
 import { stripUndefinedRecursive } from "@core/lib/utils/object";
 import * as g from "@core/lib/graph";
 import * as R from "ramda";
-import * as ui from "@ui";
 import * as styles from "@styles";
 import { SmallLoader } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
-import { style } from "typestyle";
 import { logAndAlertError } from "@ui_lib/errors";
 
 export const OrgSettings: OrgComponent = (props) => {
@@ -209,7 +207,7 @@ export const OrgSettings: OrgComponent = (props) => {
                 });
             }}
           >
-            {renaming ? "Renaming..." : "Rename"}
+            {renaming ? <SmallLoader /> : "Rename"}
           </button>
         </div>
       );
@@ -421,7 +419,7 @@ export const OrgSettings: OrgComponent = (props) => {
               }
             }}
           >
-            {isDeleting ? "Deleting Organization..." : "Delete Organization"}
+            {isDeleting ? <SmallLoader /> : "Delete Organization"}
           </button>
         </div>
       );

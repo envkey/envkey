@@ -22,9 +22,12 @@ if (process.env.NODE_ENV != "production") {
 
 const indexHtml = require("./index.html").default;
 const devIndexHtml = require("./index.dev.html").default;
+const stripeFormHtml = require("./stripe_form.html").default;
+const devStripeFormHtml = require("./stripe_form.dev.html").default;
 
 let appReady = false;
 let win: BrowserWindow | undefined;
+let stripeWin: BrowserWindow | undefined;
 let authToken: string | undefined;
 
 let appWillAutoExit = false;
@@ -48,6 +51,17 @@ app.on("ready", () => {
     downloadAndInstallUpgrade();
   });
 
+  ipcMain.on("open-stripe-form", (e, json) => {
+    if (stripeWin) stripeWin.close();
+    createStripeWindow(json);
+  });
+
+  ipcMain.on("focus-main-window", () => {
+    if (win) {
+      win.show();
+    }
+  });
+
   createWindow();
 
   startup((authTokenRes) => {
@@ -58,7 +72,7 @@ app.on("ready", () => {
 });
 
 // Quit when all windows are closed, except on Mac where closing window is expected to behave like minimizing
-// onn mac there's no way to create a new window via menu yet.
+// on mac there's no way to create a new window via menu yet.
 app.on("window-all-closed", () => {
   log("on:window-all-closed", {
     currentAppVersion: app.getVersion(),
@@ -210,6 +224,46 @@ const setupAppUpdateMenu = () => {
   // menu.items?.[0].submenu?.insert(4, switchAccount);
 
   Menu.setApplicationMenu(menu);
+};
+
+const createStripeWindow = (json: string) => {
+  const { width: screenW, height: screenH } =
+    screen.getPrimaryDisplay().workAreaSize;
+  const type = JSON.parse(decodeURIComponent(json)).type;
+  const qs = `?data=${json}`;
+
+  stripeWin = new BrowserWindow({
+    width: 650,
+    height: 450,
+    parent: win,
+    alwaysOnTop: true,
+    center: true,
+    title: "EnvKey " + app.getVersion() + " Payment Method",
+    webPreferences: {
+      nodeIntegration: false,
+    },
+  });
+
+  stripeWin.on("page-title-updated", (e) => e.preventDefault());
+
+  stripeWin.loadURL(
+    url.format({
+      pathname: path.join(
+        app.getAppPath(),
+        process.env.NODE_ENV == "production"
+          ? stripeFormHtml
+          : devStripeFormHtml
+      ),
+      protocol: "file:",
+      slashes: true,
+      search: qs,
+    })
+  );
+
+  stripeWin.on("closed", () => {
+    if (win) win.webContents.send("close-stripe-form");
+    stripeWin = undefined;
+  });
 };
 
 ["SIGINT", "SIGUSR1", "SIGUSR2", "SIGTERM", "SIGHUP"].forEach((eventType) => {
