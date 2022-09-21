@@ -1,5 +1,5 @@
 {
   "watch": ["../core_process", "../../core", "../../api/infra"],
   "ext": "ts",
-  "exec": "NODE_ENV=development LOG_REQUESTS=1 node --inspect=9224 -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli_core_proc.ts || touch src/cli_core_proc.ts"
+  "exec": "NODE_ENV=\"${NODE_ENV:-development}\" LOG_REQUESTS=1 node --inspect=9224 -r ts-node/register/transpile-only -r tsconfig-paths/register src/cli_core_proc.ts || touch src/cli_core_proc.ts"
 }

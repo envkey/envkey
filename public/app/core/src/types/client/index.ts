@@ -617,7 +617,6 @@ namespace Client {
     | "productName"
     | "refNumber"
     | "periodString"
-    | "pdf"
     | "numActiveUsers"
     | "maxUsers"
     | "total"

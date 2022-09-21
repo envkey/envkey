@@ -138,7 +138,7 @@ export const InvoiceSchema = z
     total: z.number(),
     tax: z.number().optional(),
     amountRefunded: z.number().optional(),
-    pdf: z.string().optional(),
+    html: z.string().optional(),
   })
   .merge(TimestampsSchema);
 export type Invoice = z.infer<typeof InvoiceSchema>;

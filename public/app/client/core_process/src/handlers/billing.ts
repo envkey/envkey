@@ -146,29 +146,3 @@ clientAction<Api.Action.RequestActions["CloudBillingCheckPromotionCode"]>({
     }
   },
 });
-
-clientAction<Client.Action.ClientActions["DownloadInvoice"]>({
-  type: "clientAction",
-  actionType: Client.ActionType.DOWNLOAD_INVOICE,
-  handler: async (state, { payload: { invoiceId, filePath } }) => {
-    const invoice = state.cloudBillingInvoices.find(R.propEq("id", invoiceId));
-
-    if (!invoice) {
-      throw new Error("Invoice not found");
-    }
-
-    if (!invoice.pdf) {
-      throw new Error("Invoice missing pdf");
-    }
-
-    // write the file
-    return new Promise<void>((resolve, reject) =>
-      fs.writeFile(filePath, Buffer.from(invoice.pdf!, "base64"), (err) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve();
-      })
-    );
-  },
-});

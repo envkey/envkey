@@ -23,12 +23,12 @@ ensureEnv("COMMUNITY_AUTH_HASH", "SMTP_TRANSPORT_JSON");
 
 log("EnvKey API Community Edition is starting...");
 
-const injectHandlers = () => {
+const communityStartup = async () => {
   require("../../../community/src/api_handlers");
 };
 
 startup(
-  injectHandlers,
+  communityStartup,
   async (port: number) => {
     registerVerifyLicenseFn(getCommunityLicense);
     registerEmailTransporter(getCommunityTransporter());

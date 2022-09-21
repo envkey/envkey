@@ -4,13 +4,12 @@ const LOCAL_DEV_CLOUD_HOST = "localdev-cloud.envkey.com:2999";
 
 export type Env = {
   NODE_ENV?: "development" | "production";
+  ENVKEY_CLOUD_PROD_HOST?: string;
   ENVKEY_CORE_DISPATCH_DEBUG_ENABLED?: "1";
+
   // for local testing of upgrades (core_process check) for self-hosted
   ENVKEY_RELEASES_BUCKET?: string;
-  // for local testing of upgrades (core_process check) for self-hosted
   ENVKEY_RELEASES_S3_CREDS_JSON?: string;
-
-  ENVKEY_CLOUD_PROD_HOST?: string;
 };
 
 export const env = process.env as Env;

@@ -22,8 +22,8 @@ app.use(
   })
 );
 
-export default (
-  injectHandlers: (app: express.Application) => void,
+const startup = async (
+  releaseSpecificStartup: (app: express.Application) => Promise<void>,
   afterDbCallback?: (port: number) => Promise<void>,
   exitHandlerArg?: () => Promise<void>
 ) => {
@@ -33,7 +33,7 @@ export default (
 
   // init routes after the caller of startup(app) so they can attach any routes before
   // we initRoutes(app) and add the 404 and final error handler
-  injectHandlers(app);
+  await releaseSpecificStartup(app);
   initRoutes(app);
 
   return runMigrationsIfNeeded()
@@ -52,6 +52,8 @@ export default (
       };
     });
 };
+
+export default startup;
 
 let exitHandler: (() => Promise<void>) | undefined;
 const addExitHandler = (fn: () => Promise<void>) => {

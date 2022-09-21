@@ -76,7 +76,7 @@ export const postApiAction = async <
           (res.statusCode == 502 ||
             res.statusCode == 503 ||
             res.statusCode == 504) &&
-          numRetry < 4
+          numRetry < 6
         ) {
           if (process.env.LOG_REQUESTS) {
             log(

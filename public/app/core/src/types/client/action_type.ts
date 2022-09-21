@@ -149,8 +149,6 @@ enum ActionType {
   CLEAR_ORPHANED_BLOBS = "envkey/client/CLEAR_ORPHANED_BLOBS",
 
   SET_MISSING_ENVS = "envkey/client/SET_MISSING_ENVS",
-
-  DOWNLOAD_INVOICE = "envkey/client/DOWNLOAD_INVOICE",
 }
 
 export default ActionType;

@@ -4,7 +4,7 @@ import { apiAction } from "../handler";
 import { Api, Rbac } from "@core/types";
 import { v4 as uuid } from "uuid";
 import { secureRandomAlphanumeric, sha256 } from "@core/lib/crypto/utils";
-import { mergeObjectTransactionItems } from "../db";
+import { mergeObjectTransactionItems, query } from "../db";
 import * as graphKey from "../graph_key";
 import * as R from "ramda";
 import { verifyEmailToken, verifyExternalAuthSession } from "../auth";
@@ -503,6 +503,13 @@ apiAction<
       ...environmentRoles,
       ...appRoles,
       ...appRoleEnvironmentRoles,
+
+      ...(env.IS_CLOUD
+        ? await query<Api.Db.Product | Api.Db.Price>({
+            pkey: "billing",
+            transactionConn,
+          })
+        : []),
     ]);
 
     const userGraph = getApiUserGraph(orgGraph, orgId, userId, deviceId, now);

@@ -1,8 +1,8 @@
-version: 2.1.7
+version: 2.1.8
 files:
-  - url: EnvKey_Windows_Installer-2.1.7.exe
-    sha512: pnGxLECFeeNBkdCLHKCpzURLTlL/b5YLP6oLJB3+WPrSb6PdTHxVhxfJp3wIeN1/Sftx1riH8vAycy+gRpLTUQ==
-    size: 73196288
-path: EnvKey_Windows_Installer-2.1.7.exe
-sha512: pnGxLECFeeNBkdCLHKCpzURLTlL/b5YLP6oLJB3+WPrSb6PdTHxVhxfJp3wIeN1/Sftx1riH8vAycy+gRpLTUQ==
-releaseDate: '2022-08-23T19:03:11.068Z'
+  - url: EnvKey_Windows_Installer-2.1.8.exe
+    sha512: gZkDh0ezpJNUc3EJKntD5EzpHbZ5ptJGN25koZ63PAPT0/emC5gkX9nzxdr0/eE7R9uHF8p6xuAfw0Pj5WBIvw==
+    size: 73564560
+path: EnvKey_Windows_Installer-2.1.8.exe
+sha512: gZkDh0ezpJNUc3EJKntD5EzpHbZ5ptJGN25koZ63PAPT0/emC5gkX9nzxdr0/eE7R9uHF8p6xuAfw0Pj5WBIvw==
+releaseDate: '2022-09-21T22:23:44.913Z'

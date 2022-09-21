@@ -229,8 +229,6 @@ export const UpdateCloudSubscription: OrgComponent = (props) => {
       selectedPrice &&
       selectedPrice.interval == "month";
 
-    console.log("yearToMonth", yearToMonth);
-
     if (yearToMonth) {
       console.log("year to month");
       alert(

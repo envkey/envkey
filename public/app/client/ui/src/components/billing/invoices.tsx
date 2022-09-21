@@ -1,25 +1,25 @@
 import React, { useEffect, useState } from "react";
 import { OrgComponent } from "@ui_types";
 import { Api, Client } from "@core/types";
-import { ElectronWindow } from "@core/types/electron";
 import moment from "moment";
 import { SmallLoader } from "@images";
 import { formatUsd } from "@core/lib/utils/currency";
 import { logAndAlertError } from "@ui_lib/errors";
-
-declare var window: ElectronWindow;
+import { getDefaultApiHostUrl } from "../../../../shared/src/env";
 
 export const Invoices: OrgComponent = (props) => {
   const { cloudBillingInvoices } = props.core;
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    props
-      .dispatch({
-        type: Api.ActionType.CLOUD_BILLING_FETCH_INVOICES,
-        payload: {},
-      })
-      .then(() => setLoading(false));
+    setTimeout(() => {
+      props
+        .dispatch({
+          type: Api.ActionType.CLOUD_BILLING_FETCH_INVOICES,
+          payload: {},
+        })
+        .then(() => setLoading(false));
+    }, 2000);
   }, []);
 
   return (
@@ -59,40 +59,32 @@ export const Invoices: OrgComponent = (props) => {
                   <td>{invoice.periodString}</td>
                   <td>{invoice.status}</td>
                   <td>{invoice.refNumber}</td>
-                  <td className="download">
+                  <td className="view">
                     <a
-                      href="#download"
+                      href="#view"
                       onClick={async (e) => {
                         e.preventDefault();
 
-                        const filePath = await window.electron.chooseFilePath(
-                          "Save Invoice",
-                          `envkey-invoice-${dateString}.pdf`
-                        );
-
-                        if (!filePath) {
-                          return;
-                        }
-
                         props
                           .dispatch({
-                            type: Client.ActionType.DOWNLOAD_INVOICE,
+                            type: Client.ActionType.OPEN_URL,
                             payload: {
-                              filePath,
-                              invoiceId: invoice.id,
+                              url: `https://${getDefaultApiHostUrl()}/invoices/${
+                                invoice.id
+                              }`,
                             },
                           })
                           .then((res) => {
                             if (!res.success) {
                               logAndAlertError(
-                                `There was a problem downloading the invoice.`,
+                                `There was a problem viewing the invoice.`,
                                 (res.resultAction as any)?.payload
                               );
                             }
                           });
                       }}
                     >
-                      Download
+                      View
                     </a>
                   </td>
                 </tr>
@@ -101,7 +93,7 @@ export const Invoices: OrgComponent = (props) => {
           </tbody>
         </table>
       ) : (
-        <table />
+        <p>No invoices have been generated yet.</p>
       )}
     </div>
   );

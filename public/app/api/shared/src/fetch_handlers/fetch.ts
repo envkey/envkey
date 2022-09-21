@@ -15,7 +15,7 @@ import {
   getScope,
   getGeneratedEnvkeyEncryptedKeyOrBlobComposite,
 } from "@core/lib/blob";
-import { log } from "@core/lib/utils/logger";
+import { log, logStderr } from "@core/lib/utils/logger";
 import { env } from "../env";
 import { getOrg } from "../models/orgs";
 import { getOrgStats } from "../auth";
@@ -52,16 +52,25 @@ apiAction<
       throw new Api.ApiError("not found", 404);
     }
 
-    if (
-      generatedEnvkey.allowedIps &&
-      !ipMatchesAny(requestParams.ip, generatedEnvkey.allowedIps)
-    ) {
-      log("", {
+    try {
+      if (
+        generatedEnvkey.allowedIps &&
+        !ipMatchesAny(requestParams.ip, generatedEnvkey.allowedIps)
+      ) {
+        log("", {
+          "generatedEnvkey.allowedIps": generatedEnvkey.allowedIps,
+          ip: requestParams.ip,
+        });
+
+        throw new Api.ApiError("not found", 404);
+      }
+    } catch (err) {
+      logStderr("Error checking IP against allowed IPs", {
         "generatedEnvkey.allowedIps": generatedEnvkey.allowedIps,
         ip: requestParams.ip,
       });
 
-      throw new Api.ApiError("not found", 404);
+      throw err;
     }
 
     const blobScopes = R.uniq(

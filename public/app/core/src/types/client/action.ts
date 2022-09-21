@@ -786,14 +786,6 @@ export namespace Action {
       type: ActionType.SET_MISSING_ENVS;
       payload: State["envs"];
     };
-
-    DownloadInvoice: {
-      type: ActionType.DOWNLOAD_INVOICE;
-      payload: {
-        invoiceId: string;
-        filePath: string;
-      };
-    };
   };
 
   export type EnvUpdateAction = EnvUpdateActions[keyof EnvUpdateActions];
