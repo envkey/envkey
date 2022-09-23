@@ -41,16 +41,12 @@ func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localD
 	var envkey string
 	var appConfig AppConfig
 
-	if os.Getenv("ENVKEY") != "" {
-		envkey = os.Getenv("ENVKEY")
-	} else {
-		envFile := ".env"
-		if envFileOverride != "" {
-			envFile = envFileOverride
-		}
-		godotenv.Load(envFile)
-		envkey = os.Getenv("ENVKEY")
+	envFile := ".env"
+	if envFileOverride != "" {
+		envFile = envFileOverride
 	}
+	godotenv.Load(envFile)
+	envkey = os.Getenv("ENVKEY")
 
 	if envkey == "" {
 		if verboseOutput {
@@ -97,13 +93,8 @@ func EnvkeyFromAppId(orgId string, appId string, verboseOutput bool, localDevHos
 		fmt.Fprintln(os.Stderr, "got app ENVKEY path:", path)
 	}
 
-	envMap, err := godotenv.Read(path)
-
-	var envkey string
-
-	if err == nil {
-		envkey = envMap["ENVKEY"]
-	}
+	godotenv.Load(path)
+	envkey := os.Getenv("ENVKEY")
 
 	if verboseOutput {
 		fmt.Fprintln(os.Stderr, "loaded ENVKEY: ", envkey)
