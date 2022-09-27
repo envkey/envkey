@@ -127,6 +127,17 @@ export const UpdateCloudSubscription: OrgComponent = (props) => {
         }`
       : "Free";
 
+  const hasSubscriptionChange =
+    currentProduct?.id != selectedProductId ||
+    currentPrice?.id != selectedPrice?.id;
+  const hasChange =
+    hasSubscriptionChange || (subscription?.quantity ?? 1) != quantity;
+
+  const hasValidPromotionCode =
+    props.core.cloudBillingPromotionCode &&
+    promotionCode &&
+    props.core.cloudBillingPromotionCode.code == promotionCode;
+
   const addPaymentSourceIfNeeded = useCallback(
     async (error?: string): Promise<boolean> => {
       if (!paymentSource && selectedProduct && selectedPrice) {
@@ -218,7 +229,13 @@ export const UpdateCloudSubscription: OrgComponent = (props) => {
         );
       }
     }
-  }, [graphUpdatedAt, selectedProduct?.id, selectedPrice?.id, quantity]);
+  }, [
+    graphUpdatedAt,
+    selectedProduct?.id,
+    selectedPrice?.id,
+    quantity,
+    promotionCode && hasValidPromotionCode,
+  ]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,17 +298,6 @@ export const UpdateCloudSubscription: OrgComponent = (props) => {
       />
     );
   }
-
-  const hasSubscriptionChange =
-    currentProduct?.id != selectedProductId ||
-    currentPrice?.id != selectedPrice?.id;
-  const hasChange =
-    hasSubscriptionChange || (subscription?.quantity ?? 1) != quantity;
-
-  const hasValidPromotionCode =
-    props.core.cloudBillingPromotionCode &&
-    promotionCode &&
-    props.core.cloudBillingPromotionCode.code == promotionCode;
 
   return (
     <div className={styles.Billing}>
