@@ -811,6 +811,7 @@ const apiActions: {
         logTargetIds,
         backgroundLogTargetIds,
         responseBytes: handlerResponseBytes,
+        skipLogging,
       } = await apiActionConfig.handler(
         action,
         actionStart,
@@ -835,23 +836,26 @@ const apiActions: {
 
       let logTransactionStatement: Api.Db.SqlStatement | undefined;
       let backgroundLogStatement: Api.Db.SqlStatement | undefined;
-      try {
-        ({ logTransactionStatement, backgroundLogStatement } =
-          getLogTransactionStatement({
-            action,
-            auth,
-            response,
-            ip,
-            transactionId,
-            responseBytes,
-            handlerContext,
-            targetIds,
-            backgroundTargetIds,
-            now: actionStart,
-          }));
-      } catch (err) {
-        const { message, code } = err as Api.ApiError;
-        throw new Api.ApiError(message, code);
+
+      if (!skipLogging) {
+        try {
+          ({ logTransactionStatement, backgroundLogStatement } =
+            getLogTransactionStatement({
+              action,
+              auth,
+              response,
+              ip,
+              transactionId,
+              responseBytes,
+              handlerContext,
+              targetIds,
+              backgroundTargetIds,
+              now: actionStart,
+            }));
+        } catch (err) {
+          const { message, code } = err as Api.ApiError;
+          throw new Api.ApiError(message, code);
+        }
       }
 
       return {
@@ -975,6 +979,7 @@ const apiActions: {
           logTargetIds,
           backgroundLogTargetIds,
           responseBytes: handlerResponseBytes,
+          skipLogging,
         } = await apiActionConfig.handler(
           action,
           auth,
@@ -999,28 +1004,31 @@ const apiActions: {
 
       let logTransactionStatement: Api.Db.SqlStatement | undefined;
       let backgroundLogStatement: Api.Db.SqlStatement | undefined;
-      try {
-        ({ logTransactionStatement, backgroundLogStatement } =
-          getLogTransactionStatement({
-            action,
-            auth,
-            updatedUserGraph: (
-              response as {
-                graph?: Client.Graph.UserGraph;
-              }
-            ).graph,
-            response,
-            transactionId,
-            ip,
-            targetIds,
-            backgroundTargetIds,
-            responseBytes,
-            handlerContext,
-            now: actionStart,
-          }));
-      } catch (err) {
-        const { message, code } = err as Api.ApiError;
-        throw new Api.ApiError(message, code);
+
+      if (!skipLogging) {
+        try {
+          ({ logTransactionStatement, backgroundLogStatement } =
+            getLogTransactionStatement({
+              action,
+              auth,
+              updatedUserGraph: (
+                response as {
+                  graph?: Client.Graph.UserGraph;
+                }
+              ).graph,
+              response,
+              transactionId,
+              ip,
+              targetIds,
+              backgroundTargetIds,
+              responseBytes,
+              handlerContext,
+              now: actionStart,
+            }));
+        } catch (err) {
+          const { message, code } = err as Api.ApiError;
+          throw new Api.ApiError(message, code);
+        }
       }
 
       return {
@@ -1052,7 +1060,8 @@ const apiActions: {
       handlerUserClearSockets: Api.ClearUserSocketParams[] | undefined,
       handlerEnvkeyClearSockets: Api.ClearEnvkeySocketParams[] | undefined,
       handlerUpdatedGeneratedEnvkeyIds: string[] | undefined,
-      handlerResponseBytes: number | undefined;
+      handlerResponseBytes: number | undefined,
+      handlerSkipLogging: true | undefined;
 
     if (apiActionConfig.graphHandler) {
       if (!transactionConn) {
@@ -1093,26 +1102,29 @@ const apiActions: {
 
         let logTransactionStatement: Api.Db.SqlStatement | undefined;
         let backgroundLogStatement: Api.Db.SqlStatement | undefined;
-        try {
-          ({ logTransactionStatement, backgroundLogStatement } =
-            getLogTransactionStatement({
-              action,
-              auth,
-              previousOrgGraph: orgGraph,
-              updatedOrgGraph: orgGraph,
-              updatedUserGraph: userGraph!,
-              response: handlerRes.response,
-              handlerContext: handlerRes.handlerContext,
-              ip,
-              transactionId,
-              targetIds,
-              backgroundTargetIds,
-              responseBytes,
-              now: actionStart,
-            }));
-        } catch (err) {
-          const { message, code } = err as Api.ApiError;
-          throw new Api.ApiError(message, code);
+
+        if (!handlerRes.skipLogging) {
+          try {
+            ({ logTransactionStatement, backgroundLogStatement } =
+              getLogTransactionStatement({
+                action,
+                auth,
+                previousOrgGraph: orgGraph,
+                updatedOrgGraph: orgGraph,
+                updatedUserGraph: userGraph!,
+                response: handlerRes.response,
+                handlerContext: handlerRes.handlerContext,
+                ip,
+                transactionId,
+                targetIds,
+                backgroundTargetIds,
+                responseBytes,
+                now: actionStart,
+              }));
+          } catch (err) {
+            const { message, code } = err as Api.ApiError;
+            throw new Api.ApiError(message, code);
+          }
         }
 
         return {
@@ -1139,6 +1151,7 @@ const apiActions: {
       handlerEnvkeyClearSockets = handlerRes.clearEnvkeySockets;
       handlerUpdatedGeneratedEnvkeyIds = handlerRes.updatedGeneratedEnvkeyIds;
       handlerResponseBytes = handlerRes.responseBytes;
+      handlerSkipLogging = handlerRes.skipLogging;
 
       updatedOrgGraph = handlerRes.graph;
     } else {
@@ -1872,26 +1885,29 @@ const apiActions: {
 
     let logTransactionStatement: Api.Db.SqlStatement | undefined;
     let backgroundLogStatement: Api.Db.SqlStatement | undefined;
-    try {
-      ({ logTransactionStatement, backgroundLogStatement } =
-        getLogTransactionStatement({
-          action,
-          auth,
-          previousOrgGraph: orgGraph,
-          updatedOrgGraph,
-          updatedUserGraph,
-          response: response,
-          handlerContext,
-          transactionId,
-          targetIds,
-          backgroundTargetIds,
-          ip,
-          responseBytes,
-          now: actionStart,
-        }));
-    } catch (err) {
-      const { message, code } = err as Api.ApiError;
-      throw new Api.ApiError(message, code);
+
+    if (!handlerSkipLogging) {
+      try {
+        ({ logTransactionStatement, backgroundLogStatement } =
+          getLogTransactionStatement({
+            action,
+            auth,
+            previousOrgGraph: orgGraph,
+            updatedOrgGraph,
+            updatedUserGraph,
+            response: response,
+            handlerContext,
+            transactionId,
+            targetIds,
+            backgroundTargetIds,
+            ip,
+            responseBytes,
+            now: actionStart,
+          }));
+      } catch (err) {
+        const { message, code } = err as Api.ApiError;
+        throw new Api.ApiError(message, code);
+      }
     }
 
     logWithElapsed(

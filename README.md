@@ -1,4 +1,4 @@
-## Magical secure app config
+## Configuration and secrets management done right
 
 - End-to-end encryption for API keys and other secrets.
 

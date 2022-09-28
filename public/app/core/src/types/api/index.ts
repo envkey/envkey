@@ -69,6 +69,7 @@ namespace Api {
     Net.FetchChangesetOptions;
 
   type HandlerResultBase = {
+    skipLogging?: true;
     logTargetIds: string[] | ((response: Api.Net.ApiResult) => string[]);
     backgroundLogTargetIds?:
       | string[]

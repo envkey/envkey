@@ -486,7 +486,9 @@ apiAction<
       },
       transactionItems: {
         hardDeleteKeys,
-        softDeleteKeys: Object.values(orgGraph).map(pick(["pkey", "skey"])),
+        softDeleteKeys: Object.values(orgGraph)
+          .filter(({ pkey }) => pkey != "billing")
+          .map(pick(["pkey", "skey"])),
         hardDeleteEncryptedKeyParams,
         hardDeleteEncryptedBlobParams: [{ orgId: auth.org.id }],
         puts: [{ ...auth.org, deletedAt: now }],
