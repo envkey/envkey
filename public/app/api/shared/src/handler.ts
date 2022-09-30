@@ -1217,7 +1217,6 @@ const apiActions: {
 
     if (
       auth.type != "provisioningBearerAuthContext" &&
-      apiActionConfig.graphAuthorizer &&
       (("keys" in action.payload && action.payload.keys) ||
         ("blobs" in action.payload && action.payload.blobs))
     ) {

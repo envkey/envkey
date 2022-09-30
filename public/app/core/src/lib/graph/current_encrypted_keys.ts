@@ -103,8 +103,8 @@ export const getCurrentEncryptedKeys = memoize(
               getEnvironmentsByEnvParentId(active)[environment.envParentId] ??
               []
             )
-              .filter(
-                (sibling) =>
+              .filter((sibling) => {
+                return (
                   sibling.id != environment.id &&
                   !sibling.isSub &&
                   !(
@@ -112,7 +112,8 @@ export const getCurrentEncryptedKeys = memoize(
                     environment.parentEnvironmentId == sibling.id
                   ) &&
                   sibling.envUpdatedAt
-              )
+                );
+              })
               .map(R.prop("id"));
 
             if (siblingBaseEnvironmentIds.length > 0) {
@@ -392,7 +393,11 @@ export const getCurrentEncryptedKeys = memoize(
           userId
         );
 
-        if (envParentPermissions.has("app_read_user_locals")) {
+        if (
+          envParentPermissions.has("app_read_user_locals") ||
+          (userId == localsUserId &&
+            envParentPermissions.has("app_read_own_locals"))
+        ) {
           addLocals(userId, localsUserId);
         }
       };

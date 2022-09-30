@@ -2,6 +2,7 @@ import * as R from "ramda";
 import { Client, Api, Model, Crypto } from "@core/types";
 import { encryptSymmetricWithKey } from "@core/lib/crypto/proxy";
 import {
+  getAuth,
   getEnvInherits,
   getKeyableEnv,
   ensureEnvsFetched,
@@ -10,6 +11,7 @@ import {
   getPendingActionsByEnvironmentId,
   getInheritanceOverrides,
 } from "@core/lib/client";
+import { getEnvironmentPermissions, getEnvironmentName } from "@core/lib/graph";
 import { encryptedKeyParamsForEnvironments } from ".";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import set from "lodash.set";
@@ -26,8 +28,20 @@ export const envParamsForEnvironments = async (params: {
   reencryptChangesets?: true;
   initEnvs?: true;
 }) => {
-  const { state, pending, message, rotateKeys, reencryptChangesets, initEnvs } =
-    params;
+  const {
+    state,
+    context,
+    pending,
+    message,
+    rotateKeys,
+    reencryptChangesets,
+    initEnvs,
+  } = params;
+
+  const currentAuth = getAuth(state, context.accountIdOrCliKey);
+  if (!currentAuth || !currentAuth.privkey) {
+    throw new Error("Authentication and decrypted privkey required");
+  }
 
   let environmentIds = params.environmentIds;
 
@@ -290,6 +304,16 @@ export const envParamsForEnvironments = async (params: {
               environmentIdsSet.has(inheritingEnvironment.parentEnvironmentId))
           )
         ) {
+          continue;
+        }
+
+        const currentUserBasePermissions = getEnvironmentPermissions(
+          state.graph,
+          baseEnvironment.id,
+          currentAuth.userId
+        );
+
+        if (!currentUserBasePermissions.has("read")) {
           continue;
         }
 

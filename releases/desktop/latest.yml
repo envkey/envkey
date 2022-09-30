@@ -1,8 +1,8 @@
-version: 2.1.9
+version: 2.1.10
 files:
-  - url: EnvKey_Windows_Installer-2.1.9.exe
-    sha512: 7QYV0zmsp8Z8b62pQupqvw9zdLdsOdQ79wYw22wX4Fx4WAwp9ZlMbbSUxlFDOvxmp/e/zKIe/8EHL6HaHew/OA==
-    size: 73564584
-path: EnvKey_Windows_Installer-2.1.9.exe
-sha512: 7QYV0zmsp8Z8b62pQupqvw9zdLdsOdQ79wYw22wX4Fx4WAwp9ZlMbbSUxlFDOvxmp/e/zKIe/8EHL6HaHew/OA==
-releaseDate: '2022-09-26T23:19:27.624Z'
+  - url: EnvKey_Windows_Installer-2.1.10.exe
+    sha512: tORj1DrFH9G1AxlpUR7CiFAczE/C5DJ4nC9vwYnbE8HRA/JipfO7FgTsWah9hxAgIRUDvhyh8gmraL3d/coBkg==
+    size: 73565544
+path: EnvKey_Windows_Installer-2.1.10.exe
+sha512: tORj1DrFH9G1AxlpUR7CiFAczE/C5DJ4nC9vwYnbE8HRA/JipfO7FgTsWah9hxAgIRUDvhyh8gmraL3d/coBkg==
+releaseDate: '2022-09-30T13:44:19.606Z'

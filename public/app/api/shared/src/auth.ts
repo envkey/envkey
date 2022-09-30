@@ -15,6 +15,8 @@ import {
   getOrgPermissions,
   getAppPermissions,
   getConnectedBlockEnvironmentsForApp,
+  getEnvironmentName,
+  getObjectName,
   authz,
 } from "@core/lib/graph";
 import * as R from "ramda";
@@ -594,6 +596,7 @@ export const authenticate = async <
                   accessParams
                 )
               ) {
+                log("userEnvs - !authorizeEnvUpdate");
                 return false;
               }
             }
@@ -613,6 +616,7 @@ export const authenticate = async <
                   accessParams
                 )
               ) {
+                log("userEnvs - !authorizeLocalsEncryptedKeyUpdate");
                 return false;
               }
             }
@@ -632,6 +636,7 @@ export const authenticate = async <
             | Model.KeyableParent
             | undefined;
         if (!keyableParent) {
+          log("keyableParentEnvs - !keyableParent");
           return false;
         }
 
@@ -644,6 +649,7 @@ export const authenticate = async <
             update
           )
         ) {
+          log("keyableParentEnvs - !authorizeKeyableParentUpdate");
           return false;
         }
       }
@@ -651,12 +657,14 @@ export const authenticate = async <
 
     if (blockKeyableParentEnvs) {
       if (!encryptedByTrustChain) {
+        log("!encryptedByTrustChain");
         return false;
       }
 
       for (let blockId in blockKeyableParentEnvs) {
         const block = userGraph[blockId] as Model.Block | undefined;
         if (!block) {
+          log("!block");
           return false;
         }
         for (let keyableParentId in blockKeyableParentEnvs[blockId]) {
@@ -665,6 +673,7 @@ export const authenticate = async <
               | Model.KeyableParent
               | undefined;
           if (!keyableParent) {
+            log("blockKeyableParentEnvs - !keyableParent");
             return false;
           }
 
@@ -678,6 +687,7 @@ export const authenticate = async <
               blockId
             )
           ) {
+            log("blockKeyableParentEnvs - !authorizeKeyableParentUpdate");
             return false;
           }
         }
@@ -733,6 +743,7 @@ export const authenticate = async <
               accessParams
             )
           ) {
+            log("newDeviceEnvs - !authorizeEnvUpdate");
             return false;
           }
         }
@@ -752,6 +763,7 @@ export const authenticate = async <
               accessParams
             )
           ) {
+            log("newDeviceEnvs - !authorizeLocalsEncryptedKeyUpdate");
             return false;
           }
         }
@@ -767,16 +779,6 @@ export const authenticate = async <
         const { environments, locals } = blobs[envParentId];
 
         for (let environmentId in environments) {
-          if (
-            !getEnvironmentPermissions(
-              userGraph,
-              environmentId,
-              auth.user.id
-            ).has("write")
-          ) {
-            return false;
-          }
-
           const {
             env,
             meta,
@@ -798,7 +800,38 @@ export const authenticate = async <
               inheritanceOverrides
             )
           ) {
+            log("blobs - env update missing required attributes");
             return false;
+          }
+
+          if (env || meta || inherits || changesets || changesetsById) {
+            if (
+              !getEnvironmentPermissions(
+                userGraph,
+                environmentId,
+                auth.user.id
+              ).has("write")
+            ) {
+              log("blobs - no write permission");
+              return false;
+            }
+          }
+
+          if (inheritanceOverrides) {
+            const inheritsEnvironmentIds = Object.keys(inheritanceOverrides);
+
+            for (let inheritsEnvironmentId of inheritsEnvironmentIds) {
+              const currentUserOverridePermissions = getEnvironmentPermissions(
+                userGraph,
+                inheritsEnvironmentId,
+                auth.user.id
+              );
+
+              if (!currentUserOverridePermissions.has("write")) {
+                log("blobs - inheritance overrides - no write permission");
+                return false;
+              }
+            }
           }
         }
 
@@ -808,13 +841,19 @@ export const authenticate = async <
         for (let localsUserId in locals) {
           if (
             !(
-              localsUserId == auth.user.id ||
+              (localsUserId == auth.user.id &&
+                getEnvParentPermissions(
+                  userGraph,
+                  envParentId,
+                  auth.user.id
+                ).has("app_read_own_locals")) ||
               currentUserCanWriteOrgBlock ||
               getEnvParentPermissions(userGraph, envParentId, auth.user.id).has(
                 "app_write_user_locals"
               )
             )
           ) {
+            log("blobs - locals - not permitted");
             return false;
           }
 
@@ -822,6 +861,7 @@ export const authenticate = async <
             locals[localsUserId];
 
           if (!(env || meta) || !(changesets || changesetsById)) {
+            log("blobs - locals - missing required attributes");
             return false;
           }
         }
@@ -846,35 +886,29 @@ const authorizeEnvUpdate = (
     }
 
     if (userId && deviceId) {
-      const inviteOrGrantOrRecoveryKey = userGraph[deviceId] as
+      const deviceLike = userGraph[deviceId] as
+          | Model.OrgUserDevice
           | Model.Invite
           | Model.DeviceGrant
           | Model.RecoveryKey
           | undefined,
         user = userGraph[userId] as Model.CliUser | Model.OrgUser,
         cliUser = user.type == "cliUser" ? user : undefined;
-      let orgUserDevice: Model.OrgUserDevice | undefined;
 
-      if (!inviteOrGrantOrRecoveryKey && !cliUser) {
-        orgUserDevice = userGraph[deviceId] as Model.OrgUserDevice;
-      }
-
-      if (
-        !(inviteOrGrantOrRecoveryKey || inviteOrGrantOrRecoveryKey || cliUser)
-      ) {
+      if (!(deviceLike || cliUser)) {
+        log("authorizeEnvUpdate - !(deviceLike || cliUser)");
         return false;
       }
 
       if (cliUser && deviceId != "cli") {
+        log(`authorizeEnvUpdate - cliUser && deviceId != "cli"`);
         return false;
       }
 
-      if (
-        inviteOrGrantOrRecoveryKey &&
-        inviteOrGrantOrRecoveryKey.type == "recoveryKey"
-      ) {
+      if (deviceLike && deviceLike.type == "recoveryKey") {
         const orgUser = userGraph[userId] as Model.OrgUser;
         if (!orgUser) {
+          log(`authorizeEnvUpdate - recoveryKey - !orgUser`);
           return false;
         }
 
@@ -884,6 +918,7 @@ const authorizeEnvUpdate = (
             "org_generate_recovery_key"
           )
         ) {
+          log(`authorizeEnvUpdate - recoveryKey - not permitted`);
           return false;
         }
       }
@@ -893,6 +928,7 @@ const authorizeEnvUpdate = (
       | Model.Environment
       | undefined;
     if (!environment) {
+      log(`authorizeEnvUpdate - !environment`);
       return false;
     }
 
@@ -901,9 +937,12 @@ const authorizeEnvUpdate = (
         update.env ||
         update.meta ||
         update.inherits ||
-        update.inheritanceOverrides
+        update.inheritanceOverrides ||
+        ("changesets" in update && update.changesets) ||
+        ("changesetsById" in update && update.changesetsById)
       )
     ) {
+      log(`authorizeEnvUpdate - missing required attributes`);
       return false;
     }
 
@@ -932,6 +971,7 @@ const authorizeEnvUpdate = (
       (update.env || update.meta || update.inherits) &&
       !currentUserCanWriteEnv
     ) {
+      log(`authorizeEnvUpdate - no write permission`);
       return false;
     }
 
@@ -940,18 +980,21 @@ const authorizeEnvUpdate = (
       (!currentUserPermissions.has("read") ||
         !targetUserPermissions.has("read"))
     ) {
+      log(`authorizeEnvUpdate - no read permission`);
       return false;
     } else if (
       update.meta &&
       (!currentUserPermissions.has("read_meta") ||
         !targetUserPermissions.has("read_meta"))
     ) {
+      log(`authorizeEnvUpdate - no read_meta permission`);
       return false;
     } else if (
       update.inherits &&
       (!currentUserPermissions.has("read_inherits") ||
         !targetUserPermissions.has("read_inherits"))
     ) {
+      log(`authorizeEnvUpdate - no read_inherits permission`);
       return false;
     }
 
@@ -961,17 +1004,11 @@ const authorizeEnvUpdate = (
       (!currentUserPermissions.has("read_history") ||
         !targetUserPermissions.has("read_history"))
     ) {
+      log(`authorizeEnvUpdate - no read_history permission`);
       return false;
     }
 
     if (update.inheritanceOverrides) {
-      if (
-        !currentUserPermissions.has("read") ||
-        !targetUserPermissions.has("read")
-      ) {
-        return false;
-      }
-
       const inheritsEnvironmentIds = Array.isArray(update.inheritanceOverrides)
         ? update.inheritanceOverrides
         : Object.keys(update.inheritanceOverrides);
@@ -987,6 +1024,9 @@ const authorizeEnvUpdate = (
           action.type == Api.ActionType.CONNECT_BLOCK &&
           !currentUserOverridePermissions.has("read")
         ) {
+          log(
+            `authorizeEnvUpdate - inheritanceOverrides - CONNECT_BLOCK - no read permission`
+          );
           return false;
         } else if (
           action.type != Api.ActionType.ACCEPT_INVITE &&
@@ -996,8 +1036,11 @@ const authorizeEnvUpdate = (
           action.type != Api.ActionType.CREATE_INVITE &&
           action.type != Api.ActionType.CREATE_DEVICE_GRANT &&
           action.type != Api.ActionType.CREATE_CLI_USER &&
-          !currentUserOverridePermissions.has("write")
+          !currentUserOverridePermissions.has("read")
         ) {
+          log(
+            `authorizeEnvUpdate - inheritanceOverrides - no current user write permission for override environment`
+          );
           return false;
         }
       }
@@ -1032,6 +1075,7 @@ const authorizeEnvUpdate = (
       | Model.Block
       | undefined;
     if (!envParent) {
+      log(`authorizeLocalsEncryptedKeyUpdate - !envParent`);
       return false;
     }
 
@@ -1054,33 +1098,29 @@ const authorizeEnvUpdate = (
         targetUserOrgPermissions.has("blocks_read_all");
 
     if (userId && deviceId) {
-      const inviteOrGrantOrRecoveryKey = userGraph[deviceId] as
+      const deviceLike = userGraph[deviceId] as
+          | Model.OrgUserDevice
           | Model.Invite
           | Model.DeviceGrant
           | Model.RecoveryKey
           | undefined,
         user = userGraph[userId] as Model.OrgUser | Model.CliUser,
         cliUser = user.type == "cliUser" ? user : undefined;
-      let orgUserDevice: Model.OrgUserDevice | undefined;
 
-      if (!inviteOrGrantOrRecoveryKey && !cliUser) {
-        orgUserDevice = userGraph[deviceId] as Model.OrgUserDevice;
-      }
-
-      if (!(inviteOrGrantOrRecoveryKey || orgUserDevice || cliUser)) {
+      if (!(deviceLike || cliUser)) {
+        log(`authorizeLocalsEncryptedKeyUpdate - !(deviceLike || cliUser)`);
         return false;
       }
 
       if (cliUser && deviceId != "cli") {
+        log(`authorizeLocalsEncryptedKeyUpdate - cliUser && deviceId != "cli"`);
         return false;
       }
 
-      if (
-        inviteOrGrantOrRecoveryKey &&
-        inviteOrGrantOrRecoveryKey.type == "recoveryKey"
-      ) {
+      if (deviceLike && deviceLike.type == "recoveryKey") {
         const orgUser = userGraph[userId] as Model.OrgUser;
         if (!orgUser) {
+          log(`authorizeLocalsEncryptedKeyUpdate - recoveryKey - !orgUser`);
           return false;
         }
 
@@ -1090,6 +1130,9 @@ const authorizeEnvUpdate = (
             "org_generate_recovery_key"
           )
         ) {
+          log(
+            `authorizeLocalsEncryptedKeyUpdate - recoveryKey - not permitted`
+          );
           return false;
         }
       }
@@ -1121,6 +1164,7 @@ const authorizeEnvUpdate = (
           targetUserCanReadOrgBlock)
       )
     ) {
+      log(`authorizeLocalsEncryptedKeyUpdate - not permitted`);
       return false;
     }
 
@@ -1141,6 +1185,7 @@ const authorizeEnvUpdate = (
           targetUserCanReadOrgBlock
         )
       ) {
+        log(`authorizeLocalsEncryptedKeyUpdate - changesets - not permitted`);
         return false;
       }
     }
@@ -1196,12 +1241,7 @@ const authorizeEnvUpdate = (
 
     if (update.env) {
       if (!currentUserPermissions.has("write")) {
-        return false;
-      }
-    }
-
-    if (update.subEnv) {
-      if (!currentUserPermissions.has("write_branches")) {
+        log(`authorizeKeyableParentUpdate - no write permission`);
         return false;
       }
     }
@@ -1223,8 +1263,14 @@ const authorizeEnvUpdate = (
             action.type == Api.ActionType.CONNECT_BLOCK) &&
           !currentUserOverridePermissions.has("read")
         ) {
+          log(
+            `authorizeKeyableParentUpdate - inheritanceOverrides - no read permission`
+          );
           return false;
         } else if (!currentUserOverridePermissions.has("write")) {
+          log(
+            `authorizeKeyableParentUpdate - inheritanceOverrides - no write permission`
+          );
           return false;
         }
       }
@@ -1232,6 +1278,9 @@ const authorizeEnvUpdate = (
 
     if (update.localOverrides) {
       if (keyableParent.type != "localKey") {
+        log(
+          `authorizeKeyableParentUpdate - locals - keyableParent.type != "localKey"`
+        );
         return false;
       }
 
@@ -1251,12 +1300,14 @@ const authorizeEnvUpdate = (
             auth.user.id
           );
           if (!appRole) {
+            log(`authorizeKeyableParentUpdate - locals - !appRole`);
             return false;
           }
           appPermissions = getAppPermissions(userGraph, appRole.id);
         }
 
         if (!appPermissions.has("app_write_user_locals")) {
+          log(`authorizeKeyableParentUpdate - locals - no write permission`);
           return false;
         }
       }

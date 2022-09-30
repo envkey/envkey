@@ -42,18 +42,22 @@ export const clearOrphanedBlobPaths = (
       const { envParentId } = blobState.graph[
           environmentId
         ] as Model.Environment,
-        blob =
+        encryptedKey =
           currentUserEncryptedKeys?.[envParentId]?.environments?.[
             environmentId
           ];
-      if (!blob || !(blob.env || blob.meta || blob.inherits)) {
+      if (
+        !encryptedKey ||
+        !(encryptedKey.env || encryptedKey.meta || encryptedKey.inherits)
+      ) {
         paths.push(["envs", composite]);
       }
     } else {
       const [envParentId, localsUserId] = environmentId.split("|"),
-        blob = currentUserEncryptedKeys?.[envParentId]?.locals?.[localsUserId];
+        encryptedKey =
+          currentUserEncryptedKeys?.[envParentId]?.locals?.[localsUserId];
       if (blobState.graph[envParentId]) {
-        if (!blob || !blob.env) {
+        if (!encryptedKey || !encryptedKey.env) {
           paths.push(["envs", composite]);
         }
       } else {

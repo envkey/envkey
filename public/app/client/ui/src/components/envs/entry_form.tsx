@@ -80,11 +80,31 @@ export const EntryForm: EnvManagerComponent = (props) => {
           envParentId: props.envParentId,
           entryKey: entryFormState.entryKey,
           vals: R.mergeAll(
-            environmentIds.map((environmentId) => ({
-              [environmentId]: entryFormState.vals[environmentId] ?? {
-                isUndefined: true,
-              },
-            }))
+            environmentIds.map((environmentId) => {
+              let canUpdate: boolean;
+              const environment = props.core.graph[environmentId] as
+                | Model.Environment
+                | undefined;
+              if (environment) {
+                canUpdate = envsUiPermissions[environmentId].canUpdate;
+              } else {
+                const [envParentId, localsUserId] = environmentId.split("|");
+                canUpdate = g.authz.canUpdateLocals(
+                  props.core.graph,
+                  currentUserId,
+                  envParentId,
+                  localsUserId
+                );
+              }
+
+              return canUpdate
+                ? {
+                    [environmentId]: entryFormState.vals[environmentId] ?? {
+                      isUndefined: true,
+                    },
+                  }
+                : {};
+            })
           ),
         },
       })

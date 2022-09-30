@@ -34,6 +34,7 @@ import {
   graphTypes,
   getEnvironmentName,
   getObjectName,
+  authz,
 } from "@core/lib/graph";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -120,9 +121,43 @@ clientAction<Client.Action.ClientActions["CreateEntryRow"]>({
     { payload: { vals, envParentId, entryKey } },
     context
   ) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
     await Promise.all(
-      R.toPairs(vals).map(([environmentId, update]) =>
-        dispatch<Client.Action.ClientActions["CreateEntry"]>(
+      R.toPairs(vals).map(([environmentId, update]) => {
+        let canUpdate: boolean;
+        const environment = state.graph[environmentId] as
+          | Model.Environment
+          | undefined;
+        if (environment) {
+          const permissions = getEnvironmentPermissions(
+            state.graph,
+            environmentId,
+            auth!.userId
+          );
+
+          canUpdate = permissions.has("write");
+        } else {
+          const [envParentId, localsUserId] = environmentId.split("|");
+          canUpdate = authz.canUpdateLocals(
+            state.graph,
+            auth.userId,
+            envParentId,
+            localsUserId
+          );
+        }
+
+        if (!canUpdate) {
+          throw new Error(
+            "User must have write permissions for all environments to update an entry"
+          );
+        }
+
+        return dispatch<Client.Action.ClientActions["CreateEntry"]>(
           {
             type: Client.ActionType.CREATE_ENTRY,
             payload: {
@@ -133,8 +168,8 @@ clientAction<Client.Action.ClientActions["CreateEntryRow"]>({
             },
           },
           context
-        )
-      )
+        );
+      })
     );
   },
 });
@@ -1291,6 +1326,7 @@ clientAction<
         auth.userId,
         auth.type == "clientUserAuth" ? auth.deviceId : "cli"
       );
+
       return dispatchSuccess(
         { paths, graphUpdatedAt: state.graphUpdatedAt! },
         context

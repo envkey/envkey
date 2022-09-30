@@ -584,6 +584,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
 
       addUserInheritanceOverrides({
         state,
+        currentUserId: currentAuth.userId,
         baseEnvironment,
         inheritingEnvironmentIds,
         environmentIdsSet,
@@ -601,6 +602,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
 
       addKeyableParentInheritanceOverrides({
         state,
+        currentUserId: currentAuth.userId,
         baseEnvironment,
         inheritingKeyableParents,
         envParent,
@@ -619,6 +621,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
 
       addKeyableParentInheritanceOverrides({
         state,
+        currentUserId: currentAuth.userId,
         baseEnvironment,
         inheritingKeyableParents,
         envParent,
@@ -712,6 +715,7 @@ const getInheritingKeyableParents = (params: {
 
 const addUserInheritanceOverrides = (params: {
   state: Client.State;
+  currentUserId: string;
   baseEnvironment: Model.Environment;
   inheritingEnvironmentIds: Set<string>;
   environmentIdsSet: Set<string>;
@@ -725,6 +729,7 @@ const addUserInheritanceOverrides = (params: {
 }) => {
   const {
     state,
+    currentUserId,
     baseEnvironment,
     inheritingEnvironmentIds,
     environmentIdsSet,
@@ -750,6 +755,16 @@ const addUserInheritanceOverrides = (params: {
           environmentIdsSet.has(inheritingEnvironment.parentEnvironmentId))
       )
     ) {
+      continue;
+    }
+
+    const currentUserBasePermissions = getEnvironmentPermissions(
+      state.graph,
+      baseEnvironment.id,
+      currentUserId
+    );
+
+    if (!currentUserBasePermissions.has("read")) {
       continue;
     }
 
@@ -814,6 +829,7 @@ const addUserInheritanceOverrides = (params: {
 
 const addKeyableParentInheritanceOverrides = (params: {
   state: Client.State;
+  currentUserId: string;
   baseEnvironment: Model.Environment;
   inheritingKeyableParents: Model.KeyableParent[];
   envParent: Model.EnvParent;
@@ -826,6 +842,7 @@ const addKeyableParentInheritanceOverrides = (params: {
 }) => {
   const {
     state,
+    currentUserId,
     baseEnvironment,
     inheritingKeyableParents,
     envParent,
@@ -846,6 +863,16 @@ const addKeyableParentInheritanceOverrides = (params: {
       ] as Model.Environment;
 
     if (!generatedEnvkey) {
+      continue;
+    }
+
+    const currentUserBasePermissions = getEnvironmentPermissions(
+      state.graph,
+      baseEnvironment.id,
+      currentUserId
+    );
+
+    if (!currentUserBasePermissions.has("read")) {
       continue;
     }
 
