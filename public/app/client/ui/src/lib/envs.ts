@@ -52,9 +52,9 @@ export const getEnvsUiPermissions = (
               canReadMeta,
               canReadVersions,
             },
-          };
+          } as EnvsUiPermissions;
         })
-        .filter((res): res is EnvsUiPermissions => typeof res != "undefined")
+        .filter((res) => typeof res != "undefined")
     ),
   getValDisplay = (val: string) =>
     val.split(/\n/).join("\\n").split(/\r/).join("\\r"),

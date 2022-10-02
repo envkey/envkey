@@ -272,8 +272,9 @@ export const LabelRow: EnvManagerComponent = (props) => {
     let localsUserId: string | undefined;
 
     if (environment) {
-      ({ canUpdate, canRead, canReadVersions } =
-        envsUiPermissions[environmentId]);
+      ({ canUpdate, canRead, canReadVersions } = envsUiPermissions[
+        environmentId
+      ] ?? { canUpdate: false, canRead: false, canReadVersions: false });
     } else {
       const split = environmentId.split("|");
       localsUserId = split[1];

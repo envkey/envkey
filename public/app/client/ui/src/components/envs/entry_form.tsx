@@ -33,7 +33,13 @@ export const EntryForm: EnvManagerComponent = (props) => {
         props.visibleEnvironmentIds,
         props.localsUserId
       ),
-    [currentUserId, props.visibleEnvironmentIds, props.core.graphUpdatedAt]
+    [
+      currentUserId,
+      props.envParentId,
+      props.localsUserId,
+      JSON.stringify(props.visibleEnvironmentIds),
+      props.core.graphUpdatedAt,
+    ]
   );
 
   const currentEntryKeysSet = useMemo(() => {
@@ -86,7 +92,8 @@ export const EntryForm: EnvManagerComponent = (props) => {
                 | Model.Environment
                 | undefined;
               if (environment) {
-                canUpdate = envsUiPermissions[environmentId].canUpdate;
+                canUpdate =
+                  envsUiPermissions[environmentId]?.canUpdate ?? false;
               } else {
                 const [envParentId, localsUserId] = environmentId.split("|");
                 canUpdate = g.authz.canUpdateLocals(
@@ -136,7 +143,7 @@ export const EntryForm: EnvManagerComponent = (props) => {
 
     let canUpdate: boolean;
     if (environment) {
-      canUpdate = envsUiPermissions[environmentId].canUpdate;
+      canUpdate = envsUiPermissions[environmentId]?.canUpdate ?? false;
     } else {
       const [envParentId, localsUserId] = environmentId.split("|");
       canUpdate = g.authz.canUpdateLocals(
