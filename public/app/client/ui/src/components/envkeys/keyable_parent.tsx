@@ -260,8 +260,10 @@ export const KeyableParent: OrgComponent<
       )
     ) {
       content.push(
-        <button
+        <span
+          className="regen"
           onClick={() => {
+            onRegenerate!();
             props
               .dispatch({
                 type: Client.ActionType.GENERATE_KEY,
@@ -274,15 +276,16 @@ export const KeyableParent: OrgComponent<
               .then((res) => {
                 if (!res.success) {
                   logAndAlertError(
-                    `There was a problem genearting the ENVKEY.`,
+                    `There was a problem generating the ENVKEY.`,
                     (res.resultAction as any)?.payload
                   );
                 }
               });
           }}
         >
-          Generate
-        </button>
+          <SvgImage type="restore" />
+          <span>Generate ENVKEY</span>
+        </span>
       );
     }
 
@@ -296,7 +299,7 @@ export const KeyableParent: OrgComponent<
   };
 
   const renderEnvkey = () => {
-    return (
+    return justGenerated || generatedEnvkey ? (
       <span className="envkey">
         ENVKEY=
         {justGenerated
@@ -304,6 +307,8 @@ export const KeyableParent: OrgComponent<
           : generatedEnvkey?.envkeyShort}
         …{justGenerated && copied ? <small>Copied.</small> : ""}
       </span>
+    ) : (
+      <span className="envkey no-envkey">No ENVKEY generated.</span>
     );
   };
 

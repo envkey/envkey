@@ -22,7 +22,7 @@ func Load(shouldCache bool, firstAttempt bool) {
 	*	  4 - .env file at ~/.env
 	 */
 
-	envkey, appConfig = env.GetEnvkey(false, "envFileOverride", true, false)
+	envkey, appConfig = env.GetEnvkey(false, "", true, false)
 
 	if envkey == "" {
 		panic(errors.New("missing ENVKEY"))

@@ -371,7 +371,15 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
   },
   handler: async (
     initialState,
-    { payload: { filePath, encryptionKey, importOrgUsers } },
+    {
+      payload: {
+        filePath,
+        encryptionKey,
+        importOrgUsers,
+        importServers,
+        regenServerKeys,
+      },
+    },
     { context, dispatchSuccess, dispatchFailure }
   ) => {
     let state = initialState;
@@ -956,7 +964,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       }
     }
 
-    if (archive.servers.length > 0) {
+    if (importServers && archive.servers.length > 0) {
       await updateStatus("Regenerating servers");
 
       for (let archiveServer of archive.servers) {
@@ -967,6 +975,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
               appId: idMap[archiveServer.appId],
               environmentId: idMap[archiveServer.environmentId],
               name: archiveServer.name,
+              skipGenerateKey: !regenServerKeys,
             },
           },
           context

@@ -33,12 +33,16 @@ const getCreateKeyableParentHandler =
           keyableParentType == "server"
             ? Api.ActionType.CREATE_SERVER
             : Api.ActionType.CREATE_LOCAL_KEY,
-        payload,
+        payload: R.omit(["skipGenerateKey"], payload),
       } as any,
       context
     );
 
     if (apiRes.success) {
+      if (payload.skipGenerateKey) {
+        return dispatchSuccess(null, context);
+      }
+
       const created =
         keyableParentType == "server"
           ? R.find(

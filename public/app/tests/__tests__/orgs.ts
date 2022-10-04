@@ -1797,6 +1797,8 @@ describe("orgs", () => {
           encryptionKey,
           filePath,
           importOrgUsers: true,
+          importServers: true,
+          regenServerKeys: true,
         },
       },
       owner2Id

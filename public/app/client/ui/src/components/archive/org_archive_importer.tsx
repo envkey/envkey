@@ -21,6 +21,8 @@ export const OrgArchiveImporter: OrgComponent<
 
   const [encryptionKey, setEncryptionKey] = useState("");
   const [importOrgUsers, setImportOrgUsers] = useState(true);
+  const [importServers, setImportServers] = useState(true);
+  const [regenServerKeys, setRegenServerKeys] = useState(true);
   const [importing, setImporting] = useState(false);
 
   const [importComplete, setImportComplete] = useState(false);
@@ -54,6 +56,12 @@ export const OrgArchiveImporter: OrgComponent<
     })();
   }, [props.core.isImportingOrg]);
 
+  useEffect(() => {
+    if (!importServers && regenServerKeys) {
+      setRegenServerKeys(false);
+    }
+  }, [importServers]);
+
   const clearGenerated = () => {
     props.dispatch({
       type: Client.ActionType.CLEAR_GENERATED_INVITES,
@@ -81,6 +89,8 @@ export const OrgArchiveImporter: OrgComponent<
           filePath: props.filePath,
           encryptionKey,
           importOrgUsers,
+          importServers,
+          regenServerKeys,
         },
       })
       .then((res) => {
@@ -254,6 +264,43 @@ export const OrgArchiveImporter: OrgComponent<
       >
         <label>Automatically Re-Invite Users?</label>
         <input type="checkbox" checked={importOrgUsers} />
+      </div>,
+
+      <p>
+        If you have large numbers of servers in your org, you might prefer to
+        re-generate them gradually rather than automatically as part of the
+        import. You can recreate your servers as placeholders, but wait on
+        generating their associated ENVKEYs by checking{" "}
+        <strong>Automatically Re-Create Servers?</strong> below, but leaving{" "}
+        <strong>Regenerate Server ENVKEYs?</strong> unchecked.
+      </p>,
+
+      <div
+        className={"field checkbox" + (importServers ? " selected" : "")}
+        onClick={() => setImportServers(!importServers)}
+      >
+        <label>Automatically Re-Create Servers?</label>
+        <input type="checkbox" checked={importServers} />
+      </div>,
+
+      <div
+        className={
+          "field checkbox" +
+          (regenServerKeys ? " selected" : "") +
+          (importServers ? "" : " disabled")
+        }
+        onClick={() => {
+          if (importServers) {
+            setRegenServerKeys(!regenServerKeys);
+          }
+        }}
+      >
+        <label>Regenerate Server ENVKEYs?</label>
+        <input
+          type="checkbox"
+          disabled={!importServers}
+          checked={regenServerKeys}
+        />
       </div>,
 
       <div className="field">
