@@ -1,1 +1,1 @@
-web: envkey-source -w -- node server.js
+web: es -w -- node server.js
