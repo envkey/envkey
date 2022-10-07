@@ -36,15 +36,25 @@ if [ -f $ENV_DIR/ENVKEY ]; then
   mkdir -p $ENVKEY_DIR
   mv envkey-source $ENVKEY_DIR
 
-  echo "creating es alias" | indent
-  cp $ENVKEY_DIR/envkey-source $ENVKEY_DIR/es
+  # don't ovewrite existing es command
+  if [ ! -x "$(command -v es)" ]; then
+    echo "creating es alias" | indent
+    cp $ENVKEY_DIR/envkey-source $ENVKEY_DIR/es
+  fi
 
   echo "ENVKEY is set" | indent
   export "ENVKEY=$(cat $ENV_DIR/ENVKEY)"
+  echo $($ENVKEY_DIR/envkey-source) > $BP_DIR/export
+  echo "EnvKey variables exported to subsequent buildpacks" | indent
   mkdir -p $BUILD_DIR/.profile.d
   cat > $BUILD_DIR/.profile.d/envkey.sh << EOF
+export -p > ./envkey-runtime-env.sh
+$(cat $BP_DIR/export)
+. ./envkey-runtime-env.sh
+rm envkey-runtime-env.sh
 export PATH=\$PATH:\$HOME/vendor/envkey/bin
 EOF
+  echo "EnvKey variables exported to running application via .profile.d/envkey.sh" | indent
   echo "envkey-source executable is available for use" | indent
 else
   echo "ENVKEY not set" | indent
