@@ -1,1 +1,0 @@
-web: es -w -- node server.js

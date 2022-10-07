@@ -14,6 +14,6 @@ app.get("/", (req, res)=> {
   `)
 });
 
-app.listen(port);
-
+app.listen(port, '0.0.0.0');  
 console.log(`EnvKey node test app listening on ${port}...`);
+console.log(`TITLE: ${process.env.TITLE}`)

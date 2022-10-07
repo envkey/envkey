@@ -4,9 +4,7 @@
   "description": "Integrating a node app with EnvKey",
   "type" : "module",
   "main": "server.js",
-  "scripts": {
-    "start": "envkey-source-v2 -e 'node server.js' -w -r 'say $TITLE!'"
-  },
+
   "author": "Envkey Inc.",
   "license": "MIT",
   "dependencies": {
