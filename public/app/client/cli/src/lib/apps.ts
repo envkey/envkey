@@ -14,7 +14,8 @@ export const createApp = async (
   state: Client.State,
   nameArg: string | undefined,
   dirArg: string | undefined,
-  confirmName?: true
+  confirmName?: true,
+  quiet?: true
 ): Promise<Model.App> => {
   const prompt = getPrompt();
 
@@ -59,33 +60,37 @@ export const createApp = async (
 
   await logAndExitIfActionFailed(res, `Creating the app ${name} failed.`);
 
-  console.log(chalk.bold("App created.\n"));
+  if (!quiet) {
+    console.log(chalk.bold("App created.\n"));
+  }
 
   state = res.state;
 
-  const newApp = graphTypes(state.graph).apps.filter(
-      R.propEq("createdAt", state.graphUpdatedAt)
-    )[0]!,
+  const newApp = R.last(
+      R.sortBy(R.prop("createdAt"), graphTypes(state.graph).apps)
+    )!,
     role = getAppRoleForUserOrInvitee(state.graph, newApp.id, auth.userId);
 
-  const table = new Table({
-    colWidths: [15, 40],
-  });
+  if (!quiet) {
+    const table = new Table({
+      colWidths: [15, 40],
+    });
 
-  table.push(
-    ["App Name", chalk.bold(newApp.name)],
-    ["Your Role", chalk.bold(role!.name)],
-    ["Environments", chalk.bold(getEnvironmentTree(state.graph, newApp.id))]
-  );
+    table.push(
+      ["App Name", chalk.bold(newApp.name)],
+      ["Your Role", chalk.bold(role!.name)],
+      ["Environments", chalk.bold(getEnvironmentTree(state.graph, newApp.id))]
+    );
 
-  console.log(table.toString());
-  console.log("");
+    console.log(table.toString());
+    console.log("");
 
-  console.log(
-    `Use ${chalk.bold("envkey set")} to set config values or ${chalk.bold(
-      "envkey apps grant"
-    )} to give users access.`
-  );
+    console.log(
+      `Use ${chalk.bold("envkey set")} to set config values or ${chalk.bold(
+        "envkey apps grant"
+      )} to give users access.`
+    );
+  }
 
   return newApp;
 };

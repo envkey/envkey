@@ -59,15 +59,9 @@ export const handler = async (
 
   state = res.state;
 
-  const newBlock = graphTypes(state.graph).blocks.find(
-    R.propEq("createdAt", state.graphUpdatedAt)
-  );
-  if (!newBlock) {
-    return exit(
-      1,
-      chalk.red.bold("Failed to fetch block after successful creation.")
-    );
-  }
+  const newBlock = R.last(
+    R.sortBy(R.prop("createdAt"), graphTypes(state.graph))
+  )!;
 
   console.log(chalk.bold("Block created.\n"));
 

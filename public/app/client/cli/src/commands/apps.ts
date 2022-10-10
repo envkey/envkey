@@ -11,6 +11,7 @@ import * as listCollaborators from "./apps_cmd/list_collaborators";
 import * as listCliKeys from "./apps_cmd/list_cli_keys";
 import * as accessUpdate from "./apps_cmd/access_update";
 import * as current from "./apps_cmd/current";
+import * as duplicate from "./apps_cmd/duplicate";
 
 addCommand((yargs: Argv<BaseArgs>) =>
   yargs.command(
@@ -27,6 +28,7 @@ addCommand((yargs: Argv<BaseArgs>) =>
         .command(listCliKeys)
         .command(accessUpdate)
         .command(current)
+        .command(duplicate)
         .demandCommand() // invalid sub-commands will hang without this
   )
 );
