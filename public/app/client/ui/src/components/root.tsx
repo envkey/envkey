@@ -180,6 +180,25 @@ const clientParams: Client.ClientParams<"app"> = {
           fetchCoreState();
         }
       },
+      onSocketMessage = (e: MessageEvent) => {
+        (async () => {
+          const msg = JSON.parse(e.data) as Client.LocalSocketMessage;
+
+          if (msg.type == "update") {
+            onSocketUpdate(e);
+          } else if (msg.type == "diffs") {
+            const newState = R.clone(coreStateRef.current!);
+            applyPatch(newState, msg.diffs);
+            setCoreStateIfLatest(newState);
+          } else {
+            console.log(
+              new Date().toISOString(),
+              "Received unknown socket message for core proc: ",
+              e.data
+            );
+          }
+        })();
+      },
       dispatch: ComponentProps["dispatch"] = async (
         action,
         hostUrlOverride?: string,
@@ -217,9 +236,26 @@ const clientParams: Client.ClientParams<"app"> = {
         } as Client.DispatchResult & { status: number };
       };
 
-    useEffect(() => {
+    const initLocalSocket = () => {
+      const client = new ReconnectingWebSocket(
+        "ws://localhost:19048",
+        undefined,
+        { debug: true }
+      );
+      client.addEventListener("open", onSocketUpdate);
+      client.addEventListener("message", onSocketMessage);
+      client.addEventListener("error", (e) => {
+        console.log("Local socket error:", e);
+      });
+    };
+
+    const init = useCallback(() => {
       // ensures we don't start trying to connect to core proc until it's running and the auth token has been retrieved from OS keyring and added to user agent
       if (!navigator.userAgent.startsWith(Client.CORE_PROC_AGENT_NAME)) {
+        console.log(
+          "navigator.userAgent does not include CORE_PROC_AGENT_NAME"
+        );
+        setTimeout(init, 300);
         return;
       }
 
@@ -232,34 +268,13 @@ const clientParams: Client.ClientParams<"app"> = {
           dispatch({ type: Client.ActionType.DISCONNECT_CLIENT });
         }
       });
-      const client = new ReconnectingWebSocket(
-        "ws://localhost:19048",
-        undefined,
-        { debug: true }
-      );
-      client.addEventListener("open", onSocketUpdate);
-      client.addEventListener("message", (e) => {
-        (async () => {
-          const msg = JSON.parse(e.data) as Client.LocalSocketMessage;
 
-          if (msg.type == "update") {
-            onSocketUpdate(e);
-          } else if (msg.type == "diffs") {
-            const newState = R.clone(coreStateRef.current!);
-            applyPatch(newState, msg.diffs);
-            setCoreStateIfLatest(newState);
-          } else {
-            console.log(
-              new Date().toISOString(),
-              "Received unknown socket message for core proc: ",
-              e.data
-            );
-          }
-        })();
-      });
+      initLocalSocket();
 
       fetchCoreState(true);
-    }, [navigator.userAgent]);
+    }, [coreState]);
+
+    useEffect(init, [navigator.userAgent]);
 
     useLayoutEffect(() => {
       forceRenderStyles();

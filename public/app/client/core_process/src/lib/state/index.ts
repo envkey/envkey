@@ -111,13 +111,23 @@ export const newAccountStateProducer: NewAccountStateProducer = (
 export const waitForStateCondition = async (
   store: Client.ReduxStore,
   context: ContextParams,
-  conditionFn: (state: Client.State) => boolean
+  conditionFn: (state: Client.State) => boolean,
+  timeout = 60000
 ) => {
   let state = getState(store, context);
+  let total = 0;
+
   while (!conditionFn(state)) {
     await wait(50);
+    total += 50;
+
+    if (timeout && total > timeout) {
+      log("waitForStateCondition timeout", { timeout, total });
+      log("conditionFn: " + conditionFn.toString());
+      console.trace();
+      throw new Error("Timeout waiting for state condition");
+    }
+
     state = getState(store, context);
   }
 };
-
-export const mergeFetchEnvsResults = async (state: Client.State) => {};

@@ -118,7 +118,8 @@ export const clientAction = <
       await waitForStateCondition(
         store,
         context,
-        (state) => !state.isFetchingSession
+        (state) => !state.isFetchingSession,
+        30000
       );
     }
 
