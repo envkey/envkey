@@ -42,13 +42,13 @@ if [ -f $ENV_DIR/ENVKEY ]; then
   echo "ENVKEY is set" | indent
   export "ENVKEY=$(cat $ENV_DIR/ENVKEY)"
 
-  if [ -f $ENV_DIR/HTTPS_PROXY ]; then    
-    echo "Detected HTTPS_PROXY config var. Exporting as env var." | indent
-    export "HTTPS_PROXY=$(cat $ENV_DIR/HTTPS_PROXY)"
+  if [ -f $ENV_DIR/ENVKEY_PROXY ]; then    
+    echo "Detected ENVKEY_PROXY config var. Exporting as env var." | indent
+    export "ENVKEY_PROXY=$(cat $ENV_DIR/ENVKEY_PROXY)"
   fi
 
   if [ -f $ENV_DIR/ENVKEY_BUILD_PHASE_EXPORT ]; then    
-    echo $($ENVKEY_DIR/envkey-source) > $BP_DIR/export
+    echo $(HTTPS_PROXY=$ENVKEY_PROXY $ENVKEY_DIR/envkey-source) > $BP_DIR/export
     echo "EnvKey variables exported to subsequent buildpacks" | indent
   fi
 
