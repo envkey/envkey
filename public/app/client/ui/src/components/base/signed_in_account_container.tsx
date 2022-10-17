@@ -198,31 +198,6 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     }
   }, [props.core.throttleError]);
 
-  const shouldFetchSession = Boolean(
-    props.ui.loadedAccountId &&
-      auth &&
-      auth.token &&
-      auth.privkey &&
-      (!props.core.graphUpdatedAt ||
-        !props.core.graph[props.ui.loadedAccountId]) &&
-      !props.core.isFetchingSession &&
-      !props.core.fetchSessionError &&
-      !props.core.fetchSessionNotModified
-  );
-
-  useLayoutEffect(() => {
-    (async () => {
-      if (shouldFetchSession) {
-        if (document.documentElement.classList.contains("loaded")) {
-          document.documentElement.classList.remove("loaded");
-        }
-        const res = await props.dispatch({
-          type: Client.ActionType.GET_SESSION,
-        });
-      }
-    })();
-  }, [props.ui.loadedAccountId, shouldFetchSession]);
-
   const shouldRequireRecoveryKey = useMemo(() => {
     if (
       !props.ui.loadedAccountId ||
@@ -562,6 +537,21 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       shouldRedirectPath ||
       !uiTree
     );
+
+  if (!shouldRender) {
+    console.log("signed_in_account_container: won't render yet", {
+      auth: Boolean(auth),
+      "props.core.fetchSessionError": props.core.fetchSessionError,
+      "props.ui.loadedAccountId": Boolean(props.ui.loadedAccountId),
+      currentUser: Boolean(currentUser),
+      "auth.orgId": auth?.orgId ?? false,
+      orgId,
+      shouldRedirectPath,
+      uiTree: Boolean(uiTree),
+    });
+  } else {
+    console.log("signed_in_account_container: will render");
+  }
 
   useLayoutEffect(() => {
     if (

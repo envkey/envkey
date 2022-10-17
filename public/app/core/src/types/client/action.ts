@@ -166,7 +166,7 @@ export namespace Action {
     };
     GetSession: {
       type: ActionType.GET_SESSION;
-      payload?: { skipWaitForReencryption?: true };
+      payload?: { skipWaitForReencryption?: true; noop?: true };
     };
     AuthenticateCliKey: {
       type: ActionType.AUTHENTICATE_CLI_KEY;

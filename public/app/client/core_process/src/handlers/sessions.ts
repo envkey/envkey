@@ -258,6 +258,13 @@ clientAction<
     action,
     { context, dispatchSuccess, dispatchFailure }
   ) => {
+    if (action.payload?.noop) {
+      return dispatchSuccess(
+        { timestamp: Date.now(), notModified: true },
+        context
+      );
+    }
+
     let state = initialState;
 
     let auth = getAuth<Client.ClientUserAuth>(state, context.accountIdOrCliKey);

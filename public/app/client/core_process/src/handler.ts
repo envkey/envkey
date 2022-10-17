@@ -119,8 +119,9 @@ export const clientAction = <
         store,
         context,
         (state) => !state.isFetchingSession,
-        30000
+        20000
       );
+      action.payload = { ...(action.payload ?? {}), noop: true };
     }
 
     const handleSuccess = getHandleSuccess(actionParams, action, store, tempId),

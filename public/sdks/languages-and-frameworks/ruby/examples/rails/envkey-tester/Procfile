@@ -1,2 +1,2 @@
-web: es -r ./restart-dyno.sh --rolling -- bundle exec puma -C config/puma.rb
-release: es -- ./heroku-release.sh
+web: bundle exec puma -C config/puma.rb
+release: ./heroku-release.sh

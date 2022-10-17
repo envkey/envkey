@@ -61,6 +61,7 @@ export const resolveOrgSockets = async (
     }
   },
   clearSocket = (userId: string, silent = false) => {
+    log("clearing socket " + userId);
     delete storeByUserId[userId];
     const socket = sockets[userId];
     if (socket) {
@@ -247,18 +248,36 @@ const connectSocket = async (
       clearSocket(account.userId, reconnectAttempt > 0);
 
       const state = store.getState();
-      if (!state.accountStates[account.userId]?.fetchSessionError) {
-        refreshSessions(state, _localSocketUpdate, [account.userId]);
-      }
 
+      let throttled = false;
+      let alwaysFetchSession = false;
+      let shouldRetry = true;
+      let timeoutMultiplier = 1;
       if (
         ("message" in evt && evt.message.endsWith("401")) ||
         ("code" in evt && evt.code === 4001)
       ) {
         // don't retry when response is unauthorized
         log("Socket connection unauthorized. Won't retry.", logAccountData);
-        refreshSessions(state, _localSocketUpdate, [account.userId]);
-        return;
+        shouldRetry = false;
+        alwaysFetchSession = true;
+      } else if ("message" in evt && evt.message.endsWith("429")) {
+        throttled = true;
+        timeoutMultiplier = 100;
+        log(
+          `Socket connection attempt throttled. Will retry connection every ${
+            RETRY_BASE_DELAY * timeoutMultiplier
+          }ms + jitter`,
+          logAccountData
+        );
+      } else if ("message" in evt && evt.message.includes("ENOTFOUND")) {
+        timeoutMultiplier = 100;
+        log(
+          `Socket server isn't reachable. Will retry connection every ${
+            RETRY_BASE_DELAY * timeoutMultiplier
+          }ms + jitter.`,
+          logAccountData
+        );
       } else if (reconnectAttempt == 0) {
         log(
           `Will retry connection every ${RETRY_BASE_DELAY}ms + jitter`,
@@ -266,8 +285,17 @@ const connectSocket = async (
         );
       }
 
-      retryTimeouts[account.userId] = setTimeout(
-        () => connectSocket(store, account.userId, reconnectAttempt),
-        RETRY_BASE_DELAY
-      );
+      if (
+        alwaysFetchSession ||
+        !state.accountStates[account.userId]?.fetchSessionError
+      ) {
+        refreshSessions(state, _localSocketUpdate, [account.userId]);
+      }
+
+      if (shouldRetry) {
+        retryTimeouts[account.userId] = setTimeout(
+          () => connectSocket(store, account.userId, reconnectAttempt),
+          RETRY_BASE_DELAY * timeoutMultiplier
+        );
+      }
     };
