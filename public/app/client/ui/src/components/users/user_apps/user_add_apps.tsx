@@ -65,7 +65,7 @@ export const UserAddApps: OrgComponent<{ userId: string }> = (props) => {
   }, [graphUpdatedAt, currentUserId, userId, now]);
 
   const [selectedAppRoleId, setSelectedAppRoleId] = useState(
-    grantableAppRoles[grantableAppRoles.length - 1].id
+    grantableAppRoles[grantableAppRoles.length - 1]?.id ?? ""
   );
 
   const [submitting, setSubmitting] = useState(false);
@@ -103,12 +103,16 @@ export const UserAddApps: OrgComponent<{ userId: string }> = (props) => {
         </Link>
       </div>
 
-      <div className="field app-role">
-        <label>
-          Add With App Role <ui.RoleInfoLink {...props} roleType="appRoles" />
-        </label>
-        {renderAppRoleSelect()}
-      </div>
+      {grantableAppRoles.length > 0 ? (
+        <div className="field app-role">
+          <label>
+            Add With App Role <ui.RoleInfoLink {...props} roleType="appRoles" />
+          </label>
+          {renderAppRoleSelect()}
+        </div>
+      ) : (
+        ""
+      )}
 
       <div className="field">
         <label>Apps To Add</label>
@@ -116,7 +120,11 @@ export const UserAddApps: OrgComponent<{ userId: string }> = (props) => {
         <ui.CheckboxMultiSelect
           title="App"
           winHeight={props.winHeight}
-          emptyText="No apps can be added with this App Role. Try a different role."
+          emptyText={
+            grantableAppRoles.length == 0
+              ? "No apps can be added. Try creating a new app."
+              : "No apps can be added with this App Role. Try a different role."
+          }
           submitting={submitting}
           items={grantableApps.map((app) => {
             const existingRole = existingAppRolesByAppId[app.id];

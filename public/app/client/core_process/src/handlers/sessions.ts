@@ -276,7 +276,9 @@ clientAction<
       {
         type: Api.ActionType.GET_SESSION,
         payload: {
-          graphUpdatedAt: state.graphUpdatedAt,
+          graphUpdatedAt: R.isEmpty(state.graph)
+            ? undefined
+            : state.graphUpdatedAt,
         },
       },
       { ...context, rootClientAction: action }

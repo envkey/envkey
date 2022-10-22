@@ -16,6 +16,7 @@ export const TeamApps: OrgComponent<{ groupId: string }> = (props) => {
   const group = graph[groupId] as Model.Group;
   const graphUpdatedAt = props.core.graphUpdatedAt;
   const currentUserId = props.ui.loadedAccountId!;
+  const byType = g.graphTypes(props.core.graph);
 
   const searchParams = new URLSearchParams(props.location.search);
   const scrollToAppId = searchParams.get("appId");

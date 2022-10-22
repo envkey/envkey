@@ -198,6 +198,30 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     }
   }, [props.core.throttleError]);
 
+  const shouldFetchSession = Boolean(
+    !props.core.isFetchingSession &&
+      !props.core.fetchSessionError &&
+      props.ui.loadedAccountId &&
+      auth &&
+      auth.token &&
+      auth.privkey &&
+      (!props.core.graphUpdatedAt ||
+        !props.core.graph[props.ui.loadedAccountId])
+  );
+
+  useLayoutEffect(() => {
+    (async () => {
+      if (shouldFetchSession) {
+        if (document.documentElement.classList.contains("loaded")) {
+          document.documentElement.classList.remove("loaded");
+        }
+        const res = await props.dispatch({
+          type: Client.ActionType.GET_SESSION,
+        });
+      }
+    })();
+  }, [props.ui.loadedAccountId, shouldFetchSession]);
+
   const shouldRequireRecoveryKey = useMemo(() => {
     if (
       !props.ui.loadedAccountId ||
@@ -549,6 +573,8 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       shouldRedirectPath,
       uiTree: Boolean(uiTree),
     });
+    console.log("auth", auth);
+    console.log("graph", props.core.graph);
   } else {
     console.log("signed_in_account_container: will render");
   }

@@ -40,7 +40,11 @@ export const BillingUI: OrgComponent = (props) => {
           ]
         : ""}
 
-      {license.hostType != "cloud" ? <SelfHostedLicense {...props} /> : ""}
+      {process.env.NODE_ENV == "development" || license.hostType != "cloud" ? (
+        <SelfHostedLicense {...props} />
+      ) : (
+        ""
+      )}
 
       {license.hostType == "cloud" && org.customLicense ? (
         <p>
