@@ -1,6 +1,6 @@
-## Configuration and secrets management done right
+## End-to-end encryption for app secrets. Superpowers for config management.
 
-- End-to-end encryption for API keys and other secrets.
+- Protects API keys and other secrets.
 
 - Live reload for environment variables.
 
