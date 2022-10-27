@@ -7,6 +7,8 @@ import * as styles from "@styles";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import { logAndAlertError } from "@ui_lib/errors";
+import { SmallLoader } from "@images";
+import { CryptoStatus } from "../shared";
 
 const INVITE_TOKEN_REGEX = /^(i|dg)_[a-zA-Z0-9]{22}_.+$/;
 const ENCRYPTION_TOKEN_REGEX = /^[a-fA-F0-9]{64}_[a-zA-Z0-9]{22}$/;
@@ -368,13 +370,13 @@ export const AcceptInvite: Component = (props) => {
     const disabledDueToLoading =
       samlWaiting || !formValid || isLoading || isAccepting;
 
-    let label: string;
+    let label: React.ReactChild;
     if (isLoading) {
-      label = "Loading and Verifying...";
+      label = <SmallLoader />;
     } else if (samlWaiting) {
       label = "Authenticating with SSO...";
     } else if (isAccepting) {
-      label = "Signing In...";
+      label = <SmallLoader />;
     } else if (loadedInviteOrDeviceGrant) {
       label = "Sign In";
     } else {
@@ -384,13 +386,11 @@ export const AcceptInvite: Component = (props) => {
     return (
       <div>
         <div className="buttons">
-          <input
-            className="primary"
-            type="submit"
-            disabled={disabledDueToLoading}
-            value={label}
-          />
+          <button className="primary" disabled={disabledDueToLoading}>
+            {label}
+          </button>
         </div>
+        {isLoading || isAccepting ? <CryptoStatus {...props} /> : ""}
         <div className="back-link">
           <a
             onClick={(e) => {

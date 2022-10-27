@@ -711,36 +711,37 @@ export const getLogTransactionStatement = ({
     mainQargs.push(loggedAction[field] ?? null);
   }
 
-  const targetQs = `SET ${byTargetIdFields
-    .map((field) => `@${field} = ?`)
-    .join(
+  const getTargetQs = (qsIds: string[]) =>
+    `INSERT INTO transaction_ids_by_target_id (${byTargetIdFields.join(
       ", "
-    )}; INSERT INTO transaction_ids_by_target_id (${byTargetIdFields.join(
-    ", "
-  )}) VALUES (${byTargetIdFields
-    .map((field) => `@${field}`)
-    .join(", ")}) ON DUPLICATE KEY UPDATE ${byTargetIdFields
-    .map((field) => `${field} = @${field}`)
-    .join(", ")};`;
+    )}) VALUES ${qsIds
+      .map(() => `(${R.repeat("?", byTargetIdFields.length)})`)
+      .join(",")} AS put ON DUPLICATE KEY UPDATE ${byTargetIdFields
+      .map((f) => `${f} = put.${f}`)
+      .join(", ")};`;
 
-  for (let targetId of mainTargetIds) {
-    mainQs += targetQs;
-    for (let field of byTargetIdFields) {
-      if (field == "targetId") {
-        mainQargs.push(targetId);
-      } else {
-        mainQargs.push(loggedAction[field] ?? null);
+  if (mainTargetIds.length > 0) {
+    mainQs += getTargetQs(mainTargetIds);
+    for (let targetId of mainTargetIds) {
+      for (let field of byTargetIdFields) {
+        if (field == "targetId") {
+          mainQargs.push(targetId);
+        } else {
+          mainQargs.push(loggedAction[field] ?? null);
+        }
       }
     }
   }
 
-  for (let targetId of bgTargetIds) {
-    bgQs += targetQs;
-    for (let field of byTargetIdFields) {
-      if (field == "targetId") {
-        bgQargs.push(targetId);
-      } else {
-        bgQargs.push(loggedAction[field] ?? null);
+  if (bgTargetIds.length > 0) {
+    bgQs += getTargetQs(bgTargetIds);
+    for (let targetId of bgTargetIds) {
+      for (let field of byTargetIdFields) {
+        if (field == "targetId") {
+          bgQargs.push(targetId);
+        } else {
+          bgQargs.push(loggedAction[field] ?? null);
+        }
       }
     }
   }

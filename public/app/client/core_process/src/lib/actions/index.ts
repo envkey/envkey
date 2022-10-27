@@ -34,7 +34,8 @@ export const postApiAction = async <
     log(
       `POST action ${action.type} to host: ` +
         hostUrl +
-        (numRetry > 0 ? ` | retry ${numRetry}` : ``)
+        (numRetry > 0 ? ` | retry ${numRetry}` : ``) +
+        ` | ${Buffer.byteLength(JSON.stringify(action))} bytes`
     );
   }
 
@@ -58,7 +59,7 @@ export const postApiAction = async <
           }
         : {}),
     })
-    .then((res) => {
+    .then(async (res) => {
       if (process.env.LOG_REQUESTS) {
         log(
           `RESPONSE to ${action.type} (${hostUrl}): status ${
@@ -82,6 +83,9 @@ export const postApiAction = async <
             log(
               `ERROR: ${action.type} (${hostUrl}) | ${res.statusCode} error | retrying`
             );
+
+            await wait((numRetry + 1) * 5000);
+
             return postApiAction(action, hostUrlArg, ipOverride, numRetry + 1);
           }
         }

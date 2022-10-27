@@ -21,6 +21,7 @@ apiAction<
   type: Api.ActionType.CREATE_EMAIL_VERIFICATION,
   graphAction: false,
   authenticated: false,
+
   handler: async ({ payload }, now, requestParams, transactionConn) => {
     // Check for situations where a user is already registered with this email / a different provider
     // Also check for currently outstanding email verifications using this email so we can mark them revoked later

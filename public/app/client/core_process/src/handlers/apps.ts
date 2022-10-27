@@ -297,10 +297,7 @@ clientAction<Client.Action.ClientActions["GrantAppsAccess"]>({
       throw new Error("Action requires authentication");
     }
 
-    initLocalsIfNeeded(state, auth.userId, {
-      ...context,
-      store: getTempStore(context.store),
-    }).catch((err) => {
+    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 

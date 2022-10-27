@@ -39,6 +39,7 @@ import open from "open";
 import * as R from "ramda";
 import { createPatch, Patch } from "rfc6902";
 import { version as cliVersion } from "../../cli/package.json";
+import { pick } from "@core/lib/utils/pick";
 
 export const start = async (port = 19047, wsport = 19048) => {
   log("Starting EnvKey core process...", { cliVersion });
@@ -101,6 +102,8 @@ export const start = async (port = 19047, wsport = 19048) => {
         clientId,
       });
 
+      const keys = req.query.keys as (keyof Client.State)[] | undefined;
+
       // to update lastActiveAt
       await dispatch(
         {
@@ -111,7 +114,7 @@ export const start = async (port = 19047, wsport = 19048) => {
 
       resolveLockoutTimer();
 
-      res.status(200).json(state);
+      res.status(200).json(keys ? pick(keys, state) : state);
     })
   );
 
@@ -119,7 +122,12 @@ export const start = async (port = 19047, wsport = 19048) => {
     "/action",
     asyncHandler(async (req, res) => {
       const action = req.body.action as Client.Action.ClientAction | undefined,
-        context = req.body.context as Client.Context | undefined;
+        context = req.body.context as Client.Context | undefined,
+        returnFullState = req.body.returnFullState as boolean | undefined;
+
+      if (context) {
+        context.localSocketUpdate = localSocketUpdate;
+      }
 
       if (!action || !context) {
         const msg =
@@ -230,11 +238,20 @@ export const start = async (port = 19047, wsport = 19048) => {
           actionParams.type == "asyncClientAction" ||
           actionParams.type == "apiRequestAction");
 
+      const shouldIncludeEnvsInDiffs =
+        action.type == Client.ActionType.FETCH_ENVS ||
+        action.type == Client.ActionType.COMMIT_ENVS;
+
       if (shouldSendSocketUpdate) {
-        localSocketUpdate(
-          "diffs",
-          createPatch(initialClientState, afterDispatchClientState)
-        );
+        localSocketUpdate({
+          type: "diffs",
+          diffs: shouldIncludeEnvsInDiffs
+            ? createPatch(initialClientState, afterDispatchClientState)
+            : createPatch(
+                R.omit(["envs", "changesets"], initialClientState),
+                R.omit(["envs", "changesets"], afterDispatchClientState)
+              ),
+        });
       }
 
       const dispatchRes = await dispatchPromise;
@@ -252,12 +269,17 @@ export const start = async (port = 19047, wsport = 19048) => {
 
       await resolveLockoutTimer();
 
-      const finalDiffs = createPatch(
+      const finalDiffsPreviousState =
         actionParams.type == "clientAction" || !shouldSendSocketUpdate
           ? initialClientState
-          : afterDispatchClientState,
-        dispatchRes.state
-      );
+          : afterDispatchClientState;
+
+      const finalDiffs = shouldIncludeEnvsInDiffs
+        ? createPatch(finalDiffsPreviousState, dispatchRes.state)
+        : createPatch(
+            R.omit(["envs", "changesets"], finalDiffsPreviousState),
+            R.omit(["envs", "changesets"], dispatchRes.state)
+          );
 
       if (
         shouldSendSocketUpdate &&
@@ -265,13 +287,17 @@ export const start = async (port = 19047, wsport = 19048) => {
         (actionParams.type == "asyncClientAction" ||
           actionParams.type == "apiRequestAction")
       ) {
-        localSocketUpdate("diffs", finalDiffs);
+        localSocketUpdate({ type: "diffs", diffs: finalDiffs });
       }
 
-      res.status(200).json({
-        ...R.omit(["state"], dispatchRes),
-        diffs: finalDiffs,
-      });
+      res.status(200).json(
+        returnFullState
+          ? dispatchRes
+          : {
+              ...R.omit(["state"], dispatchRes),
+              diffs: finalDiffs,
+            }
+      );
     })
   );
 
@@ -549,24 +575,12 @@ const initReduxStore = async (forceReset?: true) => {
 
     startFn();
   },
-  localSocketUpdate = (
-    updateType: "full_update" | "diffs" = "full_update",
-    diffs?: Patch
-  ) => {
+  localSocketUpdate: Client.LocalSocketUpdateFn = (msg) => {
     if (wss && wss.clients.size > 0) {
-      log("Dispatching local socket update", { clients: wss.clients.size });
+      // log("Dispatching local socket update", { clients: wss.clients.size });
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(
-            JSON.stringify(
-              updateType == "full_update"
-                ? { type: "update" }
-                : {
-                    type: "diffs",
-                    diffs,
-                  }
-            )
-          );
+          client.send(JSON.stringify(msg));
         }
       });
     }
@@ -576,7 +590,7 @@ const initReduxStore = async (forceReset?: true) => {
     reduxStore = undefined;
     clearLockoutTimer();
     await lock();
-    localSocketUpdate();
+    localSocketUpdate({ type: "update", accountId: undefined });
     closeAllOrgSockets();
   },
   unlockDevice = async (passphrase: string) => {

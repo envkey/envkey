@@ -135,7 +135,7 @@ export const OrgArchiveV1: OrgComponent = (props) => {
           Import Org
         </button>
       </div>
-      {importFilePath ? (
+      {importFilePath || props.core.isImportingOrg ? (
         <OrgArchiveImporter
           {...props}
           filePath={importFilePath}

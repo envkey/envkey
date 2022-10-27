@@ -220,18 +220,17 @@ apiAction<
       };
     }
 
-    const graphPromise = getOrgGraph(auth.org.id, {
-        transactionConnOrPool: transactionConn,
-      }).then((orgGraph) =>
-        getApiUserGraph(
-          orgGraph,
-          auth.org.id,
-          auth.user.id,
-          auth.orgUserDevice.id,
-          now
-        )
-      ),
-      graph = await graphPromise;
+    const orgGraph = await getOrgGraph(auth.org.id, {
+      transactionConnOrPool: transactionConn,
+    });
+
+    const graph = getApiUserGraph(
+      orgGraph,
+      auth.org.id,
+      auth.user.id,
+      auth.orgUserDevice.id,
+      now
+    );
 
     return {
       type: "handlerResult",

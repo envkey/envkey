@@ -96,9 +96,9 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
     log("Successfully started core process");
     return true;
   } finally {
-    if (keepAlive) {
-      setTimeout(keepAliveLoop, 10000);
-    }
+    // if (keepAlive) {
+    //   setTimeout(keepAliveLoop, 10000);
+    // }
   }
 };
 
@@ -116,7 +116,7 @@ export const stopCoreProcess = (onShutdown?: (stopped: boolean) => void) => {
 };
 
 const keepAliveLoop = async () => {
-  let alive = await isAlive();
+  let alive = await isAlive(10000);
 
   // if core process died, restart
   // if core process is running an outdated version, stop it and restart

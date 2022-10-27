@@ -5,6 +5,7 @@ import {
   getEnvironmentPermissions,
   getEnvParentPermissions,
   getOrgPermissions,
+  getOrg,
 } from "@core/lib/graph";
 import {
   getUserEncryptedKeyOrBlobComposite,
@@ -12,15 +13,27 @@ import {
 } from "@core/lib/blob";
 import { encrypt } from "@core/lib/crypto/proxy";
 import { log } from "@core/lib/utils/logger";
+import { dispatch } from "../../handler";
 import set from "lodash.set";
+import {
+  CRYPTO_ASYMMETRIC_BATCH_SIZE,
+  CRYPTO_ASYMMETRIC_BATCH_DELAY_MS,
+  CRYPTO_ASYMMETRIC_STATUS_INTERVAL,
+} from "./constants";
+import { wait } from "@core/lib/utils/wait";
 
-export const encryptedKeyParamsForDeviceOrInvitee = async (
-  state: Client.State,
-  privkey: Crypto.Privkey,
-  pubkey: Crypto.Pubkey,
-  userId?: string,
-  accessParams?: Model.AccessParams
-): Promise<Api.Net.EnvParams> => {
+export const encryptedKeyParamsForDeviceOrInvitee = async (params: {
+  state: Client.State;
+  privkey: Crypto.Privkey;
+  pubkey: Crypto.Pubkey;
+  userId?: string;
+  accessParams?: Model.AccessParams;
+  context: Client.Context;
+}): Promise<Api.Net.EnvParams> => {
+  // log("encryptedKeyParamsForDeviceOrInvitee");
+
+  const { state, privkey, pubkey, userId, accessParams, context } = params;
+
   let keys: Api.Net.EnvParams["keys"] = {},
     orgRoleId: string;
 
@@ -168,21 +181,23 @@ export const encryptedKeyParamsForDeviceOrInvitee = async (
 
         const key = state.envs[composite].key;
 
-        toEncrypt.push([
-          [
-            "newDevice",
-            environment.envParentId,
-            "environments",
-            environment.id,
-            "inheritanceOverrides",
-            inheritsEnvironmentId!,
-          ],
-          {
-            data: key,
-            pubkey,
-            privkey,
-          },
-        ]);
+        if (key) {
+          toEncrypt.push([
+            [
+              "newDevice",
+              environment.envParentId,
+              "environments",
+              environment.id,
+              "inheritanceOverrides",
+              inheritsEnvironmentId!,
+            ],
+            {
+              data: key,
+              pubkey,
+              privkey,
+            },
+          ]);
+        }
       }
     }
   }
@@ -271,14 +286,70 @@ export const encryptedKeyParamsForDeviceOrInvitee = async (
     }
   }
 
-  const promises = toEncrypt.map(([path, params]) =>
-      encrypt(params).then((encrypted) => [path, encrypted])
-    ) as Promise<[string[], Crypto.EncryptedData]>[],
-    pathResults = await Promise.all(promises);
+  // log("encryptedKeyParamsForDeviceOrInvitee - got toEncrypt", {
+  //   toEncrypt: toEncrypt.length,
+  // });
+
+  await dispatch(
+    {
+      type: Client.ActionType.SET_CRYPTO_STATUS,
+      payload: {
+        processed: 0,
+        total: toEncrypt.length,
+        op: "encrypt",
+        dataType: "keys",
+      },
+    },
+    context
+  );
+
+  // log("encryptedKeyParamsForDeviceOrInvitee - starting encryption");
+
+  let pathResults: [string[], Crypto.EncryptedData][] = [];
+  let encryptedSinceStatusUpdate = 0;
+  for (let batch of R.splitEvery(CRYPTO_ASYMMETRIC_BATCH_SIZE, toEncrypt)) {
+    const res = await Promise.all(
+      batch.map(([path, params]) =>
+        encrypt(params).then((encrypted) => {
+          encryptedSinceStatusUpdate++;
+          if (encryptedSinceStatusUpdate >= CRYPTO_ASYMMETRIC_STATUS_INTERVAL) {
+            dispatch(
+              {
+                type: Client.ActionType.CRYPTO_STATUS_INCREMENT,
+                payload: encryptedSinceStatusUpdate,
+              },
+              context
+            );
+            encryptedSinceStatusUpdate = 0;
+          }
+
+          return [path, encrypted];
+        })
+      ) as Promise<[string[], Crypto.EncryptedData]>[]
+    );
+
+    await wait(CRYPTO_ASYMMETRIC_BATCH_DELAY_MS);
+
+    pathResults = pathResults.concat(res);
+  }
+
+  // log("encryptedKeyParamsForDeviceOrInvitee - encrypted all");
+
+  await dispatch(
+    {
+      type: Client.ActionType.SET_CRYPTO_STATUS,
+      payload: undefined,
+    },
+    context
+  );
 
   for (let [path, data] of pathResults) {
     set(keys, path, data);
   }
+
+  // log("encryptedKeyParamsForDeviceOrInvitee - set pathResults");
+
+  // log("invites", { pathResults });
 
   return {
     keys,

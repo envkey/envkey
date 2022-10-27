@@ -38,6 +38,8 @@ enum ActionType {
 
   FETCH_ENVS = "envkey/client/FETCH_ENVS",
 
+  // UPLOAD_ENVS = "envkey/client/UPLOAD_ENVS",
+
   EXPORT_ENVIRONMENT = "envkey/client/EXPORT_ENVIRONMENT",
 
   INVITE_USERS = "envkey/client/INVITE_USERS",
@@ -139,6 +141,8 @@ enum ActionType {
 
   ACCOUNT_ACTIVE = "envkey/client/ACCOUNT_ACTIVE",
 
+  DECRYPT_ORG_ARCHIVE = "envkey/client/DECRYPT_ORG_ARCHIVE",
+  RESET_ORG_IMPORT = "envkey/client/RESET_ORG_IMPORT",
   IMPORT_ORG = "envkey/client/IMPORT_ORG",
   SET_IMPORT_ORG_STATUS = "envkey/client/SET_IMPORT_ORG_STATUS",
 
@@ -149,6 +153,9 @@ enum ActionType {
   CLEAR_ORPHANED_BLOBS = "envkey/client/CLEAR_ORPHANED_BLOBS",
 
   SET_MISSING_ENVS = "envkey/client/SET_MISSING_ENVS",
+
+  SET_CRYPTO_STATUS = "envkey/client/SET_CRYPTO_STATUS",
+  CRYPTO_STATUS_INCREMENT = "envkey/client/CRYPTO_STATUS_INCREMENT",
 }
 
 export default ActionType;

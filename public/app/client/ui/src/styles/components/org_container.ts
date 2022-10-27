@@ -312,6 +312,17 @@ export const OrgContainer = style(
             "&:hover": {},
           },
         },
+
+        ".crypto-status p": {
+          margin: "30px 0",
+          padding: 15,
+          fontSize: "15px",
+          background: color(colors.LIGHTEST_BLUE).fadeOut(0.5).toString(),
+          color: "rgba(0,0,0,0.55)",
+          textAlign: "center",
+          fontWeight: 500,
+          lineHeight: "140%",
+        },
       },
     }
   )

@@ -29,6 +29,7 @@ import { newAccountStateProducer } from "../lib/state";
 import { removeObjectProducers } from "../lib/status";
 import { log } from "@core/lib/utils/logger";
 import { decode as decodeBase58 } from "bs58";
+import { updateLocalSocketEnvActionStatusIfNeeded } from "@core_proc/lib/envs/status";
 
 clientAction<
   Client.Action.ClientActions["ApproveDevices"],
@@ -89,7 +90,13 @@ clientAction<
     try {
       const deviceGrantRes = await Promise.all(
           payload.map((clientParams) =>
-            approveDevice(stateWithFetched!, clientParams, trustedRoot, auth)
+            approveDevice(
+              stateWithFetched!,
+              clientParams,
+              trustedRoot,
+              auth,
+              context
+            )
           )
         ),
         res = await dispatch<Api.Action.BulkGraphAction>(
@@ -330,22 +337,46 @@ clientAction<
         state = replacementsRes.state;
       }
 
+      await dispatch(
+        {
+          type: Client.ActionType.SET_CRYPTO_STATUS,
+          payload: {
+            processed: 0,
+            total:
+              Object.keys(apiPayload.envs.keys ?? {}).length +
+              Object.keys(apiPayload.changesets.keys ?? {}).length,
+            op: "decrypt",
+            dataType: "keys",
+          },
+        },
+        context
+      );
       const [decryptedEnvs, decryptedChangesets] = await Promise.all([
         decryptEnvs(
           state,
           apiPayload.envs.keys ?? {},
           apiPayload.envs.blobs ?? {},
           deviceGrantPrivkey,
-          apiSuccessContext
+          apiSuccessContext,
+          true
         ),
         decryptChangesets(
           state,
           apiPayload.changesets.keys ?? {},
           apiPayload.changesets.blobs ?? {},
           deviceGrantPrivkey,
-          apiSuccessContext
+          apiSuccessContext,
+          true
         ),
       ]);
+
+      await dispatch(
+        {
+          type: Client.ActionType.SET_CRYPTO_STATUS,
+          payload: undefined,
+        },
+        context
+      );
 
       return dispatchSuccess(
         {
@@ -367,6 +398,10 @@ clientAction<
         apiSuccessContext
       );
     }
+  },
+
+  successHandler: async (state, action, payload, context) => {
+    updateLocalSocketEnvActionStatusIfNeeded(state, context);
   },
 });
 
@@ -459,12 +494,13 @@ clientAction<Client.Action.ClientActions["AcceptDeviceGrant"]>({
       }),
       trustedRoot = state.trustedRoot!,
       [envParams, signedTrustedRoot] = await Promise.all([
-        encryptedKeyParamsForDeviceOrInvitee(
+        encryptedKeyParamsForDeviceOrInvitee({
           state,
           privkey,
-          signedPubkey,
-          state.loadedDeviceGrant.granteeId
-        ),
+          pubkey: signedPubkey,
+          userId: state.loadedDeviceGrant.granteeId,
+          context,
+        }),
         signJson({ data: trustedRoot, privkey }),
       ]);
 
@@ -648,7 +684,8 @@ const approveDevice = async (
     state: Client.State,
     clientParams: Client.Action.ClientActions["ApproveDevices"]["payload"][0],
     trustedRoot: Trust.RootTrustChain,
-    auth: Client.ClientUserAuth | Client.ClientCliAuth
+    auth: Client.ClientUserAuth | Client.ClientCliAuth,
+    context: Client.Context
   ): Promise<[Api.Net.ApiParamTypes["CreateDeviceGrant"], string]> => {
     if (!auth.privkey) {
       throw new Error("Action requires decrypted privkey");
@@ -692,12 +729,13 @@ const approveDevice = async (
         host: auth.hostUrl,
         encryptionKey,
       }),
-      envParams = await encryptedKeyParamsForDeviceOrInvitee(
+      envParams = await encryptedKeyParamsForDeviceOrInvitee({
         state,
-        auth.privkey!,
-        deviceGrantPubkey,
-        clientParams.granteeId
-      );
+        privkey: auth.privkey!,
+        pubkey: deviceGrantPubkey,
+        userId: clientParams.granteeId,
+        context,
+      });
 
     return [
       {

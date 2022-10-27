@@ -55,7 +55,7 @@ apiAction<
         type: "block",
         id: blockId,
         ...graphKey.block(auth.org.id, blockId),
-        ...pick(["name", "settings"], action.payload),
+        ...pick(["name", "settings", "importId"], action.payload),
         localsUpdatedAtByUserId: {},
         localsEncryptedBy: {},
         localsReencryptionRequiredAt: {},
@@ -145,6 +145,7 @@ apiAction<
   type: Api.ActionType.DELETE_BLOCK,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async ({ payload: { id } }, orgGraph, userGraph, auth) =>
     authz.canDeleteBlock(userGraph, auth.user.id, id),
   graphHandler: async (action, orgGraph, auth, now) => {
@@ -205,6 +206,7 @@ apiAction<
   graphAction: true,
   authenticated: true,
   reorderBlobsIfNeeded: true,
+
   graphAuthorizer: async (
     { payload: { blockId, appId } },
     orgGraph,
@@ -213,7 +215,7 @@ apiAction<
   ) => authz.canConnectBlock(userGraph, auth.user.id, appId, blockId),
   graphHandler: async (action, orgGraph, auth, now) => {
     const appBlockId = uuid();
-    const { appId, blockId, orderIndex } = action.payload;
+    const { appId, blockId, orderIndex, importId } = action.payload;
     const appBlock: Api.Db.AppBlock = {
       type: "appBlock",
       id: appBlockId,
@@ -221,6 +223,7 @@ apiAction<
       appId,
       blockId,
       orderIndex,
+      importId,
       createdAt: now,
       updatedAt: now,
     };
@@ -258,6 +261,7 @@ apiAction<
   authenticated: true,
   reorderBlobsIfNeeded: true,
   shouldClearOrphanedLocals: true,
+
   graphAuthorizer: async ({ payload: { id } }, orgGraph, userGraph, auth) =>
     authz.canDisconnectBlock(userGraph, auth.user.id, { appBlockId: id }),
   graphHandler: async (action, orgGraph, auth, now) => {
@@ -286,6 +290,7 @@ apiAction<
   graphAction: true,
   authenticated: true,
   reorderBlobsIfNeeded: true,
+
   graphAuthorizer: async (
     { payload: { appId, order } },
     orgGraph,

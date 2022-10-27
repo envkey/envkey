@@ -168,6 +168,8 @@ export const UserAddApps: OrgComponent<{ userId: string }> = (props) => {
             }
           }}
         />
+
+        {submitting ? <ui.CryptoStatus {...props} /> : ""}
       </div>
     </div>
   );

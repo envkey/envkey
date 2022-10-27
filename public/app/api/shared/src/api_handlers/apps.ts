@@ -76,7 +76,7 @@ apiAction<
         type: "app",
         id: appId,
         ...graphKey.app(auth.org.id, appId),
-        ...pick(["name", "settings"], action.payload),
+        ...pick(["name", "settings", "importId"], action.payload),
         localsUpdatedAtByUserId: {},
         localsEncryptedBy: {},
         localsReencryptionRequiredAt: {},
@@ -188,6 +188,7 @@ apiAction<
   type: Api.ActionType.DELETE_APP,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async ({ payload: { id } }, orgGraph, userGraph, auth) =>
     authz.canDeleteApp(userGraph, auth.user.id, id),
   graphHandler: async (action, orgGraph, auth, now) => {
@@ -236,6 +237,7 @@ apiAction<
   graphAction: true,
   authenticated: true,
   shouldClearOrphanedLocals: true,
+
   graphAuthorizer: async ({ payload }, orgGraph, userGraph, auth) =>
     authz.canGrantAppRoleToUser(userGraph, auth.user.id, payload),
 
@@ -260,7 +262,7 @@ apiAction<
           payload.userId,
           appUserGrantId
         ),
-        ...pick(["appId", "appRoleId", "userId"], payload),
+        ...pick(["appId", "appRoleId", "userId", "importId"], payload),
         createdAt: now,
         updatedAt: now,
       };
@@ -326,6 +328,7 @@ apiAction<
   graphAction: true,
   authenticated: true,
   shouldClearOrphanedLocals: true,
+
   graphAuthorizer: async ({ payload: { id } }, orgGraph, userGraph, auth) =>
     authz.canRemoveAppUserAccess(userGraph, auth.user.id, {
       appUserGrantId: id,

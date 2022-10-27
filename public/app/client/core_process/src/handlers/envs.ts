@@ -1,5 +1,5 @@
 import { waitForStateCondition } from "./../lib/state/index";
-import { stripEmptyRecursive } from "@core/lib/utils/object";
+import { stripEmptyRecursive, pick } from "@core/lib/utils/object";
 import produce from "immer";
 import * as R from "ramda";
 import * as async from "@core/lib/async";
@@ -19,6 +19,7 @@ import {
   getPendingInherits,
   getPendingInheritingEnvironmentIds,
   getInheritanceOverrides,
+  clearOrphanedBlobPaths,
 } from "@core/lib/client";
 import {
   getUserEncryptedKeyOrBlobComposite,
@@ -35,6 +36,7 @@ import {
   getEnvironmentName,
   getObjectName,
   authz,
+  getConnectedBlocksForApp,
 } from "@core/lib/graph";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -53,6 +55,7 @@ import { signJson } from "@core/lib/crypto/proxy";
 import { log } from "@core/lib/utils/logger";
 import { getDefaultStore } from "@core_proc/redux_store";
 import unset from "lodash.unset";
+import { updateLocalSocketEnvActionStatusIfNeeded } from "@core_proc/lib/envs/status";
 
 envUpdateAction<Client.Action.ClientActions["CreateEntry"]>({
   actionType: Client.ActionType.CREATE_ENTRY,
@@ -665,18 +668,6 @@ clientAction<
               };
             }
             let key = environmentKeysByComposite[composite];
-            if (!key) {
-              log("Missing inheritanceOverrides key", {
-                composite,
-                envParent: getObjectName(state.graph, environment.envParentId),
-                environment: getEnvironmentName(state.graph, environment.id),
-                inheritingEnvironment: getEnvironmentName(
-                  state.graph,
-                  inheritingEnvironment.id
-                ),
-              });
-              throw new Error("Missing inheritanceOverrides key");
-            }
             res[composite] = { env: overrides, key };
           }
         }
@@ -737,22 +728,8 @@ clientAction<
               };
             }
             let key =
-              environmentKeysByComposite[composite] ?? state.envs[composite];
-            if (!key) {
-              log("Missing inheritanceOverrides key", {
-                composite,
-                envParent: getObjectName(state.graph, environment.envParentId),
-                inheritingEnvironment: getEnvironmentName(
-                  state.graph,
-                  environment.id
-                ),
-                baseEnvironment: getEnvironmentName(
-                  state.graph,
-                  siblingEnvironment.id
-                ),
-              });
-              throw new Error("Missing inheritanceOverrides key");
-            }
+              environmentKeysByComposite[composite] ??
+              state.envs[composite]?.key;
             res[composite] = { env: overrides, key };
           }
         }
@@ -827,12 +804,10 @@ clientAction<
   graphAction: true,
 });
 
-clientAction<
-  Client.Action.ClientActions["FetchEnvs"],
-  Partial<Pick<Client.State, "envs" | "changesets">> & {
-    timestamp: number;
-  }
->({
+type ClientFetchResult = Partial<Pick<Client.State, "envs" | "changesets">> & {
+  timestamp: number;
+};
+clientAction<Client.Action.ClientActions["FetchEnvs"], ClientFetchResult>({
   type: "asyncClientAction",
   actionType: Client.ActionType.FETCH_ENVS,
   stateProducer: (draft, { payload }) => {
@@ -953,6 +928,8 @@ clientAction<
       );
     }
 
+    updateLocalSocketEnvActionStatusIfNeeded(state, context);
+
     /*
      * if we're currently re-encrypting an environment belonging
      * to an env parent that we're about to fetch, then wait for
@@ -1070,7 +1047,28 @@ clientAction<
 
     state = apiRes.state;
 
-    // log("Got FETCH_ENVS api result " + (Date.now() - start).toString());
+    // log("FETCH_ENVS - get result, starting decryption");
+
+    await dispatch(
+      {
+        type: Client.ActionType.SET_CRYPTO_STATUS,
+        payload: {
+          processed: 0,
+          total:
+            Object.keys(
+              apiPayload.envs[payload.keysOnly ? "keys" : "blobs"] ?? {}
+            ).length +
+            Object.keys(
+              apiPayload.changesets[payload.keysOnly ? "keys" : "blobs"] ?? {}
+            ).length,
+          op: "decrypt",
+          dataType: payload.keysOnly ? "keys" : "keys_and_blobs",
+        },
+      },
+      context
+    );
+
+    // log("FETCH_ENVS - set crypto status");
 
     const [decryptedEnvs, decryptedChangesets] = await Promise.all([
       decryptEnvs(
@@ -1078,16 +1076,30 @@ clientAction<
         apiPayload.envs.keys ?? {},
         apiPayload.envs.blobs ?? {},
         auth.privkey,
-        context
+        context,
+        payload.keysOnly
       ),
       decryptChangesets(
         state,
         apiPayload.changesets.keys ?? {},
         apiPayload.changesets.blobs ?? {},
         auth.privkey,
-        context
+        context,
+        payload.keysOnly
       ),
     ]);
+
+    await dispatch(
+      {
+        type: Client.ActionType.SET_CRYPTO_STATUS,
+        payload: undefined,
+      },
+      context
+    );
+
+    // log("FETCH_ENVS - cleared crypto status");
+
+    // log("FETCH_ENVS - decrypted");
 
     // log("FETCH_ENVS decrypted " + (Date.now() - start).toString());
 
@@ -1119,7 +1131,8 @@ clientAction<
       );
     }
 
-    return dispatchSuccess(
+    // log("FETCH_ENVS - dispatching success");
+    const res = dispatchSuccess(
       {
         envs: decryptedEnvs,
         changesets: decryptedChangesets,
@@ -1130,6 +1143,12 @@ clientAction<
       },
       context
     );
+    // log("FETCH_ENVS - dispatched success");
+    return res;
+  },
+
+  successHandler: async (state, action, payload, context) => {
+    updateLocalSocketEnvActionStatusIfNeeded(state, context);
   },
 });
 
@@ -1344,5 +1363,29 @@ clientAction<Client.Action.ClientActions["SetMissingEnvs"]>({
     for (let composite in payload) {
       draft.envs[composite] = payload[composite];
     }
+  },
+});
+
+clientAction<Client.Action.ClientActions["SetCryptoStatus"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.SET_CRYPTO_STATUS,
+  stateProducer: (draft, { payload }) => {
+    draft.cryptoStatus = payload;
+  },
+  handler: async (state, action, context) => {
+    updateLocalSocketEnvActionStatusIfNeeded(state, context);
+  },
+});
+
+clientAction<Client.Action.ClientActions["CryptoStatusIncrement"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.CRYPTO_STATUS_INCREMENT,
+  stateProducer: (draft, { payload }) => {
+    if (draft.cryptoStatus) {
+      draft.cryptoStatus.processed += payload;
+    }
+  },
+  handler: async (state, action, context) => {
+    updateLocalSocketEnvActionStatusIfNeeded(state, context);
   },
 });

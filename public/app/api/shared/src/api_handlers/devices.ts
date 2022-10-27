@@ -22,6 +22,7 @@ import { encode as encodeBase58 } from "bs58";
 import { getPubkeyHash } from "@core/lib/client";
 import produce from "immer";
 import { deleteDevice } from "../graph";
+import * as semver from "semver";
 import { log } from "@core/lib/utils/logger";
 
 apiAction<
@@ -31,6 +32,7 @@ apiAction<
   type: Api.ActionType.CREATE_DEVICE_GRANT,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async (
     { payload: { granteeId } },
     orgGraph,
@@ -253,12 +255,17 @@ apiAction<
       };
     }
 
+    const keysOnly = Boolean(
+      action.meta.client &&
+        semver.gte(action.meta.client.clientVersion, "2.2.0")
+    );
+
     return {
       type: "graphHandlerResult",
       graph: orgGraph,
-      envs: { all: true },
-      inheritanceOverrides: { all: true },
-      changesets: { all: true },
+      envs: { all: true, keysOnly },
+      inheritanceOverrides: { all: true, keysOnly },
+      changesets: { all: true, keysOnly },
       signedTrustedRoot: deviceGrant.signedTrustedRoot,
       logTargetIds: getFetchActionLogTargetIdsFn(orgGraph),
       backgroundLogTargetIds: getFetchActionBackgroundLogTargetIdsFn(orgGraph),
@@ -273,6 +280,7 @@ apiAction<
   type: Api.ActionType.REVOKE_DEVICE_GRANT,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async (
     { payload: { id } },
     orgGraph,
@@ -452,6 +460,7 @@ apiAction<
   type: Api.ActionType.REVOKE_DEVICE,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async (
     { payload: { id } },
     orgGraph,

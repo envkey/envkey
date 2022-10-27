@@ -920,7 +920,9 @@ describe("blocks", () => {
       shouldEq
     );
 
-    // accept invite and fetch with invitee and ensure proper block access
+    // console.log(
+    //   "accept invite and fetch with invitee and ensure proper block access"
+    // );
     await acceptInvite(devUserInviteParams);
 
     await dispatch(
@@ -1172,7 +1174,7 @@ describe("blocks", () => {
       ]
     ).toBeUndefined();
 
-    // ensure key generation works with connected blocks
+    // console.log("ensure key generation works with connected blocks");
     await dispatch(
       {
         type: Client.ActionType.CREATE_LOCAL_KEY,
@@ -1208,7 +1210,7 @@ describe("blocks", () => {
       APP_KEY: "app-val",
     });
 
-    // ensure updating block/app envs still works correctly
+    // console.log("ensure updating block/app envs still works correctly");
     dispatch(
       {
         type: Client.ActionType.UPDATE_ENTRY_VAL,
@@ -1367,10 +1369,10 @@ describe("blocks", () => {
       APP_SUB: "app-sub-val",
     });
 
-    // ensure updating locals and subenv still working correctly
+    // console.log("ensure updating locals and subenv still working correctly");
     await loadAccount(ownerId);
 
-    // locals
+    // console.log("locals");
     dispatch(
       {
         type: Client.ActionType.UPDATE_ENTRY_VAL,
@@ -1423,7 +1425,7 @@ describe("blocks", () => {
       ownerId
     );
 
-    // subenv
+    // console.log("subenv");
     dispatch(
       {
         type: Client.ActionType.UPDATE_ENTRY_VAL,
@@ -1504,7 +1506,7 @@ describe("blocks", () => {
       APP_SUB: "app-sub-val-updated",
     });
 
-    // test reordering blocks
+    // console.log("test reordering blocks");
     const reorderPromise = dispatch(
       {
         type: Api.ActionType.REORDER_BLOCKS,
@@ -1622,7 +1624,7 @@ describe("blocks", () => {
       APP_SUB: "app-sub-val-updated",
     });
 
-    // test disconnecting block
+    // console.log("test disconnecting block");
     let { appBlocks } = graphTypes(state.graph),
       { id: appBlockId } = appBlocks.filter(
         (appBlock) => appBlock.appId == appId && appBlock.blockId == block1Id
@@ -1646,7 +1648,9 @@ describe("blocks", () => {
     state = getState(ownerId);
     expect(state.isRemoving[appBlockId]).toBeUndefined();
 
-    // re-connect and then re-disconnect to ensure primary key truncation/duplication issue is fixed
+    // console.log(
+    //   "re-connect and then re-disconnect to ensure primary key truncation/duplication issue is fixed"
+    // );
     await connectBlocks(ownerId, [
       {
         appId,

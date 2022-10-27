@@ -79,6 +79,7 @@ export const TeamAddMembers: OrgComponent<{ groupId: string }> = (props) => {
             }
           }}
         />
+        {submitting ? <ui.CryptoStatus {...props} /> : ""}
       </div>
     </div>
   );

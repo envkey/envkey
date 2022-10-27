@@ -1,14 +1,12 @@
 import workerpool from "workerpool";
 import path from "path";
-
-if (typeof window != "undefined") {
-  console.log("using worker from browser");
-  throw new Error("using worker from browser");
-}
+import os from "os";
+import { log } from "../lib/utils/logger";
 
 declare var process: {
   resourcesPath: string;
   env: {
+    IS_TEST?: string;
     WORKER_PATH_FROM_ELECTRON_RESOURCES?: string;
     WORKER_PATH?: string;
     IS_ELECTRON?: string;
@@ -39,8 +37,16 @@ if (
   workerPath = path.resolve(__dirname, "../../build/worker.js");
 }
 
+const numCpus = os.cpus().length;
+const numWorkers = numCpus;
+// const numWorkers = Math.max(1, numCpus - 1);
+if (!process.env.IS_TEST) {
+  log("starting workers", { numCpus, numWorkers });
+}
+
 let workerPool = workerpool.pool(workerPath, {
     workerType: process.env.IS_ELECTRON ? "process" : "thread",
+    maxWorkers: numWorkers,
     minWorkers: "max",
   }),
   proxyPromise = (<any>workerPool.proxy()) as Promise<any>;

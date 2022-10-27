@@ -133,29 +133,7 @@ apiAction<
   type: Api.ActionType.FETCH_ENVS,
   graphAction: true,
   authenticated: true,
-  // graphScopes: [
-  //   (auth, { payload: { byEnvParentId } }) =>
-  //     () =>
-  //       [
-  //         auth.user.skey + "$",
-  //         "g|block|",
-  //         "g|environment|",
-  //         "g|group|",
-  //         "g|groupMembership|",
-  //         "g|appGroupBlockGroup|",
-  //         "g|appGroupBlock|",
-  //         "g|appGroupUserGroup|",
-  //         "g|appGroupUser|",
-
-  //         ...Object.keys(byEnvParentId).flatMap((envParentId) => [
-  //           graphKey.app(auth.org.id, envParentId).skey + "$",
-  //           `g|appBlock|${envParentId}`,
-  //           `g|appBlockGroup|${envParentId}`,
-  //           `g|appUserGrant|${envParentId}`,
-  //           `g|appUserGroup|${envParentId}`,
-  //         ]),
-  //       ],
-  // ],
+  nonLockingGraphUpdatedAtCheck: true,
   graphResponse: "envsAndOrChangesets",
   graphAuthorizer: async (action, orgGraph, userGraph, auth) => {
     for (let envParentId in action.payload.byEnvParentId) {
@@ -192,11 +170,19 @@ apiAction<
     }
 
     if (envEnvParentIds.length > 0) {
-      envs = getHandlerEnvsResponse(orgGraph, envEnvParentIds, "env");
+      envs = getHandlerEnvsResponse(
+        orgGraph,
+        envEnvParentIds,
+        "env",
+        undefined,
+        payload.keysOnly
+      );
       inheritanceOverrides = getHandlerEnvsResponse(
         orgGraph,
         envEnvParentIds,
-        "inheritanceOverrides"
+        "inheritanceOverrides",
+        undefined,
+        payload.keysOnly
       );
     }
 
@@ -205,7 +191,8 @@ apiAction<
         orgGraph,
         changesetEnvParentIds,
         "changeset",
-        changesetsCreatedAfterByEnvParentId
+        changesetsCreatedAfterByEnvParentId,
+        payload.keysOnly
       );
     }
 
@@ -298,6 +285,7 @@ apiAction<
   type: Api.ActionType.CREATE_ENVIRONMENT,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async ({ payload }, orgGraph, userGraph, auth) =>
     payload.isSub
       ? authz.canCreateSubEnvironment(
@@ -322,6 +310,7 @@ apiAction<
             "isSub",
             "parentEnvironmentId",
             "subName",
+            "importId",
           ],
           payload
         ) as Model.Environment),
@@ -356,6 +345,7 @@ apiAction<
   type: Api.ActionType.DELETE_ENVIRONMENT,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async ({ payload: { id } }, orgGraph, userGraph, auth) =>
     authz.canDeleteEnvironment(userGraph, auth.user.id, id),
   graphHandler: async (action, orgGraph, auth, now) => {
@@ -559,9 +549,11 @@ const canCreateOrDeleteVariableGroup = (
     orgGraph: Api.Graph.OrgGraph,
     envParentIds: string[],
     blobType: BlobType,
-    changesetsCreatedAfterByEnvParentId?: Record<string, number | undefined>
+    changesetsCreatedAfterByEnvParentId?: Record<string, number | undefined>,
+    keysOnly?: boolean
   ) => {
     return {
+      keysOnly,
       scopes: R.flatten(
         envParentIds.map((envParentId) => {
           const envParent = orgGraph[envParentId] as Model.EnvParent;

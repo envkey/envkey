@@ -49,7 +49,7 @@ apiAction<
         id: cliUserId,
         ...graphKey.cliUser(auth.org.id, cliUserId),
         ...pick(
-          ["name", "orgRoleId", "pubkey", "encryptedPrivkey"],
+          ["name", "orgRoleId", "pubkey", "encryptedPrivkey", "importId"],
           action.payload
         ),
         pubkeyId: getPubkeyHash(action.payload.pubkey),
@@ -145,6 +145,7 @@ apiAction<
   graphAction: true,
   authenticated: true,
   shouldClearOrphanedLocals: true,
+
   graphAuthorizer: async ({ payload: { id } }, orgGraph, userGraph, auth) =>
     authz.canDeleteCliUser(userGraph, auth.user.id, id),
   graphHandler: async (

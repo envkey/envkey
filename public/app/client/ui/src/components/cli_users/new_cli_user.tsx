@@ -7,10 +7,12 @@ import * as R from "ramda";
 import * as ui from "@ui";
 import { cliUserRoute } from "./helpers";
 import * as styles from "@styles";
+import { style } from "typestyle";
 import { SmallLoader, SvgImage } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import { logAndAlertError } from "@ui_lib/errors";
+import { AddInviteAppForm } from "../invites/add_invite_app_form";
 
 export const NewCliUser: OrgComponent<{
   appId?: string;
@@ -23,6 +25,7 @@ export const NewCliUser: OrgComponent<{
 
   const [generating, setGenerating] = useState(false);
   const [awaitingMinDelay, setAwaitingMinDelay] = useState(false);
+  const [showAddApps, setShowAddApps] = useState(false);
 
   useLayoutEffect(() => {
     if (props.core.generatedCliUsers.length > 0 && !awaitingMinDelay) {
@@ -202,52 +205,77 @@ export const NewCliUser: OrgComponent<{
     !selectedOrgRole.autoAppRoleId &&
     grantableAppIds.length > 0
   ) {
-    const apps = grantableAppIds.map((grantableAppId) => {
-      const app = graph[grantableAppId] as Model.App;
+    const sortedApps = R.sortWith(
+      [
+        R.ascend(({ appRoleId }) => {
+          const appRole = graph[appRoleId] as Rbac.AppRole;
+          return appRole.orderIndex;
+        }),
+        R.ascend(({ appId }) => {
+          const app = graph[appId] as Model.App;
+          return app.name;
+        }),
+      ],
 
-      return (
-        <div className="field">
-          <label>
-            {grantableAppId == appId ? <strong>{app.name}</strong> : app.name}
-          </label>
-          <div className={"select" + (generating ? " disabled" : "")}>
-            <select
-              disabled={generating}
-              value={appUserGrantsByAppId[grantableAppId]?.appRoleId ?? ""}
-              onChange={(e) => {
-                const appRoleId = e.target.value;
-                setAppUserGrantsByAppId(
-                  appRoleId
-                    ? {
-                        ...appUserGrantsByAppId,
-                        [grantableAppId]: { appId: grantableAppId, appRoleId },
-                      }
-                    : R.omit([grantableAppId], appUserGrantsByAppId)
-                );
-              }}
-            >
-              {[
-                <option value="">No Access</option>,
-                ...grantableAppRoleIdsByAppId[grantableAppId].map(
-                  (appRoleId) => (
-                    <option value={appRoleId}>
-                      {(graph[appRoleId] as Rbac.AppRole).name}
-                    </option>
-                  )
-                ),
-              ]}
-            </select>
-            <SvgImage type="down-caret" />
+      Object.values(appUserGrantsByAppId)
+    );
+
+    const pendingApps =
+      sortedApps.length > 0 ? (
+        <div className={styles.AssocManager + " " + style({ width: "100%" })}>
+          <div className="assoc-list">
+            {sortedApps.map(({ appId, appRoleId }) => {
+              const app = graph[appId] as Model.App;
+              const appRole = graph[appRoleId] as Rbac.AppRole;
+              return (
+                <div key={appId}>
+                  <div>
+                    <span className="title">{app.name}</span>
+                  </div>
+                  <div>
+                    <span className="role">{appRole.name} Access</span>
+                    <div className="actions">
+                      <span
+                        className="delete"
+                        onClick={() =>
+                          setAppUserGrantsByAppId(
+                            R.omit([appId], appUserGrantsByAppId)
+                          )
+                        }
+                      >
+                        <SvgImage type="x" />
+                        <span>Remove</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
+      ) : (
+        <div className="field no-margin">
+          <p>
+            <strong>This CLI key doesn't yet have access to any apps.</strong>
+            <br />
+            Note: it's fine to generate the CLI key now and grant access to apps
+            later.
+          </p>
+        </div>
       );
-    });
 
     appRoles = [
-      <h4>
-        App Roles <ui.RoleInfoLink {...props} roleType="appRoles" />
-      </h4>,
-      apps,
+      <h4>App Access</h4>,
+      pendingApps,
+      grantableAppIds.length > sortedApps.length ? (
+        <div className="field buttons">
+          <button className="tertiary" onClick={() => setShowAddApps(true)}>
+            Add To {sortedApps.length > 0 ? "More Apps" : "Apps"}
+          </button>
+        </div>
+      ) : (
+        ""
+      ),
     ];
   }
 
@@ -273,6 +301,32 @@ export const NewCliUser: OrgComponent<{
           {generating ? <SmallLoader /> : "Generate CLI Key"}
         </button>
       </div>
+
+      {showAddApps ? (
+        <AddInviteAppForm
+          {...props}
+          grantableAppIds={grantableAppIds}
+          grantableAppRoleIdsByAppId={grantableAppRoleIdsByAppId}
+          appUserGrantsByAppId={appUserGrantsByAppId}
+          onClose={() => setShowAddApps(false)}
+          onSubmit={(appRoleId, appIds) => {
+            setAppUserGrantsByAppId(
+              appIds.reduce(
+                (agg, appId) => ({
+                  ...agg,
+                  [appId]: { appId, appRoleId },
+                }),
+                appUserGrantsByAppId
+              )
+            );
+            setShowAddApps(false);
+          }}
+        />
+      ) : (
+        ""
+      )}
+
+      {generating ? <ui.CryptoStatus {...props} /> : ""}
     </div>
   );
 };

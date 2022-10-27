@@ -99,6 +99,15 @@ export type PartialAccountState = {
   accountLastActiveAt: number | undefined;
 
   orgStats: Model.OrgStats | undefined;
+
+  unfilteredOrgArchive: Client.OrgArchiveV1 | undefined;
+  filteredOrgArchive: Client.OrgArchiveV1 | undefined;
+  isDecryptingOrgArchive: true | undefined;
+  decryptOrgArchiveError: Client.ClientError | undefined;
+
+  isImportingOrg: true | undefined;
+  importOrgStatus: string | undefined;
+  importOrgError: Client.ClientError | undefined;
 };
 
 export type PartialClientState = {
@@ -382,10 +391,6 @@ export type PartialClientState = {
   isResyncingFailover: true | undefined;
   resyncFailoverError: Client.ClientError | undefined;
 
-  isImportingOrg: true | undefined;
-  importOrgStatus: string | undefined;
-  importOrgError: Client.ClientError | undefined;
-
   cloudBillingIsSubscribingProduct: true | undefined;
   cloudBillingSubscribeProductError: Client.ClientError | undefined;
   cloudBillingIsUpdatingSubscriptionQuantity: true | undefined;
@@ -412,6 +417,16 @@ export type PartialClientState = {
     | undefined;
 
   throttleError: Client.FetchError | undefined;
+
+  cryptoStatus:
+    | {
+        processed: number;
+        total: number;
+        op: "encrypt" | "decrypt";
+        dataType: "keys" | "blobs" | "keys_and_blobs";
+      }
+    | undefined;
+  isProcessingApi: true | undefined;
 };
 
 type ClientProcState = Omit<ProcState, "clientStates" | "accountStates">;
@@ -463,6 +478,14 @@ export const defaultAccountState: PartialAccountState = {
     accountLastActiveAt: undefined,
 
     orgStats: undefined,
+
+    unfilteredOrgArchive: undefined,
+    filteredOrgArchive: undefined,
+    isDecryptingOrgArchive: undefined,
+    decryptOrgArchiveError: undefined,
+    isImportingOrg: undefined,
+    importOrgError: undefined,
+    importOrgStatus: undefined,
   },
   defaultClientState: PartialClientState = {
     authenticateCliKeyError: undefined,
@@ -671,10 +694,6 @@ export const defaultAccountState: PartialAccountState = {
     isExportingOrg: undefined,
     exportOrgError: undefined,
 
-    isImportingOrg: undefined,
-    importOrgError: undefined,
-    importOrgStatus: undefined,
-
     cloudBillingIsSubscribingProduct: undefined,
     cloudBillingSubscribeProductError: undefined,
 
@@ -701,6 +720,9 @@ export const defaultAccountState: PartialAccountState = {
     cloudBillingPromotionCode: undefined,
 
     throttleError: undefined,
+
+    cryptoStatus: undefined,
+    isProcessingApi: undefined,
   },
   defaultProcState: ProcState = {
     orgUserAccounts: {},

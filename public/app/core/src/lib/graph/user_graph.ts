@@ -64,6 +64,10 @@ export const getUserGraph = (
 
             "billingSettings",
             "customLicense",
+
+            "optimizeEmptyEnvs",
+
+            "orgSettingsImported",
           ],
           obj
         );
@@ -85,6 +89,7 @@ export const getUserGraph = (
             "deactivatedAt",
             "orgRoleUpdatedAt",
             "scim",
+            "importId",
           ],
           obj
         );
@@ -127,6 +132,7 @@ export const getUserGraph = (
             "deactivatedAt",
             "signedById",
             "orgRoleUpdatedAt",
+            "importId",
           ],
           obj
         );
@@ -198,6 +204,8 @@ export const getUserGraph = (
             // these may filtered out in permitted_graph.ts depending on permissions
             "environmentRoleIpsMergeStrategies",
             "environmentRoleIpsAllowed",
+
+            "importId",
           ],
           obj
         );
@@ -215,15 +223,22 @@ export const getUserGraph = (
             "localsReencryptionRequiredAt",
             "localsRequireReinit",
             "settings",
+            "importId",
           ],
           obj
         );
 
       case "appUserGrant":
-        return pick([...baseProps, "userId", "appId", "appRoleId"], obj);
+        return pick(
+          [...baseProps, "userId", "appId", "appRoleId", "importId"],
+          obj
+        );
 
       case "server":
-        return pick([...baseProps, "name", "appId", "environmentId"], obj);
+        return pick(
+          [...baseProps, "name", "appId", "environmentId", "importId"],
+          obj
+        );
 
       case "localKey":
         return pick(
@@ -240,7 +255,10 @@ export const getUserGraph = (
         );
 
       case "appBlock":
-        return pick([...baseProps, "appId", "blockId", "orderIndex"], obj);
+        return pick(
+          [...baseProps, "appId", "blockId", "orderIndex", "importId"],
+          obj
+        );
 
       case "environment":
         const environmentProps = <const>[
@@ -252,6 +270,7 @@ export const getUserGraph = (
           "encryptedById",
           "reencryptionRequiredAt",
           "upgradedCrypto-2.1.0",
+          "importId",
         ];
 
         return obj.isSub
@@ -269,15 +288,27 @@ export const getUserGraph = (
 
       case "group":
         return pick(
-          [...baseProps, "objectType", "name", "membershipsUpdatedAt"],
+          [
+            ...baseProps,
+            "objectType",
+            "name",
+            "membershipsUpdatedAt",
+            "importId",
+          ],
           obj
         );
 
       case "groupMembership":
-        return pick([...baseProps, "groupId", "objectId", "orderIndex"], obj);
+        return pick(
+          [...baseProps, "groupId", "objectId", "orderIndex", "importId"],
+          obj
+        );
 
       case "appUserGroup":
-        return pick([...baseProps, "appId", "userGroupId", "appRoleId"], obj);
+        return pick(
+          [...baseProps, "appId", "userGroupId", "appRoleId", "importId"],
+          obj
+        );
 
       case "appGroupUserGroup":
         return pick(
@@ -384,6 +415,7 @@ export const getUserGraph = (
           "defaultAllBlocks",
           "settings",
           "orderIndex",
+          "importId",
         ];
 
         return obj.isDefault

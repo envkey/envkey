@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Component } from "@ui_types";
 import { Client, Model } from "@core/types";
 import { Link } from "react-router-dom";
-import * as ui from "@ui";
 import * as g from "@core/lib/graph";
 import { getDefaultApiHostUrl } from "../../../../shared/src/env";
 import { HomeContainer } from "../home/home_container";
@@ -11,6 +10,8 @@ import { wait } from "@core/lib/utils/wait";
 import { PHRASE_LENGTH } from "@core/lib/crypto/phrase";
 import * as styles from "@styles";
 import { logAndAlertError } from "@ui_lib/errors";
+import { CryptoStatus } from "../shared";
+import { SmallLoader } from "@images";
 
 export const RedeemRecoveryKey: Component = (props) => {
   const [recoveryKey, setRecoveryKey] = useState("");
@@ -211,11 +212,9 @@ export const RedeemRecoveryKey: Component = (props) => {
   };
 
   const renderButtons = () => {
-    let label: string;
-    if (isLoading) {
-      label = "Loading And Verifying...";
-    } else if (isRedeeming) {
-      label = "Signing In...";
+    let label: React.ReactChild;
+    if (isLoading || isRedeeming) {
+      label = <SmallLoader />;
     } else if (props.core.loadedRecoveryKey) {
       label = "Sign In";
     } else {
@@ -225,18 +224,19 @@ export const RedeemRecoveryKey: Component = (props) => {
     return (
       <div>
         <div className="buttons">
-          <input
+          <button
             className="primary"
-            type="submit"
             disabled={
               !formValid ||
               isLoading ||
               Boolean(loadingWithEmail) ||
               isRedeeming
             }
-            value={label}
-          />
+          >
+            {label}
+          </button>
         </div>
+        {isLoading || isRedeeming ? <CryptoStatus {...props} /> : ""},
         <div className="back-link">
           <a
             onClick={async (e) => {

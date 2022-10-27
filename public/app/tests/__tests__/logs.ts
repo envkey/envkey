@@ -430,8 +430,8 @@ describe("fetching logs", () => {
     ).toEqual([
       Api.ActionType.FETCH_ENVS,
       Api.ActionType.CREATE_INVITE,
-      Api.ActionType.LOAD_INVITE,
       Api.ActionType.UPDATE_ENVS,
+      Api.ActionType.LOAD_INVITE,
     ]);
 
     // time range deleted graph
@@ -474,8 +474,8 @@ describe("fetching logs", () => {
       )
     ).toEqual([
       Api.ActionType.CREATE_INVITE,
-      Api.ActionType.LOAD_INVITE,
       Api.ActionType.UPDATE_ENVS,
+      Api.ActionType.LOAD_INVITE,
     ]);
 
     await dispatch(
@@ -546,13 +546,14 @@ describe("fetching logs", () => {
     );
 
     state = getState(ownerId);
+
     expect(
       state.loggedActionsWithTransactionIds.flatMap(([, actions]) =>
         actions.map(R.prop("actionType"))
       )
     ).toEqual([
       Api.ActionType.LOAD_INVITE,
-      Api.ActionType.LOAD_INVITE,
+      Api.ActionType.GET_SESSION,
       Api.ActionType.GET_SESSION,
     ]);
 

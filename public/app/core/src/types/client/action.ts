@@ -166,7 +166,11 @@ export namespace Action {
     };
     GetSession: {
       type: ActionType.GET_SESSION;
-      payload?: { skipWaitForReencryption?: true; noop?: true };
+      payload?: {
+        skipWaitForReencryption?: true;
+        noop?: true;
+        omitGraphUpdatedAt?: true;
+      };
     };
     AuthenticateCliKey: {
       type: ActionType.AUTHENTICATE_CLI_KEY;
@@ -292,7 +296,6 @@ export namespace Action {
         skipWaitForReencryption?: true;
       };
     };
-
     ExportEnvironment: {
       type: ActionType.EXPORT_ENVIRONMENT;
       payload: {
@@ -377,7 +380,7 @@ export namespace Action {
       type: ActionType.CREATE_CLI_USER;
       payload: Pick<
         Api.Net.ApiParamTypes["CreateCliUser"],
-        "name" | "orgRoleId" | "appUserGrants"
+        "name" | "orgRoleId" | "appUserGrants" | "importId"
       >;
     };
     ClearGeneratedCliUsers: {
@@ -388,7 +391,7 @@ export namespace Action {
       type: ActionType.CREATE_SERVER;
       payload: Pick<
         Api.Net.ApiParamTypes["CreateServer"],
-        "appId" | "name" | "environmentId"
+        "appId" | "name" | "environmentId" | "importId"
       > & {
         skipGenerateKey?: boolean;
       };
@@ -426,7 +429,7 @@ export namespace Action {
       payload: (
         | Pick<
             Api.Net.ApiParamTypes["ConnectBlock"],
-            "appId" | "blockId" | "orderIndex"
+            "appId" | "blockId" | "orderIndex" | "importId"
           >
         | Pick<
             Api.Net.ApiParamTypes["CreateAppBlockGroup"],
@@ -440,7 +443,9 @@ export namespace Action {
             Api.Net.ApiParamTypes["CreateAppGroupBlockGroup"],
             "appGroupId" | "blockGroupId" | "orderIndex"
           >
-      )[];
+      )[] & {
+        clearCached?: boolean;
+      };
     };
 
     GrantAppsAccess: {
@@ -448,7 +453,7 @@ export namespace Action {
       payload: (
         | Pick<
             Api.Net.ApiParamTypes["GrantAppAccess"],
-            "appId" | "userId" | "appRoleId"
+            "appId" | "userId" | "appRoleId" | "importId"
           >
         | Pick<
             Api.Net.ApiParamTypes["CreateAppUserGroup"],
@@ -760,14 +765,28 @@ export namespace Action {
       type: ActionType.ACCOUNT_ACTIVE;
     };
 
-    ImportOrg: {
-      type: ActionType.IMPORT_ORG;
+    DecryptOrgArchive: {
+      type: ActionType.DECRYPT_ORG_ARCHIVE;
       payload: {
         filePath: string;
         encryptionKey: string;
+      };
+    };
+
+    ResetOrgImport: {
+      type: ActionType.RESET_ORG_IMPORT;
+    };
+
+    ImportOrg: {
+      type: ActionType.IMPORT_ORG;
+      payload: {
         importOrgUsers: boolean;
         importServers: boolean;
+        importCliUsers: boolean;
         regenServerKeys: boolean;
+        importEnvParentIds?: string[];
+        importOrgUserIds?: string[];
+        importCliUserIds?: string[];
       };
     };
     SetImportOrgStatus: {
@@ -791,6 +810,16 @@ export namespace Action {
     SetMissingEnvs: {
       type: ActionType.SET_MISSING_ENVS;
       payload: State["envs"];
+    };
+
+    SetCryptoStatus: {
+      type: ActionType.SET_CRYPTO_STATUS;
+      payload: State["cryptoStatus"];
+    };
+
+    CryptoStatusIncrement: {
+      type: ActionType.CRYPTO_STATUS_INCREMENT;
+      payload: number;
     };
   };
 

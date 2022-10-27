@@ -48,7 +48,14 @@ apiAction<
       type: "graphHandlerResult",
       graph: {
         ...orgGraph,
-        [auth.org.id]: { ...auth.org, settings, updatedAt: now },
+        [auth.org.id]: {
+          ...auth.org,
+          settings,
+          orgSettingsImported: payload.isImport
+            ? true
+            : auth.org.orgSettingsImported,
+          updatedAt: now,
+        },
       },
       logTargetIds: [],
     };
@@ -182,6 +189,7 @@ apiAction<
   graphAction: true,
   authenticated: true,
   shouldClearOrphanedLocals: true,
+
   graphAuthorizer: async (
     { payload: { id, orgRoleId } },
     orgGraph,
@@ -284,6 +292,7 @@ apiAction<
   graphAction: true,
   authenticated: true,
   shouldClearOrphanedLocals: true,
+
   graphAuthorizer: async ({ payload: { id } }, orgGraph, userGraph, auth) =>
     authz.canRemoveFromOrg(userGraph, auth.user.id, id),
   graphHandler: async (

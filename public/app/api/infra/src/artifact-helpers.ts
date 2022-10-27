@@ -40,6 +40,11 @@ export const getReleaseObject = async (params: {
   if (credentials) {
     const s3 = new S3({ credentials, region: RELEASE_ASSET_REGION });
 
+    console.log(
+      "FETCHING release object from s3:",
+      JSON.stringify({ bucket: params.bucket, key: params.key })
+    );
+
     const { Body } = await s3
       .getObject({
         Bucket: params.bucket,
@@ -47,12 +52,21 @@ export const getReleaseObject = async (params: {
       })
       .promise();
 
+    console.log(
+      "FETCHED release object from s3:",
+      JSON.stringify({ bucket: params.bucket, key: params.key })
+    );
+
     return Body as Buffer;
   }
 
   const url = `https://${params.bucket}.s3.amazonaws.com/${params.key}`;
 
+  console.log("fetching release object:", url);
+
   const res = await fetch(url);
+
+  console.log("fetched release object:", url);
 
   if (params.progress) {
     const totalBytes = Number(res.headers.get("content-length"));

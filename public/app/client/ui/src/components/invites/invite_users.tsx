@@ -9,6 +9,7 @@ import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import * as R from "ramda";
 import { logAndAlertError } from "@ui_lib/errors";
+import { CryptoStatus } from "../shared";
 
 export const InviteUsers: OrgComponent<{ appId?: string }> = (props) => {
   const graph = props.core.graph;
@@ -197,6 +198,7 @@ export const InviteUsers: OrgComponent<{ appId?: string }> = (props) => {
         ""
       )}
       {renderActions()}
+      {isInviting && !hadInviteErrors ? <CryptoStatus {...props} /> : ""}
     </div>
   );
 };

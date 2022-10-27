@@ -227,7 +227,9 @@ export const clientAction = <
               accountState,
               requiredEnvs,
               requiredChangesets,
-              context
+              context,
+              undefined,
+              true
             );
 
           let stateWithFetched: Client.State | undefined;
@@ -484,7 +486,9 @@ export const clientAction = <
             accountState,
             requiredEnvs,
             requiredChangesets,
-            context
+            context,
+            undefined,
+            true
           );
 
         if (fetchRes) {
@@ -818,8 +822,8 @@ export const clientAction = <
             );
           }
 
-          // store throttling error so we can notify user
           if (params.type == "apiRequestAction") {
+            // store throttling error so we can notify user
             reducers.push(
               (
                 procState: Client.ProcState = Client.defaultProcState,
@@ -845,6 +849,36 @@ export const clientAction = <
                       },
                     };
                   }
+                }
+
+                return procState;
+              }
+            );
+
+            // track all server requests for status updates
+            reducers.push(
+              (
+                procState: Client.ProcState = Client.defaultProcState,
+                action: Client.ActionTypeWithContextMeta<Client.Action.EnvkeyAction>
+              ) => {
+                if (
+                  action.meta?.clientId &&
+                  procState.clientStates[action.meta.clientId]
+                ) {
+                  return {
+                    ...procState,
+                    clientStates: {
+                      ...procState.clientStates,
+                      [action.meta.clientId]: {
+                        ...procState.clientStates[action.meta.clientId]!,
+                        isProcessingApi:
+                          action.type.endsWith("_SUCCESS") ||
+                          action.type.endsWith("_FAILURE")
+                            ? undefined
+                            : true,
+                      },
+                    },
+                  };
                 }
 
                 return procState;
@@ -973,17 +1007,15 @@ export const clientAction = <
 
     const store = storeArg ?? getDefaultStore();
 
-    // log(reduxAction.type);
+    let start: bigint | undefined;
 
-    let start = BigInt(0);
     if (process.env.LOG_ALL_ACTIONS) {
-      log("dispatching " + reduxAction.type);
       start = process.hrtime.bigint();
     }
 
     store.dispatch(reduxAction);
 
-    if (process.env.LOG_ALL_ACTIONS) {
+    if (process.env.LOG_ALL_ACTIONS && start) {
       const elapsedNs = process.hrtime.bigint() - start;
       const elapsedMs = Number(elapsedNs) / 1000000;
       log(

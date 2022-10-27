@@ -17,7 +17,7 @@ import { log } from "@core/lib/utils/logger";
 
 clientAction<
   Client.Action.ClientActions["CreateSession"],
-  Partial<Pick<Client.State, "envs">> & {
+  {
     timestamp: number;
   }
 >({
@@ -211,7 +211,7 @@ clientAction<
 
 clientAction<
   Client.Action.ClientActions["GetSession"],
-  Partial<Pick<Client.State, "envs">> & {
+  {
     timestamp?: number;
     notModified?: true;
   }
@@ -276,9 +276,10 @@ clientAction<
       {
         type: Api.ActionType.GET_SESSION,
         payload: {
-          graphUpdatedAt: R.isEmpty(state.graph)
-            ? undefined
-            : state.graphUpdatedAt,
+          graphUpdatedAt:
+            R.isEmpty(state.graph) || action.payload?.omitGraphUpdatedAt
+              ? undefined
+              : state.graphUpdatedAt,
         },
       },
       { ...context, rootClientAction: action }
@@ -307,6 +308,7 @@ clientAction<
       const verifyRes = await verifyCurrentUser(apiRes.state, context);
 
       if (!verifyRes.success) {
+        log("Couldn't verify current user");
         throw new Error("Couldn't verify current user");
       }
 
@@ -319,6 +321,7 @@ clientAction<
       );
 
       if (fetchLoadedRes && !fetchLoadedRes.success) {
+        log("Error fetching latest environments with pending changes");
         throw new Error(
           "Error fetching latest environments with pending changes"
         );
@@ -334,6 +337,7 @@ clientAction<
       );
 
       if (fetchPendingRes && !fetchPendingRes.success) {
+        log("Error fetching latest pending environments");
         throw new Error("Error fetching latest pending environments");
       }
 

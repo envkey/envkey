@@ -91,14 +91,22 @@ export const fetchEnvsForUserOrAccessParams = async (
       }
     }
 
-    return fetchRequiredEnvs(state, toFetchEnvs, toFetchChangesets, context);
+    return fetchRequiredEnvs(
+      state,
+      toFetchEnvs,
+      toFetchChangesets,
+      context,
+      undefined,
+      true
+    );
   },
   fetchRequiredEnvs = async (
     state: Client.State,
     requiredEnvs: Set<string>,
     requiredChangesets: Set<string>,
     context: Client.Context,
-    skipWaitForReencryption?: true
+    skipWaitForReencryption?: true,
+    keysOnly?: boolean
   ): Promise<Client.DispatchResult | undefined> => {
     const envParentIds = R.uniq(
       Array.from(requiredEnvs).concat(Array.from(requiredChangesets))
@@ -138,6 +146,7 @@ export const fetchEnvsForUserOrAccessParams = async (
           payload: {
             byEnvParentId: toFetch,
             skipWaitForReencryption,
+            keysOnly,
           },
         },
         context

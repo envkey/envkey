@@ -182,6 +182,7 @@ export const EnvironmentRoleSettingsSchema = z.object({
     defaultAllBlocks: z.boolean(),
     orderIndex: z.number(),
     settings: EnvironmentRoleSettingsSchema,
+    importId: z.string().optional(),
   });
 
 export const EnvironmentRoleSchema = utils.intersection(

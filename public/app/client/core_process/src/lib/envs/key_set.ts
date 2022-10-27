@@ -6,6 +6,7 @@ import {
   getConnectedBlockEnvironmentsForApp,
   getEnvironmentName,
   getEnvironmentsByEnvParentId,
+  getOrg,
 } from "@core/lib/graph";
 import {
   keySetDifference,
@@ -16,6 +17,13 @@ import { encrypt, signJson } from "@core/lib/crypto/proxy";
 import { verifyOrgKeyable } from "../trust";
 import { getTrustChain, getAuth } from "@core/lib/client";
 import set from "lodash.set";
+import { dispatch } from "../../handler";
+import {
+  CRYPTO_ASYMMETRIC_BATCH_SIZE,
+  CRYPTO_ASYMMETRIC_BATCH_DELAY_MS,
+  CRYPTO_ASYMMETRIC_STATUS_INTERVAL,
+} from "./constants";
+import { wait } from "@core/lib/utils/wait";
 import { log } from "@core/lib/utils/logger";
 
 export const keySetForGraphProposal = (
@@ -125,7 +133,7 @@ export const keySetForGraphProposal = (
 
     const privkey = currentAuth.privkey,
       toVerifyKeyableIds = new Set<string>(),
-      toEncryptKeys: [string[], Parameters<typeof encrypt>[0]][] = [];
+      toEncrypt: [string[], Parameters<typeof encrypt>[0]][] = [];
 
     let keys = {} as Api.Net.EnvParams["keys"];
 
@@ -158,7 +166,7 @@ export const keySetForGraphProposal = (
           const key = state.envs[composite]?.key;
 
           if (key) {
-            toEncryptKeys.push([
+            toEncrypt.push([
               [
                 "keyableParents",
                 keyableParent.id,
@@ -183,7 +191,7 @@ export const keySetForGraphProposal = (
               })
             ]?.key;
           if (key) {
-            toEncryptKeys.push([
+            toEncrypt.push([
               [
                 "keyableParents",
                 keyableParent.id,
@@ -209,7 +217,7 @@ export const keySetForGraphProposal = (
             ]?.key;
 
           if (key) {
-            toEncryptKeys.push([
+            toEncrypt.push([
               [
                 "keyableParents",
                 keyableParent.id,
@@ -236,42 +244,23 @@ export const keySetForGraphProposal = (
 
             let key = state.envs[composite]?.key;
 
-            if (!key) {
-              log("missing state.envs[composite]?.key", {
-                composite,
-                environmentId: environment.id,
-                environment: getEnvironmentName(state.graph, environment.id),
-                envParentId: environment.envParentId,
-                envParent: (
-                  state.graph[environment.envParentId] as Model.EnvParent
-                ).name,
-                inheritanceOverridesEnvironmentId,
-                inheritanceOverridesEnvironment: getEnvironmentName(
-                  state.graph,
-                  inheritanceOverridesEnvironmentId
-                ),
-                "envkeyToSet.inheritanceOverrides":
-                  envkeyToSet.inheritanceOverrides,
-              });
-
-              throw new Error("Missing symmetric key for blob");
+            if (key) {
+              toEncrypt.push([
+                [
+                  "keyableParents",
+                  keyableParent.id,
+                  generatedEnvkey.id,
+                  "inheritanceOverrides",
+                  inheritanceOverridesEnvironmentId,
+                  "data",
+                ],
+                {
+                  data: key,
+                  pubkey: generatedEnvkey.pubkey,
+                  privkey,
+                },
+              ]);
             }
-
-            toEncryptKeys.push([
-              [
-                "keyableParents",
-                keyableParent.id,
-                generatedEnvkey.id,
-                "inheritanceOverrides",
-                inheritanceOverridesEnvironmentId,
-                "data",
-              ],
-              {
-                data: key,
-                pubkey: generatedEnvkey.pubkey,
-                privkey,
-              },
-            ]);
           }
         }
       }
@@ -317,7 +306,7 @@ export const keySetForGraphProposal = (
               ]?.key;
 
             if (key) {
-              toEncryptKeys.push([
+              toEncrypt.push([
                 [
                   "blockKeyableParents",
                   blockId,
@@ -343,7 +332,7 @@ export const keySetForGraphProposal = (
                 })
               ]?.key;
             if (key) {
-              toEncryptKeys.push([
+              toEncrypt.push([
                 [
                   "blockKeyableParents",
                   blockId,
@@ -370,7 +359,7 @@ export const keySetForGraphProposal = (
               ]?.key;
 
             if (key) {
-              toEncryptKeys.push([
+              toEncrypt.push([
                 [
                   "blockKeyableParents",
                   blockId,
@@ -398,44 +387,24 @@ export const keySetForGraphProposal = (
 
               let key = state.envs[composite]?.key;
 
-              if (!key) {
-                log("missing state.envs[composite]?.key", {
-                  composite,
-                  environmentId: blockEnvironment.id,
-                  environment: getEnvironmentName(
-                    state.graph,
-                    blockEnvironment.id
-                  ),
-                  envParentId: blockEnvironment.envParentId,
-                  envParent: (
-                    state.graph[blockEnvironment.envParentId] as Model.EnvParent
-                  ).name,
-                  inheritanceOverridesEnvironmentId,
-                  inheritanceOverridesEnvironment: getEnvironmentName(
-                    state.graph,
-                    inheritanceOverridesEnvironmentId
-                  ),
-                });
-
-                throw new Error("Missing symmetric key for blob");
+              if (key) {
+                toEncrypt.push([
+                  [
+                    "blockKeyableParents",
+                    blockId,
+                    keyableParent.id,
+                    generatedEnvkey.id,
+                    "inheritanceOverrides",
+                    inheritanceOverridesEnvironmentId,
+                    "data",
+                  ],
+                  {
+                    data: key,
+                    pubkey: generatedEnvkey.pubkey,
+                    privkey,
+                  },
+                ]);
               }
-
-              toEncryptKeys.push([
-                [
-                  "blockKeyableParents",
-                  blockId,
-                  keyableParent.id,
-                  generatedEnvkey.id,
-                  "inheritanceOverrides",
-                  inheritanceOverridesEnvironmentId,
-                  "data",
-                ],
-                {
-                  data: key,
-                  pubkey: generatedEnvkey.pubkey,
-                  privkey,
-                },
-              ]);
             }
           }
         }
@@ -479,7 +448,7 @@ export const keySetForGraphProposal = (
                       getUserEncryptedKeyOrBlobComposite({ environmentId })
                     ]?.key;
                   if (key) {
-                    toEncryptKeys.push([
+                    toEncrypt.push([
                       [
                         "users",
                         userId,
@@ -506,7 +475,7 @@ export const keySetForGraphProposal = (
                       })
                     ]?.key;
                   if (key) {
-                    toEncryptKeys.push([
+                    toEncrypt.push([
                       [
                         "users",
                         userId,
@@ -534,7 +503,7 @@ export const keySetForGraphProposal = (
                     ]?.key;
 
                   if (key) {
-                    toEncryptKeys.push([
+                    toEncrypt.push([
                       [
                         "users",
                         userId,
@@ -567,7 +536,7 @@ export const keySetForGraphProposal = (
                       "changesets",
                     ];
 
-                    toEncryptKeys.push([
+                    toEncrypt.push([
                       path,
                       {
                         data: key,
@@ -588,44 +557,25 @@ export const keySetForGraphProposal = (
 
                     const key = state.envs[composite]?.key;
 
-                    if (!key) {
-                      log("missing state.envs[composite]?.key", {
-                        composite,
-                        environmentId: environmentId,
-                        environment: getEnvironmentName(
-                          state.graph,
-                          environmentId
-                        ),
-                        envParentId,
-                        envParent: (state.graph[envParentId] as Model.EnvParent)
-                          .name,
-                        inheritsEnvironmentId,
-                        inheritsEnvironment: getEnvironmentName(
-                          state.graph,
-                          inheritsEnvironmentId
-                        ),
-                      });
-
-                      throw new Error("Missing symmetric key for blob");
+                    if (key) {
+                      toEncrypt.push([
+                        [
+                          "users",
+                          userId,
+                          deviceId,
+                          envParentId,
+                          "environments",
+                          environmentId,
+                          "inheritanceOverrides",
+                          inheritsEnvironmentId!,
+                        ],
+                        {
+                          data: key,
+                          pubkey,
+                          privkey,
+                        },
+                      ]);
                     }
-
-                    toEncryptKeys.push([
-                      [
-                        "users",
-                        userId,
-                        deviceId,
-                        envParentId,
-                        "environments",
-                        environmentId,
-                        "inheritanceOverrides",
-                        inheritsEnvironmentId!,
-                      ],
-                      {
-                        data: key,
-                        pubkey,
-                        privkey,
-                      },
-                    ]);
                   }
                 }
               }
@@ -645,7 +595,7 @@ export const keySetForGraphProposal = (
                     ]?.key;
 
                   if (key) {
-                    toEncryptKeys.push([
+                    toEncrypt.push([
                       [
                         "users",
                         userId,
@@ -674,7 +624,7 @@ export const keySetForGraphProposal = (
                     ]?.key;
 
                   if (key) {
-                    toEncryptKeys.push([
+                    toEncrypt.push([
                       [
                         "users",
                         userId,
@@ -708,7 +658,7 @@ export const keySetForGraphProposal = (
                       "changesets",
                     ];
 
-                    toEncryptKeys.push([
+                    toEncrypt.push([
                       path,
                       {
                         data: key,
@@ -732,12 +682,62 @@ export const keySetForGraphProposal = (
       )
     );
 
-    const keyPromises = toEncryptKeys.map(([path, params]) =>
-        encrypt(params).then((encrypted) => [path, encrypted])
-      ) as Promise<[string[], Crypto.EncryptedData]>[],
-      keyPathResults = await Promise.all(keyPromises);
+    await dispatch(
+      {
+        type: Client.ActionType.SET_CRYPTO_STATUS,
+        payload: {
+          processed: 0,
+          total: toEncrypt.length,
+          op: "encrypt",
+          dataType: "keys",
+        },
+      },
+      context
+    );
 
-    for (let [path, data] of keyPathResults) {
+    // log("encryptedKeyParamsForKeySet - starting encryption");
+
+    let pathResults: [string[], Crypto.EncryptedData][] = [];
+    let encryptedSinceStatusUpdate = 0;
+    for (let batch of R.splitEvery(CRYPTO_ASYMMETRIC_BATCH_SIZE, toEncrypt)) {
+      const res = await Promise.all(
+        batch.map(([path, params]) =>
+          encrypt(params).then((encrypted) => {
+            encryptedSinceStatusUpdate++;
+            if (
+              encryptedSinceStatusUpdate >= CRYPTO_ASYMMETRIC_STATUS_INTERVAL
+            ) {
+              dispatch(
+                {
+                  type: Client.ActionType.CRYPTO_STATUS_INCREMENT,
+                  payload: encryptedSinceStatusUpdate,
+                },
+                context
+              );
+              encryptedSinceStatusUpdate = 0;
+            }
+
+            return [path, encrypted];
+          })
+        ) as Promise<[string[], Crypto.EncryptedData]>[]
+      );
+
+      await wait(CRYPTO_ASYMMETRIC_BATCH_DELAY_MS);
+
+      pathResults = pathResults.concat(res);
+    }
+    // log("encryptedKeyParamsForKeySet - encrypted all");
+    await dispatch(
+      {
+        type: Client.ActionType.SET_CRYPTO_STATUS,
+        payload: undefined,
+      },
+      context
+    );
+
+    // log("key_set", { keyPathResults });
+
+    for (let [path, data] of pathResults) {
       set(keys, path, data);
     }
 

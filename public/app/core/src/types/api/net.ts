@@ -386,6 +386,7 @@ export namespace Net {
         changesetOptions: FetchChangesetOptionsSchema.optional(),
       })
     ),
+    keysOnly: z.boolean().optional(),
   });
 
   type EnvsResult = {
@@ -841,6 +842,7 @@ export namespace Net {
           uid: true,
           externalAuthProviderId: true,
           orgRoleId: true,
+          importId: true,
         }),
         appUserGrants: z
           .array(
@@ -894,7 +896,11 @@ export namespace Net {
       .merge(EnvParamsSchema),
     [ActionType.REVOKE_DEVICE]: IdParamsSchema,
 
-    [ActionType.UPDATE_ORG_SETTINGS]: Model.OrgSettingsSchema,
+    [ActionType.UPDATE_ORG_SETTINGS]: Model.OrgSettingsSchema.merge(
+      z.object({
+        isImport: z.boolean().optional(),
+      })
+    ),
 
     [ActionType.CREATE_ORG_SAML_PROVIDER]: z.object({
       nickname: z.string(),
@@ -936,6 +942,7 @@ export namespace Net {
           pubkey: true,
           encryptedPrivkey: true,
           orgRoleId: true,
+          importId: true,
         })
       )
       .merge(EnvParamsSchema),
@@ -983,6 +990,7 @@ export namespace Net {
     [ActionType.CREATE_APP]: Model.AppSchema.pick({
       name: true,
       settings: true,
+      importId: true,
     }),
     [ActionType.RENAME_APP]: z
       .object({ name: z.string() })
@@ -997,6 +1005,7 @@ export namespace Net {
       userId: true,
       appId: true,
       appRoleId: true,
+      importId: true,
     }).merge(EnvParamsSchema),
 
     [ActionType.REMOVE_APP_ACCESS]: IdParamsSchema.merge(
@@ -1006,6 +1015,7 @@ export namespace Net {
     [ActionType.CREATE_BLOCK]: Model.BlockSchema.pick({
       name: true,
       settings: true,
+      importId: true,
     }),
 
     [ActionType.RENAME_BLOCK]: z
@@ -1023,6 +1033,7 @@ export namespace Net {
       appId: true,
       blockId: true,
       orderIndex: true,
+      importId: true,
     }).merge(EnvParamsSchema),
 
     [ActionType.DISCONNECT_BLOCK]: IdParamsSchema.merge(
@@ -1044,6 +1055,7 @@ export namespace Net {
       appId: true,
       name: true,
       environmentId: true,
+      importId: true,
     }),
     [ActionType.DELETE_SERVER]: IdParamsSchema,
     [ActionType.CREATE_LOCAL_KEY]: Model.LocalKeySchema.pick({
@@ -1122,6 +1134,7 @@ export namespace Net {
       Model.EnvironmentBaseSchema.pick({
         envParentId: true,
         environmentRoleId: true,
+        importId: true,
       }).merge(EnvParamsSchema.partial()),
       z.union([
         z.object({
@@ -1151,7 +1164,10 @@ export namespace Net {
       description: true,
     })
       .merge(
-        Rbac.EnvironmentRoleBaseSchema.omit({ type: true, orderIndex: true })
+        Rbac.EnvironmentRoleBaseSchema.omit({
+          type: true,
+          orderIndex: true,
+        })
       )
       .merge(
         z.object({
@@ -1242,6 +1258,7 @@ export namespace Net {
     [ActionType.CREATE_GROUP]: Model.GroupSchema.pick({
       name: true,
       objectType: true,
+      importId: true,
     }),
     [ActionType.RENAME_GROUP]: Model.GroupSchema.pick({
       name: true,
@@ -1256,6 +1273,7 @@ export namespace Net {
         Model.GroupMembershipSchema.pick({
           groupId: true,
           objectId: true,
+          importId: true,
         })
       )
       .merge(EnvParamsSchema.partial()),
@@ -1268,6 +1286,7 @@ export namespace Net {
       appId: true,
       userGroupId: true,
       appRoleId: true,
+      importId: true,
     }).merge(EnvParamsSchema),
 
     [ActionType.DELETE_APP_USER_GROUP]: IdParamsSchema.merge(

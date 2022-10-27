@@ -65,6 +65,13 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     }
   }
 
+  // redirect to org archive import screen if import in progress
+  // useLayoutEffect(() => {
+  //   if (props.core.isImportingOrg) {
+  //     props.history.push(orgRoute("/my-org/archive"));
+  //   }
+  // }, []);
+
   useEffect(
     () => () => {
       // clear selected account on unmount
@@ -215,8 +222,9 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         if (document.documentElement.classList.contains("loaded")) {
           document.documentElement.classList.remove("loaded");
         }
-        const res = await props.dispatch({
+        await props.dispatch({
           type: Client.ActionType.GET_SESSION,
+          payload: { omitGraphUpdatedAt: true },
         });
       }
     })();
@@ -358,6 +366,10 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       props.core.graphUpdatedAt &&
       props.location.pathname.endsWith(orgId)
     ) {
+      if (props.core.isImportingOrg) {
+        return "/my-org/archive";
+      }
+
       const { apps } = g.graphTypes(props.core.graph);
 
       if (apps.length > 0) {
@@ -419,10 +431,6 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       auth && !shouldRedirectPath && props.ui.loadedAccountId
         ? getUiTree(props.core, auth!.userId, props.ui.now)
         : null;
-
-    if (tree) {
-      console.log(new Date().toISOString(), "rendered ui tree");
-    }
 
     return tree;
   }, [
@@ -565,18 +573,17 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
   if (!shouldRender) {
     console.log("signed_in_account_container: won't render yet", {
       auth: Boolean(auth),
+      "auth.token": Boolean(auth?.token),
+      shouldFetchSession,
       "props.core.fetchSessionError": props.core.fetchSessionError,
-      "props.ui.loadedAccountId": Boolean(props.ui.loadedAccountId),
-      currentUser: Boolean(currentUser),
+      "props.ui.loadedAccountId": props.ui.loadedAccountId,
+      currentUser,
       "auth.orgId": auth?.orgId ?? false,
       orgId,
       shouldRedirectPath,
+      core: props.core,
       uiTree: Boolean(uiTree),
     });
-    console.log("auth", auth);
-    console.log("graph", props.core.graph);
-  } else {
-    console.log("signed_in_account_container: will render");
   }
 
   useLayoutEffect(() => {
@@ -623,7 +630,39 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     shouldRedirectPath ||
     !uiTree
   ) {
-    return <div></div>;
+    return (
+      <div>
+        <section
+          className={style({
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: styles.layout.SIDEBAR_WIDTH,
+            transition: "height",
+            transitionDuration: "0.2s",
+            height: `calc(100% - ${props.ui.pendingFooterHeight}px)`,
+          })}
+        >
+          <div className={styles.SidebarContainer}>
+            <div className="account-menu">
+              <div className={styles.AccountMenu} />
+            </div>
+          </div>
+        </section>
+        <section
+          className={style({
+            position: "absolute",
+            top: 0,
+            left: styles.layout.SIDEBAR_WIDTH,
+            width: `calc(100% - ${styles.layout.SIDEBAR_WIDTH}px)`,
+            background: "#fff",
+            paddingBottom: 0,
+          })}
+        >
+          <header className={styles.SelectedObjectHeader} />
+        </section>
+      </div>
+    );
   }
 
   const hasPendingEnvUpdates = pendingUpdateDetails.filteredUpdates.length > 0;

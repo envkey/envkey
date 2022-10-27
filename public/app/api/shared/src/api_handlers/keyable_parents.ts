@@ -50,7 +50,7 @@ apiAction<
         type: "server",
         id,
         ...graphKey.server(auth.org.id, payload.appId, id),
-        ...pick(["appId", "environmentId", "name"], payload),
+        ...pick(["appId", "environmentId", "name", "importId"], payload),
         createdAt: now,
         updatedAt: now,
       };

@@ -32,6 +32,7 @@ import naclUtil from "tweetnacl-util";
 import { decode as decodeBase58 } from "bs58";
 import { initLocalsIfNeeded } from "../lib/envs";
 import { log } from "@core/lib/utils/logger";
+import { updateLocalSocketEnvActionStatusIfNeeded } from "@core_proc/lib/envs/status";
 
 clientAction<
   Client.Action.ClientActions["InviteUsers"],
@@ -148,10 +149,7 @@ clientAction<
       throw new Error("Action requires authentication");
     }
 
-    initLocalsIfNeeded(state, auth.userId, {
-      ...context,
-      store: getTempStore(context.store),
-    }).catch((err) => {
+    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 
@@ -370,22 +368,47 @@ clientAction<
         state = replacementsRes.state;
       }
 
+      await dispatch(
+        {
+          type: Client.ActionType.SET_CRYPTO_STATUS,
+          payload: {
+            processed: 0,
+            total:
+              Object.keys(apiPayload.envs.keys ?? {}).length +
+              Object.keys(apiPayload.changesets.keys ?? {}).length,
+            op: "decrypt",
+            dataType: "keys",
+          },
+        },
+        context
+      );
+
       const [decryptedEnvs, decryptedChangesets] = await Promise.all([
         decryptEnvs(
           state,
           apiPayload.envs.keys ?? {},
           apiPayload.envs.blobs ?? {},
           invitePrivkey,
-          apiSuccessContext
+          apiSuccessContext,
+          true
         ),
         decryptChangesets(
           state,
           apiPayload.changesets.keys ?? {},
           apiPayload.changesets.blobs ?? {},
           invitePrivkey,
-          apiSuccessContext
+          apiSuccessContext,
+          true
         ),
       ]);
+
+      await dispatch(
+        {
+          type: Client.ActionType.SET_CRYPTO_STATUS,
+          payload: undefined,
+        },
+        context
+      );
 
       return dispatchSuccess(
         {
@@ -407,6 +430,10 @@ clientAction<
         apiSuccessContext
       );
     }
+  },
+
+  successHandler: async (state, action, payload, context) => {
+    updateLocalSocketEnvActionStatusIfNeeded(state, context);
   },
 });
 
@@ -499,12 +526,13 @@ clientAction<Client.Action.ClientActions["AcceptInvite"]>({
       }),
       trustedRoot = state.trustedRoot!,
       [envParams, signedTrustedRoot] = await Promise.all([
-        encryptedKeyParamsForDeviceOrInvitee(
+        encryptedKeyParamsForDeviceOrInvitee({
           state,
           privkey,
-          signedPubkey,
-          state.loadedInvite.inviteeId
-        ),
+          pubkey: signedPubkey,
+          userId: state.loadedInvite.inviteeId,
+          context,
+        }),
         signJson({ data: trustedRoot, privkey }),
       ]),
       authProps = {
@@ -652,13 +680,13 @@ const inviteUser = async (
         orgRoleId: clientParams.user.orgRoleId,
         appUserGrants: clientParams.appUserGrants,
       },
-      envParams = await encryptedKeyParamsForDeviceOrInvitee(
+      envParams = await encryptedKeyParamsForDeviceOrInvitee({
         state,
-        auth.privkey!,
-        invitePubkey,
-        undefined,
-        accessParams
-      );
+        privkey: auth.privkey!,
+        pubkey: invitePubkey,
+        accessParams,
+        context,
+      });
 
     return [
       {

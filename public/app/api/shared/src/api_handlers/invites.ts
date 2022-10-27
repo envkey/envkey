@@ -29,6 +29,7 @@ import {
   getCanAutoUpgradeLicenseFn,
   getResolveProductAndQuantityFn,
 } from "../billing";
+import * as semver from "semver";
 
 apiAction<
   Api.Action.RequestActions["CreateInvite"],
@@ -37,6 +38,7 @@ apiAction<
   type: Api.ActionType.CREATE_INVITE,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async (
     { payload },
     orgGraph,
@@ -165,6 +167,7 @@ apiAction<
         orgRoleUpdatedAt: now,
         // link scim candidate to user
         scim: payload.scim || undefined,
+        importId: userParams.importId,
         createdAt: now,
         updatedAt: now,
       };
@@ -443,12 +446,17 @@ apiAction<
       };
     }
 
+    const keysOnly = Boolean(
+      action.meta.client &&
+        semver.gte(action.meta.client.clientVersion, "2.2.0")
+    );
+
     return {
       type: "graphHandlerResult",
       graph: orgGraph,
-      envs: { all: true },
-      inheritanceOverrides: { all: true },
-      changesets: { all: true },
+      envs: { all: true, keysOnly },
+      inheritanceOverrides: { all: true, keysOnly },
+      changesets: { all: true, keysOnly },
       signedTrustedRoot: invite.signedTrustedRoot,
       logTargetIds: getFetchActionLogTargetIdsFn(orgGraph),
       backgroundLogTargetIds: getFetchActionBackgroundLogTargetIdsFn(orgGraph),
@@ -464,6 +472,7 @@ apiAction<
   graphAction: true,
   authenticated: true,
   shouldClearOrphanedLocals: true,
+
   graphAuthorizer: async (
     { payload: { id } },
     orgGraph,

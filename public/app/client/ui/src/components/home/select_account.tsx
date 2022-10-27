@@ -1,5 +1,5 @@
 import * as R from "ramda";
-import React, { useState, useEffect } from "react";
+import React, { useState, useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
 import { Component } from "@ui_types";
 import { Client } from "@core/types";
@@ -26,14 +26,19 @@ export const SelectAccount: Component = (props) => {
     Client.PendingSelfHostedDeployment | undefined
   >();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (
       selectedAccountId &&
       selectedAccountId == props.ui.loadedAccountId &&
       !awaitingMinSelectDelay
     ) {
       const { orgId } = core.orgUserAccounts[selectedAccountId]!;
-      props.history.push(`/org/${orgId}`);
+      if (document.documentElement.classList.contains("loaded")) {
+        document.documentElement.classList.remove("loaded");
+      }
+      requestAnimationFrame(() => {
+        props.history.push(`/org/${orgId}`);
+      });
     }
   }, [props.ui.loadedAccountId, awaitingMinSelectDelay]);
 

@@ -27,6 +27,7 @@ import nacl from "tweetnacl";
 import naclUtil from "tweetnacl-util";
 import { secureRandomPhrase } from "@core/lib/crypto/phrase";
 import { log } from "@core/lib/utils/logger";
+import { updateLocalSocketEnvActionStatusIfNeeded } from "@core_proc/lib/envs/status";
 
 clientAction<
   Client.Action.ClientActions["CreateRecoveryKey"],
@@ -82,7 +83,8 @@ clientAction<
     try {
       const [apiParams, encryptionKey] = await createRecoveryKey(
         stateWithFetched!,
-        auth
+        auth,
+        context
       );
 
       const apiRes = await dispatch(
@@ -274,22 +276,47 @@ clientAction<
         state = replacementsRes.state;
       }
 
+      await dispatch(
+        {
+          type: Client.ActionType.SET_CRYPTO_STATUS,
+          payload: {
+            processed: 0,
+            total:
+              Object.keys(apiPayload.envs.keys ?? {}).length +
+              Object.keys(apiPayload.changesets.keys ?? {}).length,
+            op: "decrypt",
+            dataType: "keys",
+          },
+        },
+        context
+      );
+
       const [decryptedEnvs, decryptedChangesets] = await Promise.all([
         decryptEnvs(
           state,
           apiPayload.envs.keys ?? {},
           apiPayload.envs.blobs ?? {},
           recoveryPrivkey,
-          apiSuccessContext
+          apiSuccessContext,
+          true
         ),
         decryptChangesets(
           state,
           apiPayload.changesets.keys ?? {},
           apiPayload.changesets.blobs ?? {},
           recoveryPrivkey,
-          apiSuccessContext
+          apiSuccessContext,
+          true
         ),
       ]);
+
+      await dispatch(
+        {
+          type: Client.ActionType.SET_CRYPTO_STATUS,
+          payload: undefined,
+        },
+        context
+      );
 
       return dispatchSuccess(
         {
@@ -312,6 +339,10 @@ clientAction<
         apiSuccessContext
       );
     }
+  },
+
+  successHandler: async (state, action, payload, context) => {
+    updateLocalSocketEnvActionStatusIfNeeded(state, context);
   },
 });
 
@@ -399,12 +430,13 @@ clientAction<Client.Action.ClientActions["RedeemRecoveryKey"]>({
       ),
       trustedPubkeys = updateTrustedRes.state.trustedRoot!,
       [envParams, signedTrustedRoot] = await Promise.all([
-        encryptedKeyParamsForDeviceOrInvitee(
+        encryptedKeyParamsForDeviceOrInvitee({
           state,
           privkey,
-          signedPubkey,
-          state.loadedRecoveryKey.userId
-        ),
+          pubkey: signedPubkey,
+          userId: state.loadedRecoveryKey.userId,
+          context,
+        }),
         signJson({ data: trustedPubkeys, privkey }),
       ]),
       authProps = {
@@ -525,7 +557,8 @@ clientAction<
 
 const createRecoveryKey = async (
   state: Client.State,
-  auth: Client.ClientUserAuth
+  auth: Client.ClientUserAuth,
+  context: Client.Context
 ): Promise<[Api.Net.ApiParamTypes["CreateRecoveryKey"], string]> => {
   if (!auth.privkey) {
     throw new Error("Action requires decrypted privkey");
@@ -546,12 +579,13 @@ const createRecoveryKey = async (
         privkey,
       }),
     ]),
-    envParams = await encryptedKeyParamsForDeviceOrInvitee(
+    envParams = await encryptedKeyParamsForDeviceOrInvitee({
       state,
-      auth.privkey!,
-      pubkey,
-      auth.userId
-    );
+      privkey: auth.privkey!,
+      pubkey: pubkey!,
+      userId: auth.userId,
+      context,
+    });
 
   return [
     {

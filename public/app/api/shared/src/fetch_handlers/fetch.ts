@@ -21,6 +21,7 @@ import { getOrg } from "../models/orgs";
 import { getOrgStats } from "../auth";
 import { getVerifyLicenseFn } from "../billing";
 import { ipMatchesAny } from "@core/lib/utils/ip";
+import * as semver from "semver";
 
 apiAction<
   Api.Action.RequestActions["FetchEnvkey"],
@@ -29,7 +30,8 @@ apiAction<
   type: Api.ActionType.FETCH_ENVKEY,
   graphAction: false,
   authenticated: false,
-  handler: async ({ type, payload }, now, requestParams, transactionConn) => {
+  handler: async (action, now, requestParams, transactionConn) => {
+    const { type, payload } = action;
     const { envkeyIdPart } = payload;
     if (!envkeyIdPart || envkeyIdPart.includes("-")) {
       throw new Api.ApiError("not found", 404);
@@ -103,7 +105,22 @@ apiAction<
         : Promise.resolve([]),
     ]);
 
-    let org: Api.Db.Org | undefined;
+    const org = await getOrg(orgId, transactionConn);
+
+    if (!org) {
+      throw new Api.ApiError("couldn't fetch org", 500);
+    }
+
+    if (org.optimizeEmptyEnvs && env.NODE_ENV == "production") {
+      if (!action.meta.client) {
+        throw new Api.ApiError("client version required", 400);
+      }
+
+      if (!semver.gte(action.meta.client.clientVersion, "2.1.0")) {
+        throw new Api.ApiError("client upgrade required", 426);
+      }
+    }
+
     let orgStats: Model.OrgStats | undefined;
     let license: Billing.License | undefined;
     if (env.IS_CLOUD) {
@@ -115,13 +132,10 @@ apiAction<
         );
       }
 
-      [org, orgStats] = await Promise.all([
-        getOrg(orgId, transactionConn),
-        getOrgStats(orgId, transactionConn),
-      ]);
+      orgStats = await getOrgStats(orgId, transactionConn);
 
-      if (!org || !orgStats) {
-        throw new Api.ApiError("couldn't fetch org and org stats", 500);
+      if (!orgStats) {
+        throw new Api.ApiError("couldn't fetch org stats", 500);
       }
 
       const verifyLicenseFn = getVerifyLicenseFn();

@@ -76,6 +76,7 @@ export const ConnectBlocks: EnvManagerComponent = (props) => {
           setSubmitting(false);
         }}
       />
+      {submitting ? <ui.CryptoStatus {...props} /> : ""}
     </div>
   );
 };

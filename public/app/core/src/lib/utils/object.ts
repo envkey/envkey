@@ -76,7 +76,7 @@ export const flattenObj = (obj: object): { [k: string]: any } => {
       const isObj =
         typeof v == "object" && v instanceof Object && !(v instanceof Array);
       if (isObj) {
-        clone[k] = stripNullsRecursive(v);
+        clone[k] = stripUndefinedRecursive(v);
       }
     }
     for (let k of toDelete) {

@@ -89,8 +89,6 @@ const clientParams: Client.ClientParams<"app"> = {
       [uiState, _setLocalUiState] = useState(defaultLocalState),
       uiStateRef = useRef(uiState),
       setLocalUiState = (update: Partial<LocalUiState>) => {
-        console.log(new Date().toISOString(), "updating UI state");
-
         const updatedState = {
           ...uiStateRef.current,
           ...update,
@@ -102,6 +100,8 @@ const clientParams: Client.ClientParams<"app"> = {
             ...updatedState,
             envManager: emptyEnvManagerState,
             pendingFooterHeight: 0,
+            importStatus: undefined,
+            envActionStatus: undefined,
           })
         );
 
@@ -145,7 +145,11 @@ const clientParams: Client.ClientParams<"app"> = {
           fetchCoreState();
         }
       },
-      fetchCoreState = async (forceUpdate = false) => {
+      fetchCoreState = async (
+        params: { forceUpdate?: boolean; keys?: (keyof Client.State)[] } = {}
+      ) => {
+        const { forceUpdate, keys } = params;
+
         fetchingStateRef.current = true;
         const accountId = uiStateRef.current.accountId;
 
@@ -153,16 +157,33 @@ const clientParams: Client.ClientParams<"app"> = {
           accountId,
         });
 
-        await fetchState(accountId)
-          .then(async (state) => {
-            return updateState(state, forceUpdate);
+        await fetchState(accountId, undefined, keys)
+          .then(async (stateOrPartial) => {
+            console.log(
+              new Date().toISOString(),
+              "fetched core state, applying update",
+              {
+                accountId,
+              }
+            );
+            const res = updateState(
+              keys
+                ? { ...coreStateRef.current, ...stateOrPartial }
+                : stateOrPartial,
+              forceUpdate
+            );
+
+            console.log(new Date().toISOString(), "applied core state update", {
+              accountId,
+            });
+            return res;
           })
           .catch((err) => {
             console.error("fetchCoreState -> fetchState error", err);
             throw err;
           });
       },
-      onSocketUpdate = (e: WebSocketEvent) => {
+      onSocketFullStateUpdate = (e: WebSocketEvent) => {
         if (e.type == "open") {
           if (!establishedInitialSocketConnection) {
             establishedInitialSocketConnection = true;
@@ -183,13 +204,23 @@ const clientParams: Client.ClientParams<"app"> = {
       onSocketMessage = (e: MessageEvent) => {
         (async () => {
           const msg = JSON.parse(e.data) as Client.LocalSocketMessage;
-
+          // console.log("received socket message: ", msg);
           if (msg.type == "update") {
-            onSocketUpdate(e);
+            if (
+              !msg.accountId ||
+              msg.accountId == uiStateRef.current.accountId
+            ) {
+              onSocketFullStateUpdate(e);
+            }
           } else if (msg.type == "diffs") {
             const newState = R.clone(coreStateRef.current!);
             applyPatch(newState, msg.diffs);
             setCoreStateIfLatest(newState);
+          } else if (msg.type == "envActionStatus") {
+            setLocalUiState({ envActionStatus: msg.status });
+          } else if (msg.type == "importStatus") {
+            console.log("received import status update:", msg.status);
+            setLocalUiState({ importStatus: msg.status });
           } else {
             console.log(
               new Date().toISOString(),
@@ -206,25 +237,42 @@ const clientParams: Client.ClientParams<"app"> = {
       ) => {
         console.log(new Date().toISOString(), "dispatch:", action.type);
 
+        const returnFullState = action.type == Client.ActionType.GET_SESSION;
+
         const res = await dispatchCore(
           action,
           clientParams,
           uiStateRef.current.accountId,
-          hostUrlOverride
+          hostUrlOverride,
+          undefined,
+          returnFullState
         );
 
         console.log(new Date().toISOString(), "core result:", action.type);
 
         let newState: Client.State | undefined;
-        if (!skipStateUpdate && res.diffs && res.diffs.length > 0) {
-          console.log(
-            new Date().toISOString(),
-            action.type,
-            `${res.diffs.length} diffs to apply`
-          );
-          newState = R.clone(coreStateRef.current!);
-          applyPatch(newState, res.diffs);
-          setCoreStateIfLatest(newState);
+        if (!skipStateUpdate) {
+          if (returnFullState && "state" in res) {
+            console.log(
+              new Date().toISOString(),
+              action.type,
+              `received full state response`
+            );
+            setCoreStateIfLatest(res.state);
+            console.log(new Date().toISOString(), "set new state");
+          } else if ("diffs" in res && res.diffs && res.diffs.length > 0) {
+            console.log(
+              new Date().toISOString(),
+              action.type,
+              `${res.diffs.length} diffs to apply`
+            );
+            newState = R.clone(coreStateRef.current!);
+            // console.log(new Date().toISOString(), "cloned existing state");
+            applyPatch(newState, res.diffs);
+            // console.log(new Date().toISOString(), "applied patch");
+            setCoreStateIfLatest(newState);
+            console.log(new Date().toISOString(), "set new state");
+          }
         }
 
         // give state a chance to update
@@ -242,7 +290,7 @@ const clientParams: Client.ClientParams<"app"> = {
         undefined,
         { debug: true }
       );
-      client.addEventListener("open", onSocketUpdate);
+      client.addEventListener("open", onSocketFullStateUpdate);
       client.addEventListener("message", onSocketMessage);
       client.addEventListener("error", (e) => {
         console.log("Local socket error:", e);
@@ -271,7 +319,7 @@ const clientParams: Client.ClientParams<"app"> = {
 
       initLocalSocket();
 
-      fetchCoreState(true);
+      fetchCoreState({ forceUpdate: true });
     }, [coreState]);
 
     useEffect(init, [navigator.userAgent]);
@@ -285,7 +333,7 @@ const clientParams: Client.ClientParams<"app"> = {
         uiStateRef.current.accountId &&
         uiStateRef.current.accountId != uiStateRef.current.loadedAccountId
       ) {
-        fetchCoreState(true);
+        fetchCoreState({ forceUpdate: true });
       }
     }, [uiStateRef.current.accountId, uiStateRef.current.loadedAccountId]);
 

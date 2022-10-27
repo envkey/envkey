@@ -80,7 +80,8 @@ clientAction<
       const [apiParams, cliKey] = await createCliUser(
           stateWithFetched!,
           payload,
-          auth
+          auth,
+          context
         ),
         apiRes = await dispatch(
           {
@@ -123,10 +124,7 @@ clientAction<
       throw new Error("Action requires authentication");
     }
 
-    initLocalsIfNeeded(state, auth.userId, {
-      ...context,
-      store: getTempStore(context.store),
-    }).catch((err) => {
+    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 
@@ -322,7 +320,8 @@ clientAction<
 const createCliUser = async (
   state: Client.State,
   clientParams: Client.Action.ClientActions["CreateCliUser"]["payload"],
-  auth: Client.ClientUserAuth | Client.ClientCliAuth
+  auth: Client.ClientUserAuth | Client.ClientCliAuth,
+  context: Client.Context
 ): Promise<[Api.Net.ApiParamTypes["CreateCliUser"], string]> => {
   if (!auth.privkey) {
     throw new Error("Action requires decrypted privkey");
@@ -348,13 +347,14 @@ const createCliUser = async (
       orgRoleId: clientParams.orgRoleId,
       appUserGrants: clientParams.appUserGrants,
     },
-    envParams = await encryptedKeyParamsForDeviceOrInvitee(
+    envParams = await encryptedKeyParamsForDeviceOrInvitee({
       state,
-      auth.privkey!,
+      privkey: auth.privkey!,
       pubkey,
-      undefined,
-      accessParams
-    );
+      userId: undefined,
+      accessParams,
+      context,
+    });
 
   return [
     {
@@ -366,6 +366,7 @@ const createCliUser = async (
       appUserGrants: clientParams.appUserGrants,
       name: clientParams.name,
       orgRoleId: clientParams.orgRoleId,
+      importId: clientParams.importId,
     },
     [
       cliKeyIdPart,

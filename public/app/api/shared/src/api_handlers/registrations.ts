@@ -14,6 +14,8 @@ import { pick } from "@core/lib/utils/pick";
 import { getApiUserGraph } from "../graph";
 import { getPubkeyHash } from "@core/lib/client";
 import { PoolConnection } from "mysql2/promise";
+import * as semver from "semver";
+import { log } from "@core/lib/utils/logger";
 
 let initOrgStatsFn:
   | ((
@@ -44,7 +46,8 @@ apiAction<
   type: Api.ActionType.REGISTER,
   graphAction: false,
   authenticated: false,
-  handler: async ({ payload }, now, requestParams, transactionConn) => {
+  handler: async (action, now, requestParams, transactionConn) => {
+    const { payload } = action;
     const email = payload.user.email.toLowerCase().trim();
 
     let externalAuthSession: Api.Db.ExternalAuthSession | undefined,
@@ -64,6 +67,20 @@ apiAction<
 
     if (payload.hostType == "cloud" && (env.IS_ENTERPRISE || !env.IS_CLOUD)) {
       throw new Api.ApiError("invalid host", 400);
+    }
+
+    if (!action.meta.client) {
+      throw new Api.ApiError("client version required", 400);
+    }
+    if (
+      env.NODE_ENV == "production" &&
+      !semver.gte(action.meta.client.clientVersion, "2.2.0")
+    ) {
+      log("client upgrade required", {
+        clientVersion: action.meta.client.clientVersion ?? "",
+        requiresClientVersion: "2.2.0",
+      });
+      throw new Api.ApiError("client upgrade required", 426);
     }
 
     if (payload.provider == "email" && payload.emailVerificationToken) {
@@ -354,8 +371,9 @@ apiAction<
             : undefined,
         ...(env.IS_CLOUD ? { lifecycleEmailsEnabled: true } : {}),
 
-        envUpdateRequiresClientVersion: "2.1.0",
+        envUpdateRequiresClientVersion: "2.2.0",
         "upgradedCrypto-2.1.0": true,
+        optimizeEmptyEnvs: true,
       },
       orgUserDevice: Api.Db.OrgUserDevice = {
         type: "orgUserDevice",

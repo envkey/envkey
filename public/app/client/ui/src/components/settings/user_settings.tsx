@@ -114,6 +114,12 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
       }
     }, [props.core.generatedInvites.length > 0]);
 
+    useLayoutEffect(() => {
+      if (isRegenerating) {
+        window.scrollTo(0, document.body.scrollHeight);
+      }
+    }, [isRegenerating]);
+
     if (!user || !orgRole || !orgRolesAssignable) {
       return <div />;
     }
@@ -325,11 +331,12 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
                     });
                 }}
               >
-                {updatingRole ? "Updating Role..." : "Update Role"}
+                {updatingRole ? <SmallLoader /> : "Update Role"}
               </button>
             ) : (
               ""
             )}
+            {updatingRole ? <ui.CryptoStatus {...props} /> : ""}
           </div>
         </div>
       );
@@ -388,15 +395,15 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
         !(user.inviteAcceptedAt || user.isCreator)
       ) {
         const expired = props.ui.now > pendingInvite!.expiresAt;
-        let revokeLabel: string;
+        let revokeLabel: React.ReactChild;
 
         if (expired) {
-          revokeLabel = isDeleting ? "Removing..." : "Remove Invitation";
+          revokeLabel = isDeleting ? <SmallLoader /> : "Remove Invitation";
         } else {
-          revokeLabel = isDeleting ? "Revoking..." : "Revoke Invitation";
+          revokeLabel = isDeleting ? <SmallLoader /> : "Revoke Invitation";
         }
 
-        return (
+        return [
           <div className="buttons">
             <button
               className="tertiary"
@@ -479,8 +486,9 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
             >
               {isRegenerating ? <SmallLoader /> : "Regenerate Invitation"}
             </button>
-          </div>
-        );
+          </div>,
+          isRegenerating ? <ui.CryptoStatus {...props} /> : "",
+        ];
       }
     };
 

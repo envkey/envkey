@@ -463,15 +463,23 @@ func (blob *KeyableBlobWithTrustChains) decrypt() (*DecryptedKeyableBlob, error)
 	var numProcessed uint16
 
 	if blob.Env != nil {
+
 		numQueued++
 		go func() {
-			decryptedKey, err := crypto.Decrypt(
-				blob.Env.EncryptedKey,
-				blob.Env.Signer.Pubkey,
-				blob.Env.DecryptedPrivkey,
-			)
+			var decrypted []byte
+			var decryptedKey []byte
+			var err error
+			if blob.Env.EncryptedEnv.Data == "{}" {
+				decrypted = []byte(blob.Env.EncryptedEnv.Data)
+			} else {
+				decryptedKey, err = crypto.Decrypt(
+					blob.Env.EncryptedKey,
+					blob.Env.Signer.Pubkey,
+					blob.Env.DecryptedPrivkey,
+				)
 
-			decrypted, err := crypto.DecryptSymmetric(blob.Env.EncryptedEnv, decryptedKey)
+				decrypted, err = crypto.DecryptSymmetric(blob.Env.EncryptedEnv, decryptedKey)
+			}
 
 			if err == nil {
 				lock.Lock()
@@ -481,18 +489,26 @@ func (blob *KeyableBlobWithTrustChains) decrypt() (*DecryptedKeyableBlob, error)
 
 			resChan <- err
 		}()
+
 	}
 
 	if blob.SubEnv != nil {
 		numQueued++
 		go func() {
-			decryptedKey, err := crypto.Decrypt(
-				blob.SubEnv.EncryptedKey,
-				blob.SubEnv.Signer.Pubkey,
-				blob.SubEnv.DecryptedPrivkey,
-			)
+			var decrypted []byte
+			var decryptedKey []byte
+			var err error
+			if blob.SubEnv.EncryptedEnv.Data == "{}" {
+				decrypted = []byte(blob.SubEnv.EncryptedEnv.Data)
+			} else {
+				decryptedKey, err = crypto.Decrypt(
+					blob.SubEnv.EncryptedKey,
+					blob.SubEnv.Signer.Pubkey,
+					blob.SubEnv.DecryptedPrivkey,
+				)
 
-			decrypted, err := crypto.DecryptSymmetric(blob.SubEnv.EncryptedEnv, decryptedKey)
+				decrypted, err = crypto.DecryptSymmetric(blob.SubEnv.EncryptedEnv, decryptedKey)
+			}
 
 			if err == nil {
 				lock.Lock()
@@ -507,13 +523,20 @@ func (blob *KeyableBlobWithTrustChains) decrypt() (*DecryptedKeyableBlob, error)
 	if blob.Locals != nil {
 		numQueued++
 		go func() {
-			decryptedKey, err := crypto.Decrypt(
-				blob.Locals.EncryptedKey,
-				blob.Locals.Signer.Pubkey,
-				blob.Locals.DecryptedPrivkey,
-			)
+			var decrypted []byte
+			var decryptedKey []byte
+			var err error
+			if blob.Locals.EncryptedEnv.Data == "{}" {
+				decrypted = []byte(blob.Locals.EncryptedEnv.Data)
+			} else {
+				decryptedKey, err = crypto.Decrypt(
+					blob.Locals.EncryptedKey,
+					blob.Locals.Signer.Pubkey,
+					blob.Locals.DecryptedPrivkey,
+				)
 
-			decrypted, err := crypto.DecryptSymmetric(blob.Locals.EncryptedEnv, decryptedKey)
+				decrypted, err = crypto.DecryptSymmetric(blob.Locals.EncryptedEnv, decryptedKey)
+			}
 
 			if err == nil {
 				lock.Lock()
@@ -531,14 +554,22 @@ func (blob *KeyableBlobWithTrustChains) decrypt() (*DecryptedKeyableBlob, error)
 		for inheritsEnvironmentId, blobFields := range blob.InheritanceOverrides {
 			numQueued++
 			go func(inheritsEnvironmentId string, blobFields *KeyableBlobFieldsWithTrustChain) {
-				decryptedKey, err := crypto.Decrypt(
-					blobFields.EncryptedKey,
-					blobFields.Signer.Pubkey,
-					blobFields.DecryptedPrivkey,
-				)
+				var decrypted []byte
+				var decryptedKey []byte
+				var err error
 
-				decrypted, err := crypto.DecryptSymmetric(blobFields.EncryptedEnv, decryptedKey)
+				if blobFields.EncryptedEnv.Data == "{}" {
+					decrypted = []byte(blobFields.EncryptedEnv.Data)
+				} else {
 
+					decryptedKey, err = crypto.Decrypt(
+						blobFields.EncryptedKey,
+						blobFields.Signer.Pubkey,
+						blobFields.DecryptedPrivkey,
+					)
+
+					decrypted, err = crypto.DecryptSymmetric(blobFields.EncryptedEnv, decryptedKey)
+				}
 				var overrides KeyableEnv
 
 				if err == nil {

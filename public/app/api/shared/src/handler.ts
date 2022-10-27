@@ -1,4 +1,3 @@
-import { asyncify } from "@core/lib/async";
 import { clearOrphanedRootPubkeyReplacements } from "./models/crypto";
 import { getOrg } from "./models/orgs";
 import { log, logWithElapsed, logStderr } from "@core/lib/utils/logger";
@@ -28,6 +27,8 @@ import {
   graphTypes,
   getNumActiveDeviceLike,
   getNumActiveOrInvitedUsers,
+  authz,
+  getEnvironmentPermissions,
 } from "@core/lib/graph";
 import { keySetDifference, keySetEmpty } from "@core/lib/blob";
 import {
@@ -110,12 +111,18 @@ export const apiAction = <
       action.type == Api.ActionType.FETCH_ENVKEY ||
       action.type == Api.ActionType.ENVKEY_FETCH_UPDATE_TRUSTED_ROOT_PUBKEY;
 
-    const apiActionConfig = apiActions[action.type];
+    let apiActionConfig = apiActions[action.type];
 
-    if (!apiActionConfig && action.type != Api.ActionType.BULK_GRAPH_ACTION) {
-      const msg = "No handler matched the API action type";
-      log(msg);
-      throw new Api.ApiError(msg, 404);
+    if (!apiActionConfig) {
+      if (action.type == Api.ActionType.BULK_GRAPH_ACTION) {
+        apiActionConfig = apiActions[action.payload[0].type];
+      }
+
+      if (!apiActionConfig) {
+        const msg = "No handler matched the API action type";
+        log(msg);
+        throw new Api.ApiError(msg, 404);
+      }
     }
 
     const requestStart = Date.now();
@@ -152,6 +159,7 @@ export const apiAction = <
               throw new Api.ApiError("client version required", 400);
             }
             if (
+              env.NODE_ENV == "production" &&
               !semver.gte(
                 action.meta.client.clientVersion,
                 auth.org.envUpdateRequiresClientVersion
@@ -253,18 +261,18 @@ export const apiAction = <
           err,
           stack: err.stack,
         });
+      } finally {
+        try {
+          await releaseTransaction(transactionConn);
+          logWithElapsed("released transaction", requestStart);
+        } catch (err) {
+          logStderr("Error releasing transaction:", {
+            err,
+            stack: err.stack,
+          });
+        }
       }
       throw new Api.ApiError(msg, status);
-    } finally {
-      try {
-        await releaseTransaction(transactionConn);
-        logWithElapsed("released transaction", requestStart);
-      } catch (err) {
-        logStderr("Error releasing transaction:", {
-          err,
-          stack: err.stack,
-        });
-      }
     }
   },
   tryHandleAction = async (params: {
@@ -362,8 +370,6 @@ export const apiAction = <
 
       const actionResults: Awaited<ReturnType<typeof getActionRes>>[] = [];
 
-      // const actionResults = await Promise.all(
-      //   action.payload.map(async (graphAction) => {
       for (let graphAction of action.payload) {
         const graphApiActionConfig = apiActions[graphAction.type];
         if (!graphApiActionConfig) {
@@ -403,9 +409,7 @@ export const apiAction = <
           true
         );
         actionResults.push(res);
-        // return res;
       }
-      // ));
 
       for (let res of actionResults) {
         if (
@@ -438,7 +442,7 @@ export const apiAction = <
         }
 
         if (res.logTransactionStatement) {
-          transactionStatements.push(res.logTransactionStatement);
+          backgroundStatements.push(res.logTransactionStatement);
         }
 
         if (res.backgroundLogStatement) {
@@ -522,7 +526,7 @@ export const apiAction = <
       }
 
       if (res.logTransactionStatement) {
-        transactionStatements.push(res.logTransactionStatement);
+        backgroundStatements.push(res.logTransactionStatement);
       }
 
       if (res.backgroundLogStatement) {
@@ -561,9 +565,19 @@ export const apiAction = <
       (action.type == Api.ActionType.BULK_GRAPH_ACTION ||
         action.meta.loggableType == "orgAction")
     ) {
-      const lockedOrg = await getOrg(auth.org.id, transactionConn, true);
-      if (!lockedOrg) {
-        throw new Api.ApiError("couldn't obtain org write lock", 500);
+      const authOrg = await getOrg(
+        auth.org.id,
+        transactionConn,
+        !(
+          "nonLockingGraphUpdatedAtCheck" in apiActionConfig &&
+          apiActionConfig.nonLockingGraphUpdatedAtCheck
+        )
+      );
+      if (!authOrg) {
+        throw new Api.ApiError(
+          "couldn't fetch org to compare graphUpdatedAt",
+          500
+        );
       }
 
       if (action.type == Api.ActionType.BULK_GRAPH_ACTION) {
@@ -577,7 +591,7 @@ export const apiAction = <
               (graphAction as Api.Action.RequestAction).meta as {
                 graphUpdatedAt: number;
               }
-            ).graphUpdatedAt !== lockedOrg.graphUpdatedAt
+            ).graphUpdatedAt !== authOrg.graphUpdatedAt
           ) {
             throw new Api.ApiError("client graph outdated", 400);
           }
@@ -586,90 +600,134 @@ export const apiAction = <
         apiActionConfig.graphAction &&
         !apiActionConfig.skipGraphUpdatedAtCheck &&
         (action.meta as { graphUpdatedAt: number }).graphUpdatedAt !==
-          lockedOrg.graphUpdatedAt
+          authOrg.graphUpdatedAt
       ) {
         throw new Api.ApiError("client graph outdated", 400);
       }
     }
 
-    try {
-      await executeTransactionStatements(
-        transactionStatements,
-        transactionConn
+    const execTransaction = async (bg?: true) => {
+      try {
+        await executeTransactionStatements(
+          transactionStatements,
+          transactionConn
+        );
+        logWithElapsed(
+          transactionId +
+            " - executed transaction" +
+            (bg ? " in background" : ""),
+          requestStart
+        );
+      } catch (err) {
+        logStderr("Transaction error:", {
+          err,
+          stack: err.stack,
+        });
+
+        try {
+          await transactionConn.query("ROLLBACK;");
+          logWithElapsed(
+            transactionId + " - rolled back transaction",
+            requestStart
+          );
+        } catch (err) {
+          logStderr("Error rolling back transaction:", {
+            err,
+            stack: err.stack,
+          });
+        }
+      } finally {
+        try {
+          await releaseTransaction(transactionConn);
+          logWithElapsed(
+            transactionId + " - released transaction",
+            requestStart
+          );
+        } catch (err) {
+          logStderr("Error releasing transaction:", {
+            err,
+            stack: err.stack,
+          });
+        }
+      }
+    };
+
+    await execTransaction();
+
+    (async () => {
+      resolveUserSocketUpdates(apiActionConfig, action, auth, clearUserSockets);
+      resolveEnvkeySocketUpdates(
+        auth,
+        updatedGeneratedEnvkeyIds,
+        clearEnvkeySockets
       );
-    } catch (err) {
-      log("transaction error:", err);
-      throw new Api.ApiError("Transaction failed", 500);
-    }
-
-    logWithElapsed(transactionId + " - executed transaction", requestStart);
-
-    if (postUpdateActions) {
-      await Promise.all(postUpdateActions.map((fn) => fn()));
-    }
-
-    resolveUserSocketUpdates(apiActionConfig, action, auth, clearUserSockets);
-    resolveEnvkeySocketUpdates(
-      auth,
-      updatedGeneratedEnvkeyIds,
-      clearEnvkeySockets
-    );
-    logWithElapsed(transactionId + " - resolved socket updates", requestStart);
-
-    // async s3 replication
-    if (replicationFn && auth && updatedOrgGraph) {
-      // don't await result, log/alert on error
       logWithElapsed(
-        transactionId + " - replicating if needed asynchronously",
+        transactionId + " - resolved socket updates",
         requestStart
       );
 
-      (async () => {
-        // give the database some time to release the transaction
-        // so that replication fetches committed results
-        await wait(1000);
+      if (postUpdateActions) {
+        Promise.all(postUpdateActions.map((fn) => fn()));
+      }
 
-        replicationFn(
-          updatedOrgGraph[auth.org.id] as Api.Db.Org,
-          updatedOrgGraph,
+      // async s3 replication
+      if (replicationFn && auth && updatedOrgGraph) {
+        // don't await result, log/alert on error
+        logWithElapsed(
+          transactionId + " - replicating if needed asynchronously",
+          requestStart
+        );
+
+        (async () => {
+          // give the database some time to release the transaction
+          // so that replication fetches committed results
+          await wait(1000);
+
+          replicationFn(
+            updatedOrgGraph[auth.org.id] as Api.Db.Org,
+            updatedOrgGraph,
+            actionStart
+          ).catch((err) => {
+            logStderr("Replication error", { err, orgId: auth.org.id });
+          });
+        })();
+      }
+
+      if (backgroundStatements.length > 0) {
+        logWithElapsed("execute background SQL statements", requestStart);
+
+        // don't await result, log/alert on error
+        getNewTransactionConn().then((backgroundConn) => {
+          executeTransactionStatements(backgroundStatements, backgroundConn)
+            .catch((err) => {
+              logStderr("error executing background SQL statements:", {
+                err,
+                orgId: auth?.org.id,
+              });
+            })
+            .finally(() => backgroundConn.release());
+        });
+      }
+
+      if (updateOrgStatsFn && response.type != "notModified") {
+        // update org stats in background (don't await)
+        logWithElapsed("update org stats", requestStart);
+
+        updateOrgStatsFn(
+          auth,
+          handlerContext,
+          requestBytes,
+          responseBytes ?? 0,
+          Boolean(updatedOrgGraph),
           actionStart
         ).catch((err) => {
-          logStderr("Replication error", { err, orgId: auth.org.id });
+          logStderr("Error updating org stats", {
+            err,
+            orgId: auth?.org.id,
+          });
         });
-      })();
-    }
-
-    if (backgroundStatements.length > 0) {
-      logWithElapsed("execute background SQL statements", requestStart);
-
-      // don't await result, log/alert on error
-      getNewTransactionConn().then((backgroundConn) => {
-        executeTransactionStatements(backgroundStatements, backgroundConn)
-          .catch((err) => {
-            logStderr("error executing background SQL statements:", {
-              err,
-              orgId: auth?.org.id,
-            });
-          })
-          .finally(() => backgroundConn.release());
-      });
-    }
-
-    if (updateOrgStatsFn && response.type != "notModified") {
-      // update org stats in background (don't await)
-      logWithElapsed("update org stats", requestStart);
-
-      updateOrgStatsFn(
-        auth,
-        handlerContext,
-        requestBytes,
-        responseBytes ?? 0,
-        Boolean(updatedOrgGraph),
-        actionStart
-      ).catch((err) => {
-        logStderr("Error updating org stats", { err, orgId: auth?.org.id });
-      });
-    }
+      }
+    })();
 
     let status: number;
     if ("errorStatus" in response) {
@@ -1548,6 +1606,11 @@ const apiActions: {
             {},
           changesetBlobs: Blob.UserEncryptedBlobsByEnvironmentId = {};
 
+        const currentUserEnvParents = [
+          ...graphTypes(updatedUserGraph).apps,
+          ...graphTypes(updatedUserGraph).blocks,
+        ];
+
         if (auth.type != "provisioningBearerAuthContext") {
           if (handlerEnvs) {
             if (handlerEnvs.all) {
@@ -1561,7 +1624,14 @@ const apiActions: {
                       blobType: "env",
                     },
                     { transactionConn }
-                  ),
+                  ).then((res) => {
+                    logWithElapsed(
+                      transactionId +
+                        "- handlerEnvs.all - getEnvEncryptedKeysRes",
+                      requestStart
+                    );
+                    return res;
+                  }),
                   getChangesetEncryptedKeys(
                     {
                       orgId: auth.org.id,
@@ -1569,63 +1639,122 @@ const apiActions: {
                       deviceId: deviceId!,
                     },
                     { transactionConn }
-                  ),
-                  getEnvEncryptedBlobs(
-                    {
-                      orgId: auth.org.id,
-                      blobType: "env",
-                    },
-                    { transactionConn }
-                  ),
+                  ).then((res) => {
+                    logWithElapsed(
+                      transactionId +
+                        "- handlerEnvs.all - getChangesetEncryptedKeys",
+                      requestStart
+                    );
+                    return res;
+                  }),
+                  currentUserEnvParents.length == 0 || handlerEnvs.keysOnly
+                    ? {}
+                    : getEnvEncryptedBlobs(
+                        currentUserEnvParents.map(({ id }) => ({
+                          orgId: auth.org.id,
+                          blobType: "env",
+                          envParentId: id,
+                        })),
+                        { transactionConn }
+                      ).then((res) => {
+                        logWithElapsed(
+                          transactionId +
+                            "- handlerEnvs.all - getEnvEncryptedBlobs",
+                          requestStart
+                        );
+                        return res;
+                      }),
                 ]);
             } else if (handlerEnvs.scopes) {
               [envEncryptedKeys, changesetEncryptedKeys, envBlobs] =
                 await Promise.all([
-                  Promise.all(
-                    handlerEnvs.scopes.map((scope) =>
-                      getEnvEncryptedKeys(
-                        {
-                          orgId: auth.org.id,
-                          userId: auth.user.id,
-                          deviceId: deviceId!,
-                          ...scope,
-                        },
-                        { transactionConn }
-                      )
-                    )
-                  ).then((encryptedKeys) =>
-                    encryptedKeys.reduce(R.mergeDeepRight, {})
-                  ),
-                  Promise.all(
-                    handlerEnvs.scopes.map((scope) =>
-                      getChangesetEncryptedKeys(
-                        {
-                          orgId: auth.org.id,
-                          userId: auth.user.id,
-                          deviceId: deviceId!,
-                          ...scope,
-                        },
-                        { transactionConn }
-                      )
-                    )
-                  ).then((encryptedKeys) => {
-                    return encryptedKeys.reduce(R.mergeDeepRight, {});
+                  getEnvEncryptedKeys(
+                    handlerEnvs.scopes.map((scope) => ({
+                      orgId: auth.org.id,
+                      userId: auth.user.id,
+                      deviceId: deviceId!,
+                      ...scope,
+                    })),
+                    { transactionConn }
+                  ).then((res) => {
+                    logWithElapsed(
+                      transactionId +
+                        "- handlerEnvs.scopes - getEnvEncryptedKeys",
+                      requestStart
+                    );
+                    return res;
                   }),
-                  Promise.all(
-                    handlerEnvs.scopes.map((scope) =>
-                      getEnvEncryptedBlobs(
-                        {
+
+                  getChangesetEncryptedKeys(
+                    handlerEnvs.scopes.map((scope) => ({
+                      orgId: auth.org.id,
+                      userId: auth.user.id,
+                      deviceId: deviceId!,
+                      ...scope,
+                    })),
+                    { transactionConn }
+                  ).then((res) => {
+                    logWithElapsed(
+                      transactionId +
+                        "- handlerEnvs.scopes - getChangesetEncryptedKeys",
+                      requestStart
+                    );
+                    return res;
+                  }),
+
+                  handlerEnvs.keysOnly
+                    ? {}
+                    : getEnvEncryptedBlobs(
+                        handlerEnvs.scopes.map((scope) => ({
                           orgId: auth.org.id,
                           ...scope,
-                        },
+                        })),
                         { transactionConn }
-                      )
-                    )
-                  ).then((blobs) => blobs.reduce(R.mergeDeepRight, {})),
+                      ).then((res) => {
+                        logWithElapsed(
+                          transactionId +
+                            "- handlerEnvs.scopes - getEnvEncryptedBlobs",
+                          requestStart
+                        );
+                        return res;
+                      }),
                 ]);
             }
 
-            envBlobs = pick(Object.keys(envEncryptedKeys), envBlobs);
+            envBlobs = R.pickBy((v, k) => {
+              if (!(envEncryptedKeys[k] || v.data.nonce == "")) {
+                return false;
+              }
+
+              const [environmentId, envPart] = k.split("||");
+
+              const environment = updatedOrgGraph[environmentId];
+              if (environment) {
+                const permissions = getEnvironmentPermissions(
+                  updatedOrgGraph,
+                  environmentId,
+                  auth.user.id
+                );
+
+                if (envPart == "env") {
+                  return permissions.has("read");
+                } else if (envPart == "meta") {
+                  return permissions.has("read_meta");
+                } else if (envPart == "inherits") {
+                  return permissions.has("read_inherits");
+                }
+
+                return false;
+              } else {
+                const [envParentId, localsUserId] = environmentId.split("|");
+                return authz.canReadLocals(
+                  updatedOrgGraph,
+                  auth.user.id,
+                  envParentId,
+                  localsUserId
+                );
+              }
+            }, envBlobs);
           }
 
           if (handlerChangesets) {
@@ -1640,48 +1769,67 @@ const apiActions: {
                         deviceId: deviceId!,
                       },
                       { transactionConn }
-                    ),
-                getChangesetEncryptedBlobs(
-                  {
-                    orgId: auth.org.id,
-                    createdAfter: handlerChangesets.createdAfter,
-                  },
-                  { transactionConn }
-                ),
+                    ).then((res) => {
+                      logWithElapsed(
+                        transactionId +
+                          "- handlerChangesets.all - getChangesetEncryptedKeys",
+                        requestStart
+                      );
+                      return res;
+                    }),
+
+                handlerChangesets.keysOnly
+                  ? {}
+                  : getChangesetEncryptedBlobs(
+                      {
+                        orgId: auth.org.id,
+                        createdAfter: handlerChangesets.createdAfter,
+                      },
+                      { transactionConn }
+                    ).then((res) => {
+                      logWithElapsed(
+                        transactionId +
+                          "- handlerChangesets.all - getChangesetEncryptedBlobs",
+                        requestStart
+                      );
+                      return res;
+                    }),
               ]);
             } else if (handlerChangesets.scopes) {
               [changesetEncryptedKeys, changesetBlobs] = await Promise.all([
-                Promise.all(
-                  handlerChangesets.scopes.map((scope) =>
-                    getChangesetEncryptedKeys(
-                      {
-                        orgId: auth.org.id,
-                        userId: auth.user.id,
-                        deviceId: deviceId!,
-                        ...scope,
-                      },
-                      { transactionConn }
-                    )
-                  )
-                ).then((encryptedKeys) => {
-                  return encryptedKeys.reduce(
-                    R.mergeDeepRight,
-                    changesetEncryptedKeys ?? {}
+                getChangesetEncryptedKeys(
+                  handlerChangesets.scopes.map((scope) => ({
+                    orgId: auth.org.id,
+                    userId: auth.user.id,
+                    deviceId: deviceId!,
+                    ...scope,
+                  })),
+                  { transactionConn }
+                ).then((res) => {
+                  logWithElapsed(
+                    transactionId +
+                      "- handlerChangesets.scopes - getChangesetEncryptedKeys",
+                    requestStart
                   );
+                  return res;
                 }),
-                Promise.all(
-                  handlerChangesets.scopes.map((scope) =>
-                    getChangesetEncryptedBlobs(
-                      {
+                handlerChangesets.keysOnly
+                  ? {}
+                  : getChangesetEncryptedBlobs(
+                      handlerChangesets.scopes.map((scope) => ({
                         orgId: auth.org.id,
                         ...scope,
-                      },
+                      })),
+
                       { transactionConn }
-                    )
-                  )
-                ).then((blobs) => {
-                  return blobs.reduce(R.mergeDeepRight, {});
-                }),
+                    ).then((res) => {
+                      logWithElapsed(
+                        transactionId +
+                          "- handlerChangesets.scopes - getChangesetEncryptedBlobs",
+                        requestStart
+                      );
+                      return res;
+                    }),
               ]);
             }
           }

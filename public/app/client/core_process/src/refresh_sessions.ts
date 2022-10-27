@@ -19,7 +19,7 @@ let checkSuspendedTimeout: NodeJS.Timeout | undefined;
 
 export const checkSuspendedLoop = async (
   store: Client.ReduxStore,
-  localSocketUpdate: () => void
+  localSocketUpdate: Client.LocalSocketUpdateFn
 ) => {
   const state = store.getState();
 
@@ -56,7 +56,7 @@ export const clearCheckSuspendedLoop = () => {
 
 export const refreshSessions = async (
   state: Client.ProcState,
-  localSocketUpdate: () => void,
+  localSocketUpdate: Client.LocalSocketUpdateFn,
   accountIdsArg?: string[],
   initialFetch?: boolean
 ) => {
@@ -103,9 +103,7 @@ export const refreshSessions = async (
             type: Client.ActionType.GET_SESSION,
           },
           getContext(accountId)
-        ).finally(localSocketUpdate);
-
-        localSocketUpdate();
+        ).finally(() => localSocketUpdate({ type: "update", accountId }));
       });
     };
 

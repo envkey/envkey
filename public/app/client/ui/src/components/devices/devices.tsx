@@ -11,6 +11,7 @@ import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import copy from "copy-text-to-clipboard";
 import { logAndAlertError } from "@ui_lib/errors";
+import { CryptoStatus } from "../shared";
 
 const getDevicesComponent = (isTopLevel?: true) => {
   const Devices: OrgComponent<{ userId?: string }> = (props) => {
@@ -543,6 +544,8 @@ const getDevicesComponent = (isTopLevel?: true) => {
               renderPendingGrants(),
               renderExpiredGrants(),
               renderAuthorizeNewDevice(),
+
+              generatingGrant ? <CryptoStatus {...props} /> : "",
             ]}
       </div>
     );

@@ -36,10 +36,7 @@ clientAction<Client.Action.ClientActions["RbacUpdateOrgRole"]>({
       throw new Error("Action requires authentication");
     }
 
-    initLocalsIfNeeded(state, auth.userId, {
-      ...context,
-      store: getTempStore(context.store),
-    }).catch((err) => {
+    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 
@@ -64,10 +61,7 @@ clientAction<Client.Action.ClientActions["RbacUpdateAppRole"]>({
       throw new Error("Action requires authentication");
     }
 
-    initLocalsIfNeeded(state, auth.userId, {
-      ...context,
-      store: getTempStore(context.store),
-    }).catch((err) => {
+    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 

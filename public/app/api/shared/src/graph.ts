@@ -32,7 +32,7 @@ import { objectDifference } from "@core/lib/utils/object";
 import { PoolConnection, Pool } from "mysql2/promise";
 import { log } from "@core/lib/utils/logger";
 import { indexBy } from "@core/lib/utils/array";
-import { asyncify } from "@core/lib/async";
+// import { asyncify } from "@core/lib/async";
 
 export const getOrgGraph = async (
     orgId: string,
@@ -117,29 +117,29 @@ export const getOrgGraph = async (
       [license.id]: license,
     };
   },
-  getAccessUpdated = async (
-    previousGraph: Graph.Graph,
-    nextGraph: Graph.Graph,
-    scope: Rbac.OrgAccessScope
-  ): Promise<Rbac.OrgAccessUpdated> => {
-    const getOrgAccessSetAsync = asyncify("getOrgAccessSet", getOrgAccessSet);
-    const getObjectDifferenceAsync = asyncify(
-      "objectDifference",
-      objectDifference
-    );
+  // getAccessUpdated = async (
+  //   previousGraph: Graph.Graph,
+  //   nextGraph: Graph.Graph,
+  //   scope: Rbac.OrgAccessScope
+  // ): Promise<Rbac.OrgAccessUpdated> => {
+  //   const getOrgAccessSetAsync = asyncify("getOrgAccessSet", getOrgAccessSet);
+  //   const getObjectDifferenceAsync = asyncify(
+  //     "objectDifference",
+  //     objectDifference
+  //   );
 
-    const [nextSet, prevSet] = await Promise.all([
-      getOrgAccessSetAsync(nextGraph, scope),
-      getOrgAccessSetAsync(previousGraph, scope),
-    ]);
+  //   const [nextSet, prevSet] = await Promise.all([
+  //     getOrgAccessSetAsync(nextGraph, scope),
+  //     getOrgAccessSetAsync(previousGraph, scope),
+  //   ]);
 
-    const [granted, removed] = await Promise.all([
-      getObjectDifferenceAsync(nextSet, prevSet),
-      getObjectDifferenceAsync(prevSet, nextSet),
-    ]);
+  //   const [granted, removed] = await Promise.all([
+  //     getObjectDifferenceAsync(nextSet, prevSet),
+  //     getObjectDifferenceAsync(prevSet, nextSet),
+  //   ]);
 
-    return { granted, removed };
-  },
+  //   return { granted, removed };
+  // },
   setEnvsUpdatedFields = (
     auth: Auth.UserAuthContext,
     orgGraph: Api.Graph.OrgGraph,

@@ -55,7 +55,9 @@ namespace Api {
 
   export type HandlerPostUpdateActions = (() => Promise<any>)[];
 
-  export type HandlerEnvsResponse =
+  export type HandlerEnvsResponse = {
+    keysOnly?: boolean;
+  } & (
     | {
         all: true;
         scopes?: undefined;
@@ -63,7 +65,8 @@ namespace Api {
     | {
         all?: undefined;
         scopes?: Blob.ScopeParams[];
-      };
+      }
+  );
 
   export type HandlerChangesetsResponse = HandlerEnvsResponse &
     Net.FetchChangesetOptions;
@@ -134,6 +137,7 @@ namespace Api {
         graphAction: true;
         shouldClearOrphanedLocals?: true;
         skipGraphUpdatedAtCheck?: true;
+        nonLockingGraphUpdatedAtCheck?: true;
         graphResponse?: GraphResponseType; // default "diffs"
         rbacUpdate?: true;
         reorderBlobsIfNeeded?: true;

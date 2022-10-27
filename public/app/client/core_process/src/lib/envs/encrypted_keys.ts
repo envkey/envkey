@@ -16,6 +16,9 @@ import {
   getLocalKeysByLocalsComposite,
   getConnectedAppsForBlock,
   getEnvironmentsByEnvParentId,
+  getEnvironmentName,
+  getObjectName,
+  getOrg,
   authz,
 } from "@core/lib/graph";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
@@ -26,9 +29,19 @@ import {
   getAuth,
   ensureEnvsFetched,
   ensureChangesetsFetched,
+  getEnvWithMeta,
+  getInheritingEnvironmentIds,
+  getInheritanceOverrides,
 } from "@core/lib/client";
 import set from "lodash.set";
+import { dispatch } from "../../handler";
 import { log } from "@core/lib/utils/logger";
+import {
+  CRYPTO_ASYMMETRIC_BATCH_SIZE,
+  CRYPTO_ASYMMETRIC_BATCH_DELAY_MS,
+  CRYPTO_ASYMMETRIC_STATUS_INTERVAL,
+} from "./constants";
+import { wait } from "@core/lib/utils/wait";
 
 type ToEncrypt = [string[], Parameters<typeof encrypt>[0]][];
 
@@ -65,6 +78,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
     throw new Error("Authentication and decrypted privkey required");
   }
   const privkey = currentAuth.privkey;
+  const org = getOrg(state.graph);
 
   const environmentKeysByComposite: Record<string, string> = {};
   const changesetKeysByEnvironmentId: Record<string, string> = {};
@@ -94,6 +108,22 @@ export const encryptedKeyParamsForEnvironments = async (params: {
 
     ensureEnvsFetched(state, envParentId);
 
+    const envWithMeta = getEnvWithMeta(
+      state,
+      { envParentId, environmentId },
+      pending
+    );
+    const isEmpty = R.isEmpty(envWithMeta.variables);
+    const parentIsEmpty = environment?.isSub
+      ? R.isEmpty(
+          getEnvWithMeta(
+            state,
+            { envParentId, environmentId: environment.parentEnvironmentId },
+            pending
+          ).variables
+        )
+      : false;
+
     let envSymmetricKey: string | undefined;
     let metaSymmetricKey: string | undefined;
     let inheritsSymmetricKey: string | undefined;
@@ -114,21 +144,32 @@ export const encryptedKeyParamsForEnvironments = async (params: {
       return [composite, state.envs[composite]?.key];
     });
 
-    if (!(newKeysOnly && existingEnvSymmetricKey)) {
+    if (
+      !(newKeysOnly && existingEnvSymmetricKey) &&
+      (!org.optimizeEmptyEnvs || !isEmpty || existingEnvSymmetricKey)
+    ) {
       envSymmetricKey =
         environmentKeysByComposite[envComposite] ?? // in case it's already been set via a sub-environment
         symmetricEncryptionKey();
+
       environmentKeysByComposite[envComposite] = envSymmetricKey;
     }
 
-    if (!(newKeysOnly && existingMetaSymmetricKey)) {
+    if (
+      !(newKeysOnly && existingMetaSymmetricKey) &&
+      (!org.optimizeEmptyEnvs || !isEmpty || existingMetaSymmetricKey)
+    ) {
       metaSymmetricKey = symmetricEncryptionKey();
       environmentKeysByComposite[metaComposite] = metaSymmetricKey;
     }
 
     if (!localsUserId) {
-      if (!(newKeysOnly && existingInheritsSymmetricKey)) {
+      if (
+        !(newKeysOnly && existingInheritsSymmetricKey) &&
+        (!org.optimizeEmptyEnvs || !isEmpty || existingInheritsSymmetricKey)
+      ) {
         inheritsSymmetricKey = symmetricEncryptionKey();
+
         environmentKeysByComposite[inheritsComposite] = inheritsSymmetricKey;
       }
     }
@@ -139,7 +180,10 @@ export const encryptedKeyParamsForEnvironments = async (params: {
       });
       const existingParentSymmetricKey = state.envs[parentEnvComposite]?.key;
 
-      if (!(newKeysOnly && existingParentSymmetricKey)) {
+      if (
+        !(newKeysOnly && existingParentSymmetricKey) &&
+        (!org.optimizeEmptyEnvs || !parentIsEmpty || existingParentSymmetricKey)
+      ) {
         parentEnvSymmetricKey =
           environmentKeysByComposite[parentEnvComposite] ?? // in case it's already been set via parent environment
           symmetricEncryptionKey();
@@ -594,6 +638,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
         toEncrypt,
         privkey,
         allUserIds,
+        pending,
         now,
       });
 
@@ -611,6 +656,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
         environmentKeysByComposite,
         toEncrypt,
         privkey,
+        pending,
         addInheritingSubEnvironments: false,
       });
     }
@@ -630,6 +676,7 @@ export const encryptedKeyParamsForEnvironments = async (params: {
         environmentKeysByComposite,
         toEncrypt,
         privkey,
+        pending,
         addInheritingSubEnvironments: true,
       });
     }
@@ -642,10 +689,57 @@ export const encryptedKeyParamsForEnvironments = async (params: {
     )
   );
 
-  const cryptoPromises = toEncrypt.map(([path, params]) =>
-      encrypt(params).then((encrypted) => [path, encrypted])
-    ) as Promise<[string[], Crypto.EncryptedData]>[],
-    pathResults = await Promise.all(cryptoPromises);
+  await dispatch(
+    {
+      type: Client.ActionType.SET_CRYPTO_STATUS,
+      payload: {
+        processed: 0,
+        total: toEncrypt.length,
+        op: "encrypt",
+        dataType: "keys",
+      },
+    },
+    context
+  );
+
+  // log("encryptedKeyParamsForEnvironments - starting encryption");
+
+  let pathResults: [string[], Crypto.EncryptedData][] = [];
+  let encryptedSinceStatusUpdate = 0;
+  for (let batch of R.splitEvery(CRYPTO_ASYMMETRIC_BATCH_SIZE, toEncrypt)) {
+    const res = await Promise.all(
+      batch.map(([path, params]) =>
+        encrypt(params).then((encrypted) => {
+          encryptedSinceStatusUpdate++;
+          if (encryptedSinceStatusUpdate >= CRYPTO_ASYMMETRIC_STATUS_INTERVAL) {
+            dispatch(
+              {
+                type: Client.ActionType.CRYPTO_STATUS_INCREMENT,
+                payload: encryptedSinceStatusUpdate,
+              },
+              context
+            );
+            encryptedSinceStatusUpdate = 0;
+          }
+
+          return [path, encrypted];
+        })
+      ) as Promise<[string[], Crypto.EncryptedData]>[]
+    );
+
+    await wait(CRYPTO_ASYMMETRIC_BATCH_DELAY_MS);
+
+    pathResults = pathResults.concat(res);
+  }
+  // log("encryptedKeyParamsForEnvironments - encrypted all");
+
+  await dispatch(
+    {
+      type: Client.ActionType.SET_CRYPTO_STATUS,
+      payload: undefined,
+    },
+    context
+  );
 
   for (let [path, data] of pathResults) {
     set(keys, path, data);
@@ -725,8 +819,9 @@ const addUserInheritanceOverrides = (params: {
   toEncrypt: ToEncrypt;
   privkey: Crypto.Privkey;
   allUserIds: string[];
+  pending?: true;
   now: number;
-}) => {
+}): Record<string, string> => {
   const {
     state,
     currentUserId,
@@ -739,8 +834,22 @@ const addUserInheritanceOverrides = (params: {
     toEncrypt,
     privkey,
     allUserIds,
+    pending,
     now,
   } = params;
+
+  const org = getOrg(state.graph);
+
+  const nonEmptyInheritingEnvironmentIds = new Set(
+    getInheritingEnvironmentIds(
+      state,
+      {
+        envParentId,
+        environmentId: baseEnvironment.id,
+      },
+      pending
+    )
+  );
 
   for (let inheritingEnvironmentId of inheritingEnvironmentIds) {
     const inheritingEnvironment = state.graph[
@@ -768,30 +877,37 @@ const addUserInheritanceOverrides = (params: {
       continue;
     }
 
+    const isEmpty = !nonEmptyInheritingEnvironmentIds.has(
+      inheritingEnvironmentId
+    );
+
     const composite = getUserEncryptedKeyOrBlobComposite({
       environmentId: inheritingEnvironmentId,
       inheritsEnvironmentId: baseEnvironment.id,
     });
-    const existing = state.envs[composite];
+    const existing = state.envs[composite]?.key;
 
-    if (!(newKeysOnly && existing)) {
-      const inheritanceOverridesKey = symmetricEncryptionKey();
+    if (
+      !(newKeysOnly && existing) &&
+      (!org.optimizeEmptyEnvs || !isEmpty || existing)
+    ) {
+      let inheritanceOverridesKey = symmetricEncryptionKey();
       environmentKeysByComposite[composite] = inheritanceOverridesKey;
     }
 
-    for (let userId of allUserIds) {
-      const targetUserInheritingPermissions = getEnvironmentPermissions(
-        state.graph,
-        inheritingEnvironmentId,
-        userId
-      );
-      if (!targetUserInheritingPermissions.has("read")) {
-        continue;
-      }
+    const key = environmentKeysByComposite[composite];
 
-      const key = environmentKeysByComposite[composite];
+    if (key) {
+      for (let userId of allUserIds) {
+        const targetUserInheritingPermissions = getEnvironmentPermissions(
+          state.graph,
+          inheritingEnvironmentId,
+          userId
+        );
+        if (!targetUserInheritingPermissions.has("read")) {
+          continue;
+        }
 
-      if (key) {
         const deviceIds = getDeviceIdsForUser(state.graph, userId, now);
         const pubkeysByDeviceId = getPubkeysByDeviceIdForUser(
           state.graph,
@@ -804,6 +920,7 @@ const addUserInheritanceOverrides = (params: {
           if (!pubkey) {
             continue;
           }
+
           toEncrypt.push([
             [
               "users",
@@ -825,6 +942,8 @@ const addUserInheritanceOverrides = (params: {
       }
     }
   }
+
+  return environmentKeysByComposite;
 };
 
 const addKeyableParentInheritanceOverrides = (params: {
@@ -839,6 +958,7 @@ const addKeyableParentInheritanceOverrides = (params: {
   toEncrypt: ToEncrypt;
   privkey: Crypto.Privkey;
   addInheritingSubEnvironments: boolean;
+  pending?: true;
 }) => {
   const {
     state,
@@ -852,7 +972,21 @@ const addKeyableParentInheritanceOverrides = (params: {
     toEncrypt,
     privkey,
     addInheritingSubEnvironments,
+    pending,
   } = params;
+
+  const org = getOrg(state.graph);
+
+  const nonEmptyInheritingEnvironmentIds = new Set(
+    getInheritingEnvironmentIds(
+      state,
+      {
+        envParentId: baseEnvironment.envParentId,
+        environmentId: baseEnvironment.id,
+      },
+      pending
+    )
+  );
 
   for (let inheritingKeyableParent of inheritingKeyableParents) {
     const generatedEnvkey = getActiveGeneratedEnvkeysByKeyableParentId(
@@ -906,6 +1040,10 @@ const addKeyableParentInheritanceOverrides = (params: {
       continue;
     }
 
+    const isEmpty = !nonEmptyInheritingEnvironmentIds.has(
+      inheritingEnvironmentId
+    );
+
     toVerifyKeyableIds.add(inheritingKeyableParent.id);
 
     const composite = getUserEncryptedKeyOrBlobComposite({
@@ -915,10 +1053,15 @@ const addKeyableParentInheritanceOverrides = (params: {
 
     const existing = state.envs[composite]?.key;
 
-    if (!(newKeysOnly && existing)) {
+    if (
+      !(newKeysOnly && existing) &&
+      (!org.optimizeEmptyEnvs || !isEmpty || existing)
+    ) {
       const key =
         environmentKeysByComposite[composite] ?? symmetricEncryptionKey();
+
       environmentKeysByComposite[composite] = key;
+
       toEncrypt.push([
         [...basePath, "inheritanceOverrides", baseEnvironment.id, "data"],
         {

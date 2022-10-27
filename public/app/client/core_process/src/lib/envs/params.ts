@@ -11,12 +11,24 @@ import {
   getPendingActionsByEnvironmentId,
   getInheritanceOverrides,
 } from "@core/lib/client";
-import { getEnvironmentPermissions, getEnvironmentName } from "@core/lib/graph";
+import {
+  getEnvironmentPermissions,
+  getEnvironmentName,
+  getObjectName,
+  getOrg,
+} from "@core/lib/graph";
 import { encryptedKeyParamsForEnvironments } from ".";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import set from "lodash.set";
 import { log } from "@core/lib/utils/logger";
 import { createPatch } from "rfc6902";
+import { dispatch } from "../../handler";
+import {
+  CRYPTO_SYMMETRIC_BATCH_SIZE,
+  CRYPTO_SYMMETRIC_BATCH_DELAY_MS,
+  CRYPTO_SYMMETRIC_STATUS_INTERVAL,
+} from "./constants";
+import { wait } from "@core/lib/utils/wait";
 
 export const envParamsForEnvironments = async (params: {
   state: Client.State;
@@ -42,6 +54,7 @@ export const envParamsForEnvironments = async (params: {
   if (!currentAuth || !currentAuth.privkey) {
     throw new Error("Authentication and decrypted privkey required");
   }
+  const org = getOrg(state.graph);
 
   let environmentIds = params.environmentIds;
 
@@ -61,10 +74,16 @@ export const envParamsForEnvironments = async (params: {
     });
   }
 
-  const toEncrypt: [string[], Parameters<typeof encryptSymmetricWithKey>[0]][] =
-    [];
+  const toEncrypt: [
+    string[],
+    {
+      data: string;
+      encryptionKey?: string;
+    }
+  ][] = [];
 
   const addPaths: [string[], any][] = [];
+
   const {
     environmentKeysByComposite,
     changesetKeysByEnvironmentId,
@@ -117,7 +136,7 @@ export const envParamsForEnvironments = async (params: {
     const envIsEmpty = R.isEmpty(env);
     const envComposite = getUserEncryptedKeyOrBlobComposite({ environmentId });
     const envSymmetricKey =
-      environmentKeysByComposite[envComposite] ?? state.envs[envComposite].key;
+      environmentKeysByComposite[envComposite] ?? state.envs[envComposite]?.key;
     environmentKeysByComposite[envComposite] = envSymmetricKey;
 
     toEncrypt.push([
@@ -143,7 +162,7 @@ export const envParamsForEnvironments = async (params: {
     });
     const metaSymmetricKey =
       environmentKeysByComposite[metaComposite] ??
-      state.envs[metaComposite].key;
+      state.envs[metaComposite]?.key;
     environmentKeysByComposite[metaComposite] = metaSymmetricKey;
     toEncrypt.push([
       [...blobBasePath, "meta"],
@@ -168,7 +187,7 @@ export const envParamsForEnvironments = async (params: {
       });
       const inheritsSymmetricKey =
         environmentKeysByComposite[inheritsComposite] ??
-        state.envs[inheritsComposite].key;
+        state.envs[inheritsComposite]?.key;
       environmentKeysByComposite[inheritsComposite] = inheritsSymmetricKey;
       toEncrypt.push([
         [...blobBasePath, "inherits"],
@@ -341,7 +360,6 @@ export const envParamsForEnvironments = async (params: {
 
           if (inheritingEnvironment.isSub) {
             overrides = {
-              ...overrides,
               ...(getInheritanceOverrides(
                 state,
                 {
@@ -351,6 +369,7 @@ export const envParamsForEnvironments = async (params: {
                 },
                 pending
               )[baseEnvironment.id] ?? {}),
+              ...overrides,
             };
           }
 
@@ -374,10 +393,109 @@ export const envParamsForEnvironments = async (params: {
     }
   }
 
-  const cryptoPromises = toEncrypt.map(([path, params]) =>
-      encryptSymmetricWithKey(params).then((encrypted) => [path, encrypted])
-    ) as Promise<[string[], Crypto.EncryptedData]>[],
-    pathResults = await Promise.all(cryptoPromises);
+  await dispatch(
+    {
+      type: Client.ActionType.SET_CRYPTO_STATUS,
+      payload: {
+        processed: 0,
+        total: toEncrypt.length,
+        op: "encrypt",
+        dataType: "blobs",
+      },
+    },
+    context
+  );
+
+  // log("envParamsForEnvironments - starting encryption");
+
+  let pathResults: [string[], Crypto.EncryptedData][] = [];
+  let encryptedSinceStatusUpdate = 0;
+  for (let batch of R.splitEvery(CRYPTO_SYMMETRIC_BATCH_SIZE, toEncrypt)) {
+    const res = await Promise.all(
+      batch.map(([path, params]) => {
+        if (params.encryptionKey) {
+          return encryptSymmetricWithKey({
+            data: params.data,
+            encryptionKey: params.encryptionKey,
+          }).then((encrypted) => {
+            encryptedSinceStatusUpdate++;
+            if (
+              encryptedSinceStatusUpdate >= CRYPTO_SYMMETRIC_STATUS_INTERVAL
+            ) {
+              dispatch(
+                {
+                  type: Client.ActionType.CRYPTO_STATUS_INCREMENT,
+                  payload: encryptedSinceStatusUpdate,
+                },
+                context
+              );
+              encryptedSinceStatusUpdate = 0;
+            }
+            return [path, encrypted];
+          });
+        }
+
+        if (!org.optimizeEmptyEnvs) {
+          log("Missing encrypted key for blob", {
+            path: path.map((p) =>
+              state.graph[p] ? getObjectName(state.graph, p) : p
+            ),
+            params,
+            pending,
+            message,
+            rotateKeys,
+            reencryptChangesets,
+            initEnvs,
+          });
+          throw new Error("Missing encrypted key for blob");
+        }
+
+        if (!isValidEmptyVal(params.data)) {
+          log("invalid empty value", {
+            path: path.map((p) =>
+              state.graph[p] ? getObjectName(state.graph, p) : p
+            ),
+            emptyVals,
+            params,
+            pending,
+            message,
+            rotateKeys,
+            reencryptChangesets,
+            initEnvs,
+          });
+
+          throw new Error("invalid empty value");
+        }
+
+        if (encryptedSinceStatusUpdate >= CRYPTO_SYMMETRIC_STATUS_INTERVAL) {
+          dispatch(
+            {
+              type: Client.ActionType.CRYPTO_STATUS_INCREMENT,
+              payload: encryptedSinceStatusUpdate,
+            },
+            context
+          );
+          encryptedSinceStatusUpdate = 0;
+        }
+
+        return [path, { data: params.data, nonce: "" }];
+      }) as Promise<[string[], Crypto.EncryptedData]>[]
+    );
+
+    await wait(CRYPTO_SYMMETRIC_BATCH_DELAY_MS);
+
+    pathResults = pathResults.concat(res);
+  }
+
+  // log("envParamsForEnvironments - encrypted all");
+
+  await dispatch(
+    {
+      type: Client.ActionType.SET_CRYPTO_STATUS,
+      payload: undefined,
+    },
+    context
+  );
 
   for (let [path, data] of pathResults) {
     set(blobs, path, data);
@@ -387,6 +505,8 @@ export const envParamsForEnvironments = async (params: {
     set(blobs, path, data);
   }
 
+  // log("params", { pathResults });
+
   return {
     keys,
     blobs,
@@ -394,3 +514,12 @@ export const envParamsForEnvironments = async (params: {
     changesetKeysByEnvironmentId,
   };
 };
+
+const emptyVals = [
+  JSON.stringify({}),
+  JSON.stringify({ variables: {}, inherits: {} }),
+  JSON.stringify({ inherits: {}, variables: {} }),
+  JSON.stringify({ variables: {} }),
+  JSON.stringify({ inherits: {} }),
+];
+export const isValidEmptyVal = (json: string) => emptyVals.includes(json);

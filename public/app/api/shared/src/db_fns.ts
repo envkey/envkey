@@ -218,6 +218,7 @@ export const setMaxPacketSize = (n: number) => {
       pkey,
       pkeyScope,
       scope,
+      pkeysWithScopes,
       limit,
       offset,
       deleted,
@@ -256,35 +257,50 @@ export const setMaxPacketSize = (n: number) => {
     let qs = `SELECT ${fields.join(",")} from objects WHERE `;
     const qargs = [];
 
-    if (pkey) {
-      if (Array.isArray(pkey)) {
-        qs += "(" + pkey.map((s) => "pkey = ?").join(" OR ") + ")";
-        for (let s of pkey) {
-          qargs.push(s);
-        }
-      } else {
-        qs += "pkey = ?";
-        qargs.push(pkey);
-      }
-    } else if (pkeyScope) {
-      qs += "pkey LIKE ?";
-      qargs.push(pkeyScope + "%");
-    }
+    if (pkeysWithScopes) {
+      const pkeys = R.uniq(pkeysWithScopes.map(({ pkey }) => pkey));
+      const scopes = R.uniq(pkeysWithScopes.map(({ scope }) => scope));
 
-    if (scope) {
-      if (pkey || pkeyScope) {
-        qs += " AND ";
+      qs += `(pkey IN (?) AND (${scopes
+        .map(() => "skey LIKE ?")
+        .join(" OR ")}))`;
+
+      qargs.push(pkeys);
+
+      for (let scope of scopes) {
+        qargs.push(scope + "%");
       }
-      if (Array.isArray(scope)) {
-        qs += "(" + scope.map((s) => "skey LIKE ?").join(" OR ") + ")";
-        for (let s of scope) {
-          const exact = s.endsWith("$");
-          qargs.push(s.replace("$", "") + (exact ? "" : "%"));
+    } else {
+      if (pkey) {
+        if (Array.isArray(pkey)) {
+          qs += "(" + pkey.map((s) => "pkey = ?").join(" OR ") + ")";
+          for (let s of pkey) {
+            qargs.push(s);
+          }
+        } else {
+          qs += "pkey = ?";
+          qargs.push(pkey);
         }
-      } else {
-        const exact = scope.endsWith("$");
-        qs += exact ? "skey = ?" : "skey LIKE ?";
-        qargs.push(scope.replace("$", "") + (exact ? "" : "%"));
+      } else if (pkeyScope) {
+        qs += "pkey LIKE ?";
+        qargs.push(pkeyScope + "%");
+      }
+
+      if (scope) {
+        if (pkey || pkeyScope) {
+          qs += " AND ";
+        }
+        if (Array.isArray(scope)) {
+          qs += "(" + scope.map((s) => "skey LIKE ?").join(" OR ") + ")";
+          for (let s of scope) {
+            const exact = s.endsWith("$");
+            qargs.push(s.replace("$", "") + (exact ? "" : "%"));
+          }
+        } else {
+          const exact = scope.endsWith("$");
+          qs += exact ? "skey = ?" : "skey LIKE ?";
+          qargs.push(scope.replace("$", "") + (exact ? "" : "%"));
+        }
       }
     }
 
@@ -364,6 +380,8 @@ export const setMaxPacketSize = (n: number) => {
 
     qs += ";";
 
+    // log("query - ", { qs, qargs });
+
     const [rows] = (<any>await execQuery(transactionConnOrPool, qs, qargs)) as [
       {
         body: string;
@@ -406,53 +424,81 @@ export const setMaxPacketSize = (n: number) => {
         } as T)
     );
   },
-  putDbStatement = <T extends Api.Db.DbObject>(obj: T): Api.Db.SqlStatement => {
-    const bodyJson = JSON.stringify(
-      R.omit(
-        [
-          "pkey",
-          "skey",
-          "createdAt",
-          "updatedAt",
-          "deletedAt",
-          "orderIndex",
-          "data",
-          "secondaryIndex",
-          "tertiaryIndex",
-          "excludeFromDeletedGraph",
-        ],
-        obj
-      )
+  bulkPutDbStatement = <T extends Api.Db.DbObject>(
+    objects: T[]
+  ): Api.Db.SqlStatement => {
+    const fields = [
+      "pkey",
+      "skey",
+      "fullKey",
+      "body",
+      "data",
+      "createdAt",
+      "updatedAt",
+      "orderIndex",
+      "secondaryIndex",
+      "tertiaryIndex",
+      "excludeFromDeletedGraph",
+      "bytes",
+    ];
+
+    const qs = `INSERT INTO objects (${fields.join(", ")}) VALUES ${objects
+      .map(() => `(${R.repeat("?", fields.length)})`)
+      .join(",")} AS put ON DUPLICATE KEY UPDATE ${R.without(
+      ["pkey", "skey"],
+      fields
+    )
+      .map((f) => `${f} = put.${f}`)
+      .join(", ")};`;
+
+    const qargs: any[] = R.flatten(
+      objects.map((obj) => {
+        const bodyJson = JSON.stringify(
+          R.omit(
+            [
+              "pkey",
+              "skey",
+              "createdAt",
+              "updatedAt",
+              "deletedAt",
+              "orderIndex",
+              "data",
+              "secondaryIndex",
+              "tertiaryIndex",
+              "excludeFromDeletedGraph",
+            ],
+            obj
+          )
+        );
+
+        const dataJson = obj.data ? JSON.stringify(obj.data) : null;
+
+        const bytes = Buffer.byteLength(
+          bodyJson + (dataJson ?? "") + obj.pkey + obj.skey,
+          "utf8"
+        );
+
+        return [
+          obj.pkey,
+          obj.skey,
+          `${obj.pkey}|${obj.skey}`,
+          bodyJson,
+          dataJson,
+          obj.createdAt,
+          obj.updatedAt,
+          obj.orderIndex ?? null,
+          obj.secondaryIndex ?? null,
+          obj.tertiaryIndex ?? null,
+          obj.excludeFromDeletedGraph ? 1 : 0,
+          bytes,
+        ];
+      })
     );
 
-    const dataJson = obj.data ? JSON.stringify(obj.data) : null;
-
-    const bytes = Buffer.byteLength(
-      bodyJson + (dataJson ?? "") + obj.pkey + obj.skey,
-      "utf8"
-    );
-
-    return {
-      qs: `SET @pkey = ?, @skey = ?, @body = ?, @data = ?, @createdAt = ?, @updatedAt = ?, @orderIndex = ?, @secondaryIndex = ?, @tertiaryIndex = ?, @excludeFromDeletedGraph = ?, @bytes = ?;
-    SET @fullKey = CONCAT_WS("|",@pkey,@skey);
-INSERT INTO objects (pkey, skey, fullKey, body, data, createdAt, updatedAt, orderIndex, secondaryIndex, tertiaryIndex, excludeFromDeletedGraph, bytes)
-VALUES (@pkey, @skey, @fullKey, @body, @data, @createdAt, @updatedAt, @orderIndex, @secondaryIndex, @tertiaryIndex, @excludeFromDeletedGraph, @bytes)
-ON DUPLICATE KEY UPDATE fullKey = @fullKey, body = @body, data = @data, orderIndex = @orderIndex, secondaryIndex = @secondaryIndex, tertiaryIndex = @tertiaryIndex, excludeFromDeletedGraph = @excludeFromDeletedGraph, bytes = @bytes, updatedAt = @updatedAt;`,
-      qargs: [
-        obj.pkey,
-        obj.skey,
-        bodyJson,
-        dataJson,
-        obj.createdAt,
-        obj.updatedAt,
-        obj.orderIndex ?? null,
-        obj.secondaryIndex ?? null,
-        obj.tertiaryIndex ?? null,
-        obj.excludeFromDeletedGraph ? 1 : 0,
-        bytes,
-      ],
-    };
+    return { qs, qargs };
   },
+  putDbStatement = <T extends Api.Db.DbObject>(obj: T): Api.Db.SqlStatement =>
+    bulkPutDbStatement([obj]),
   putDb = async <T extends Api.Db.DbObject>(
     obj: T,
     transactionConnOrPool: PoolConnection | Pool
@@ -644,9 +690,7 @@ ON DUPLICATE KEY UPDATE fullKey = @fullKey, body = @body, data = @data, orderInd
     }
 
     if (transactionItems.puts?.length) {
-      for (let obj of transactionItems.puts) {
-        statements.push(putDbStatement(obj));
-      }
+      statements.push(bulkPutDbStatement(transactionItems.puts));
     }
 
     if (transactionItems.updates?.length) {
@@ -673,8 +717,6 @@ ON DUPLICATE KEY UPDATE fullKey = @fullKey, body = @body, data = @data, orderInd
     statements: Api.Db.SqlStatement[],
     transactionConn: PoolConnection
   ) => {
-    // log("", { statements });
-
     let qs: string = "",
       qargs: any[] = [];
 
@@ -684,6 +726,8 @@ ON DUPLICATE KEY UPDATE fullKey = @fullKey, body = @body, data = @data, orderInd
     // log(
     //   `executing SQL statements | ${statements.length} statements | total size ${totalSize} bytes`
     // );
+
+    // log("", { statements });
 
     for (let statement of statements) {
       // log("statement: " + format(statement.qs, statement.qargs));

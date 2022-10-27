@@ -249,6 +249,8 @@ const getAppAddUsersComponent = (userType: "orgUser" | "cliUser") => {
               );
             }}
           />
+
+          {submitting ? <ui.CryptoStatus {...props} /> : ""}
         </div>
       </div>
     );

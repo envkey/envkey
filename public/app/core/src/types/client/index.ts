@@ -385,6 +385,8 @@ namespace Client {
     DispatchContextType
   >;
 
+  export type LocalSocketUpdateFn = (msg: LocalSocketMessage) => void;
+
   export type Context<DispatchContextType = any> = {
     client: ClientParams<"cli" | "app" | "core">;
     clientId: string;
@@ -397,6 +399,7 @@ namespace Client {
     skipProcessRevocationRequests?: true;
     skipWaitForSerialAction?: true;
     ipTestOverride?: string;
+    localSocketUpdate?: LocalSocketUpdateFn;
   };
 
   type HandlerContext<
@@ -593,22 +596,45 @@ namespace Client {
     "user" | "appUserGrants" | "userGroupIds" | "scim"
   >;
 
+  export type EnvActionStatus = Pick<
+    Client.State,
+    | "cryptoStatus"
+    | "isFetchingEnvs"
+    | "isFetchingChangesets"
+    | "isLoadingInvite"
+    | "isLoadingDeviceGrant"
+    | "isLoadingRecoveryKey"
+    | "isProcessingApi"
+  >;
+
   export type LocalSocketMessage =
     | {
         type: "closing";
       }
     | {
         type: "update";
+        accountId: string | undefined;
       }
     | {
         type: "diffs";
         diffs: Patch;
+      }
+    | {
+        type: "importStatus";
+        status: string | undefined;
+      }
+    | {
+        type: "envActionStatus";
+        status: EnvActionStatus | undefined;
       };
 
-  export type CoreDispatchResult = Omit<DispatchResult, "state"> & {
-    diffs: Patch;
-    status: number;
-  };
+  export type CoreDispatchResult<ReturnFullStateType extends boolean = false> =
+    ReturnFullStateType extends true
+      ? DispatchResult
+      : Omit<DispatchResult, "state"> & {
+          diffs: Patch;
+          status: number;
+        };
 
   export type CloudBillingInvoice = Pick<
     Billing.Invoice,

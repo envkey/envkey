@@ -1,5 +1,6 @@
 import { Client } from "../../types";
 import crossFetch, { FetchRequestInit } from "../utils/cross_fetch";
+import { toSearchParams } from "../utils/url";
 import { v4 as uuid } from "uuid";
 
 export const clientId = uuid(), // unique per client (ephemeral)
@@ -8,11 +9,11 @@ export const clientId = uuid(), // unique per client (ephemeral)
     method: string,
     encryptedAuthToken?: string,
     args?: FetchRequestInit,
-    query?: Record<string, string>
+    query?: Record<string, string | string[]>
   ) => {
     return crossFetch(
       `http://localhost:${CORE_PROC_PORT}/${method}${
-        query ? "?" + new URLSearchParams(query).toString() : ""
+        query ? "?" + toSearchParams(query) : ""
       }`,
       {
         ...(args ?? {}),
@@ -33,7 +34,7 @@ export const clientId = uuid(), // unique per client (ephemeral)
     method: string,
     encryptedAuthToken?: string,
     args?: FetchRequestInit,
-    query?: Record<string, string>
+    query?: Record<string, string | string[]>
   ) =>
     coreMethod(method, encryptedAuthToken, args, query).then(
       (res) =>
@@ -70,19 +71,28 @@ export const clientId = uuid(), // unique per client (ephemeral)
 
     return true;
   },
-  fetchState = (accountIdOrCliKey?: string, encryptedAuthToken?: string) =>
+  fetchState = (
+    accountIdOrCliKey?: string,
+    encryptedAuthToken?: string,
+    keys?: (keyof Client.State)[]
+  ) =>
     coreMethodJson<Client.State>("state", encryptedAuthToken, undefined, {
       clientId,
       ...(accountIdOrCliKey ? { accountIdOrCliKey } : {}),
+      ...(keys ? { keys: keys as string[] } : {}),
     }),
-  dispatchCore = async <T extends Client.Action.EnvkeyAction>(
+  dispatchCore = async <
+    T extends Client.Action.EnvkeyAction,
+    ReturnFullStateType extends boolean = false
+  >(
     action: Client.Action.DispatchAction<T>,
     clientParams: Client.ClientParams<"cli" | "app">,
     accountIdOrCliKey: string | undefined,
     hostUrlOverride?: string,
-    encryptedAuthToken?: string
+    encryptedAuthToken?: string,
+    returnFullState?: ReturnFullStateType
   ) =>
-    coreMethodJson<Client.CoreDispatchResult>(
+    coreMethodJson<Client.CoreDispatchResult<ReturnFullStateType>>(
       "action",
       encryptedAuthToken,
       {
@@ -96,6 +106,7 @@ export const clientId = uuid(), // unique per client (ephemeral)
             clientId,
             hostUrl: hostUrlOverride,
           },
+          returnFullState,
         }),
       },
       undefined

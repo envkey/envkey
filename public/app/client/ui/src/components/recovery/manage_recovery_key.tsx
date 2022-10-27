@@ -8,6 +8,7 @@ import { SmallLoader } from "@images";
 import { MIN_ACTION_DELAY_MS } from "@constants";
 import { wait } from "@core/lib/utils/wait";
 import { logAndAlertError } from "@ui_lib/errors";
+import { CryptoStatus } from "../shared";
 
 export const ManageRecoveryKey: OrgComponent<
   {},
@@ -113,6 +114,7 @@ export const ManageRecoveryKey: OrgComponent<
           </div>
         </div>
         <div className="buttons">{generateButton}</div>
+        {generating ? <CryptoStatus {...props} /> : ""}
       </div>
     );
   }
@@ -141,22 +143,21 @@ export const ManageRecoveryKey: OrgComponent<
               Your <strong>{org.name}</strong> Recovery Key
             </label>
             <div className="recovery-key">
-              {props.core.generatedRecoveryKey ? (
-                [
-                  ...props.core.generatedRecoveryKey.encryptionKey.split(" "),
-                  auth.hostType == "self-hosted" ? auth.hostUrl : "",
-                ]
-                  .filter(Boolean)
-                  .map((value, i) => (
-                    <span>
-                      {i > 0 && i % 4 == 0 ? <br /> : ""}
-                      {value}{" "}
-                    </span>
-                  ))
-              ) : (
-                <SmallLoader />
-              )}
+              {props.core.generatedRecoveryKey
+                ? [
+                    ...props.core.generatedRecoveryKey.encryptionKey.split(" "),
+                    auth.hostType == "self-hosted" ? auth.hostUrl : "",
+                  ]
+                    .filter(Boolean)
+                    .map((value, i) => (
+                      <span>
+                        {i > 0 && i % 4 == 0 ? <br /> : ""}
+                        {value}{" "}
+                      </span>
+                    ))
+                : [<SmallLoader />]}
             </div>
+            {props.core.generatedRecoveryKey ? "" : <CryptoStatus {...props} />}
           </div>
           <p>
             Your Recovery Key allows you to get back in to the org if you lose

@@ -2,6 +2,7 @@ import { style } from "typestyle";
 import * as colors from "../../colors";
 import { backLink, baseContainer } from "../../mixins";
 import { multi } from "../../helpers";
+import { color } from "csx";
 
 export const HomeContainer = style({
   width: "100%",
@@ -87,6 +88,16 @@ export const HomeContainer = style({
       $nest: {
         a: backLink({ bgMode: "dark" }),
       },
+    },
+    ".crypto-status p": {
+      margin: "30px 0",
+      padding: 15,
+      fontSize: "15px",
+      background: "rgba(255,255,255,0.1)",
+      color: "rgba(255,255,255,0.6)",
+      textAlign: "center",
+      fontWeight: 500,
+      lineHeight: "140%",
     },
   },
 });

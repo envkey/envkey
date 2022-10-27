@@ -16,7 +16,7 @@ import * as graphKey from "../graph_key";
 import { pick } from "@core/lib/utils/pick";
 import { secureRandomAlphanumeric } from "@core/lib/crypto/utils";
 import { getPubkeyHash } from "@core/lib/client";
-
+import * as semver from "semver";
 import produce from "immer";
 
 apiAction<
@@ -27,6 +27,7 @@ apiAction<
   type: Api.ActionType.CREATE_RECOVERY_KEY,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async ({ payload }, orgGraph, userGraph, auth) =>
     auth.orgPermissions.has("org_generate_recovery_key"),
   graphHandler: async (
@@ -120,13 +121,15 @@ apiAction<
     return true;
   },
   graphHandler: async (
-    { type, payload },
+    action,
     orgGraph,
     auth,
     now,
     requestParams,
     transactionConn
   ) => {
+    const { type, payload } = action;
+
     const activeRecoveryKey = getActiveRecoveryKeysByUserId(orgGraph)[
         auth.user.id
       ] as Api.Db.RecoveryKey,
@@ -190,12 +193,17 @@ Please copy it and return to the EnvKey UI to complete the Account Recovery proc
       throw new Api.ApiError("Not found", 404);
     }
 
+    const keysOnly = Boolean(
+      action.meta.client &&
+        semver.gte(action.meta.client.clientVersion, "2.2.0")
+    );
+
     return {
       type: "graphHandlerResult",
       graph: orgGraph,
-      envs: { all: true },
-      inheritanceOverrides: { all: true },
-      changesets: { all: true },
+      envs: { all: true, keysOnly },
+      inheritanceOverrides: { all: true, keysOnly },
+      changesets: { all: true, keysOnly },
       signedTrustedRoot: activeRecoveryKey.signedTrustedRoot,
       handlerContext,
       logTargetIds: getFetchActionLogTargetIdsFn(orgGraph),

@@ -3,7 +3,8 @@ import { Client } from "@core/types";
 
 export const getContext = (
   accountIdOrCliKey?: string,
-  store?: Client.ReduxStore
+  store?: Client.ReduxStore,
+  localSocketUpdate?: Client.LocalSocketUpdateFn
 ): Client.Context => ({
   client: {
     clientName: "core",
@@ -12,4 +13,5 @@ export const getContext = (
   clientId: "core",
   accountIdOrCliKey,
   store,
+  localSocketUpdate,
 });

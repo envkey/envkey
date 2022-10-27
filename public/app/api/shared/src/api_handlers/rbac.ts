@@ -23,6 +23,7 @@ apiAction<
   authenticated: true,
   graphAction: true,
   rbacUpdate: true,
+
   graphAuthorizer: async ({ payload }, orgGraph, userGraph, auth) => {
     const appRoleIds = graphTypes(orgGraph)
       .appRoles.filter(R.complement(R.prop("hasFullEnvironmentPermissions")))
@@ -56,6 +57,7 @@ apiAction<
             "defaultAllApps",
             "defaultAllBlocks",
             "settings",
+            "importId",
           ],
           payload
         ),
@@ -152,6 +154,7 @@ apiAction<
   authenticated: true,
   graphAction: true,
   rbacUpdate: true,
+
   graphAuthorizer: async ({ payload }, orgGraph, userGraph, auth) => {
     const environmentRole = userGraph[payload.id];
     if (
@@ -247,6 +250,7 @@ apiAction<
   graphAction: true,
   rbacUpdate: true,
   shouldClearOrphanedLocals: true,
+
   graphAuthorizer: async ({ payload }, orgGraph, userGraph, auth) => {
     const environmentRole = userGraph[payload.id];
     if (!environmentRole || environmentRole.type != "environmentRole") {
@@ -334,6 +338,7 @@ apiAction<
   type: Api.ActionType.RBAC_REORDER_ENVIRONMENT_ROLES,
   graphAction: true,
   authenticated: true,
+
   graphAuthorizer: async ({ payload }, orgGraph, userGraph, auth) => {
     if (!auth.orgPermissions.has("org_manage_environment_roles")) {
       return false;

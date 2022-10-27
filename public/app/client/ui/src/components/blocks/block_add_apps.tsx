@@ -45,14 +45,17 @@ export const BlockAddApps: OrgComponent<{ blockId: string }> = (props) => {
             })}
             onSubmit={async (ids) => {
               setSubmitting(true);
+              const payload: Client.Action.ClientActions["ConnectBlocks"]["payload"] =
+                ids.map((appId, i) => ({
+                  blockId,
+                  appId,
+                  orderIndex: i,
+                }));
+              payload.clearCached = true;
               await props
                 .dispatch({
                   type: Client.ActionType.CONNECT_BLOCKS,
-                  payload: ids.map((appId, i) => ({
-                    blockId,
-                    appId,
-                    orderIndex: i,
-                  })),
+                  payload,
                 })
                 .then((res) => {
                   if (!res.success) {
@@ -68,6 +71,7 @@ export const BlockAddApps: OrgComponent<{ blockId: string }> = (props) => {
               );
             }}
           />
+          {submitting ? <ui.CryptoStatus {...props} /> : ""}
         </div>
       </div>
     </div>

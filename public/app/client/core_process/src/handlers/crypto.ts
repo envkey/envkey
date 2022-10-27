@@ -792,10 +792,6 @@ clientAction<
 
           if (state.envs[composite]) {
             const key = environmentKeysByComposite![composite];
-            if (!key) {
-              throw new Error("Missing inheritanceOverrides key");
-            }
-
             res[composite] = { env: state.envs[composite].env, key };
           } else {
             log("Missing inheritanceOverrides composite", {
@@ -840,10 +836,6 @@ clientAction<
 
           if (state.envs[composite]) {
             const key = environmentKeysByComposite![composite];
-            if (!key) {
-              throw new Error("Missing inheritanceOverrides key");
-            }
-
             res[composite] = { env: state.envs[composite].env, key };
           } else {
             log("Missing inheritanceOverrides composite", {

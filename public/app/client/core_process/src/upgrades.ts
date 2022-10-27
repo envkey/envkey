@@ -15,7 +15,7 @@ let checkUpgradesTimeout: NodeJS.Timeout | undefined;
 
 export const checkUpgradesAvailableLoop = async (
   store: Client.ReduxStore,
-  localSocketUpdate: () => void
+  localSocketUpdate: Client.LocalSocketUpdateFn
 ) => {
   let procState = store.getState();
   if (procState.locked) {
@@ -44,7 +44,7 @@ export const clearUpgradesLoop = () => {
 
 const checkSelfHostedUpgradesAvailable = async (
   store: Client.ReduxStore,
-  localSocketUpdate: () => void
+  localSocketUpdate: Client.LocalSocketUpdateFn
 ) => {
   let procState = store.getState();
   let canUpgradeAny = false;
@@ -116,7 +116,7 @@ const checkSelfHostedUpgradesAvailable = async (
     procState = store.getState();
     queuePersistState(procState, true);
     await processPersistStateQueue();
-    localSocketUpdate();
+    localSocketUpdate({ type: "update", accountId: undefined });
   } else {
     // log("Not permitted to upgrade any current self-hosted orgs.");
   }

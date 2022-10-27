@@ -17,23 +17,35 @@ export type LocalUiState = {
   accountId: string | undefined;
   loadedAccountId: string | undefined;
   lastLoadedAccountId: string | undefined;
+
   selectedCategoryFilter: NavFilter;
+
   selectedObjectId?: string;
+
   envManager: EnvManagerState;
+
   sidebarWidth: number;
   pendingFooterHeight: number;
+
   now: number;
+
   creatingEnvParent?: boolean;
   importingNewEnvParentId?: string;
+
   justDeletedObjectId?: string;
   justRegeneratedInviteForUserId?: string;
+
   lastSelectedTab?: string;
+
   startedOnboarding?: true;
   closedOnboardApp?: true;
   closedOnboardBlock?: true;
   closedOnboardAppLocalKeys?: true;
   closedOnboardAppServers?: true;
   closedOnboardCLIKeys?: true;
+
+  envActionStatus?: Client.EnvActionStatus;
+  importStatus?: string;
 };
 
 export type CoreDispatchFn = (
@@ -47,7 +59,9 @@ export type ComponentBaseProps = {
   dispatch: CoreDispatchFn;
   ui: LocalUiState;
   setUiState: (state: Partial<LocalUiState>) => void;
-  refreshCoreState: () => Promise<void>;
+  refreshCoreState: (params?: {
+    keys?: (keyof Client.State)[];
+  }) => Promise<void>;
   winWidth: number;
   winHeight: number;
 };

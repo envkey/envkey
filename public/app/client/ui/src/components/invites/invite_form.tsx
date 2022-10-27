@@ -452,7 +452,7 @@ export const InviteForm: OrgComponent<{
       blockStatement = [
         "Your organization has reached its limit of ",
         <strong>
-          {license.maxUsers!} active or pending users
+          {license.maxUsers!} active or pending user
           {license.maxUsers! == 1 ? "" : "s"}.
         </strong>,
       ];

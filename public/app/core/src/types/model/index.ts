@@ -76,6 +76,10 @@ export namespace Model {
       reinitializedLocals: z.boolean().optional(),
 
       customLicense: z.boolean().optional(),
+
+      optimizeEmptyEnvs: z.boolean().optional(),
+
+      orgSettingsImported: z.boolean().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -168,6 +172,8 @@ export namespace Model {
       scim: z
         .object({ providerId: z.string(), candidateId: z.string() })
         .optional(),
+
+      importId: z.string().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -204,6 +210,7 @@ export namespace Model {
       signedById: z.string(),
       deactivatedAt: z.number().optional(),
       orgRoleUpdatedAt: z.number(),
+      importId: z.string().optional(),
     })
     .merge(KeyableSchema)
     .merge(TimestampsSchema);
@@ -346,6 +353,7 @@ export namespace Model {
       localsReencryptionRequiredAt: z.record(z.number()),
       envsOrLocalsUpdatedAt: z.number().optional(),
       localsRequireReinit: z.boolean().optional(),
+      importId: z.string().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -388,6 +396,7 @@ export namespace Model {
       userId: z.string(),
       appId: z.string(),
       appRoleId: z.string(),
+      importId: z.string().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -404,6 +413,7 @@ export namespace Model {
   export const ServerSchema = z
     .object({
       type: z.literal("server"),
+      importId: z.string().optional(),
     })
     .merge(KeyableParentFieldsSchema);
 
@@ -428,6 +438,7 @@ export namespace Model {
       appId: z.string(),
       blockId: z.string(),
       orderIndex: z.number(),
+      importId: z.string().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -445,6 +456,7 @@ export namespace Model {
       encryptedById: z.string().optional(),
       reencryptionRequiredAt: z.number().optional(),
       "upgradedCrypto-2.1.0": z.boolean().optional(),
+      importId: z.string().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -509,6 +521,7 @@ export namespace Model {
       id: z.string(),
       name: z.string(),
       membershipsUpdatedAt: z.number().optional(),
+      importId: z.string().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -520,6 +533,7 @@ export namespace Model {
       groupId: z.string(),
       objectId: z.string(),
       orderIndex: z.number().optional(),
+      importId: z.string().optional(),
     })
     .merge(TimestampsSchema);
 
@@ -531,6 +545,7 @@ export namespace Model {
       appId: z.string(),
       userGroupId: z.string(),
       appRoleId: z.string(),
+      importId: z.string().optional(),
     })
     .merge(TimestampsSchema);
 

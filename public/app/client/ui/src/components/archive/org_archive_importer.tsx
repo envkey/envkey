@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useLayoutEffect } from "react";
 import { OrgComponent } from "@ui_types";
 import { Link } from "react-router-dom";
 import { Client } from "@core/types";
 import * as g from "@core/lib/graph";
 import * as ui from "@ui";
 import * as styles from "@styles";
-import { wait } from "@core/lib/utils/wait";
-import { SmallLoader } from "@images";
+import { SmallLoader, SvgImage } from "@images";
 import { style } from "typestyle";
 import { logAndAlertError } from "@ui_lib/errors";
 
-let refreshingState = false;
+type ImportStep = "orgUsers" | "cliUsers" | "apps" | "blocks" | "servers";
 
 export const OrgArchiveImporter: OrgComponent<
   {},
@@ -20,10 +19,22 @@ export const OrgArchiveImporter: OrgComponent<
   const currentUserId = props.ui.loadedAccountId!;
 
   const [encryptionKey, setEncryptionKey] = useState("");
+
   const [importOrgUsers, setImportOrgUsers] = useState(true);
+  const [importCliUsers, setImportCliUsers] = useState(true);
   const [importServers, setImportServers] = useState(true);
   const [regenServerKeys, setRegenServerKeys] = useState(true);
+
+  const [orgUserIds, setOrgUserIds] = useState<string[]>();
+  const [cliUserIds, setCliUserIds] = useState<string[]>();
+  const [appIds, setAppIds] = useState<string[]>();
+  const [blockIds, setBlockIds] = useState<string[]>();
+
+  const [decrypting, setDecrypting] = useState(false);
   const [importing, setImporting] = useState(false);
+
+  const [importStep, setImportStep] = useState<ImportStep>();
+  const [selectAllForStep, setSelectAllForStep] = useState(true);
 
   const [importComplete, setImportComplete] = useState(false);
 
@@ -37,24 +48,36 @@ export const OrgArchiveImporter: OrgComponent<
   );
 
   useEffect(() => {
-    (async () => {
-      if (importing && !props.core.isImportingOrg) {
-        setImportComplete(!Boolean(props.core.importOrgError));
-        setImporting(false);
-        refreshingState = false;
-        await props.refreshCoreState();
-      } else if (importing && props.core.isImportingOrg) {
-        if (!refreshingState) {
-          refreshingState = true;
-          await props.refreshCoreState();
-          while (refreshingState) {
-            await wait(1000);
-            await props.refreshCoreState();
-          }
-        }
-      }
-    })();
+    if (importing && !props.core.isImportingOrg) {
+      setImportComplete(!Boolean(props.core.importOrgError));
+      setImporting(false);
+      props.setUiState({ importStatus: undefined });
+    } else if (props.core.isImportingOrg && !importing) {
+      setImporting(true);
+    }
   }, [props.core.isImportingOrg]);
+
+  useLayoutEffect(() => {
+    if (decrypting && !props.core.isDecryptingOrgArchive) {
+      setDecrypting(false);
+    }
+
+    if (props.core.filteredOrgArchive && !importStep) {
+      let nextStep: ImportStep | undefined;
+      if (props.core.filteredOrgArchive.orgUsers.length > 0) {
+        nextStep = "orgUsers";
+      } else if (props.core.filteredOrgArchive.cliUsers.length > 0) {
+        nextStep = "cliUsers";
+      } else if (props.core.filteredOrgArchive.apps.length > 0) {
+        nextStep = "apps";
+      } else if (props.core.filteredOrgArchive.blocks.length > 0) {
+        nextStep = "blocks";
+      } else if (props.core.filteredOrgArchive.servers.length > 0) {
+        nextStep = "servers";
+      }
+      setImportStep(nextStep);
+    }
+  }, [props.core.isDecryptingOrgArchive]);
 
   useEffect(() => {
     if (!importServers && regenServerKeys) {
@@ -74,11 +97,32 @@ export const OrgArchiveImporter: OrgComponent<
     });
   };
 
-  const startImport = async () => {
+  const decryptArchive = async () => {
     if (!encryptionKey) {
       return;
     }
 
+    setDecrypting(true);
+
+    props
+      .dispatch({
+        type: Client.ActionType.DECRYPT_ORG_ARCHIVE,
+        payload: {
+          filePath: props.filePath,
+          encryptionKey,
+        },
+      })
+      .then((res) => {
+        if (!res.success) {
+          logAndAlertError(
+            "There was a problem decrypting the archive.",
+            (res.resultAction as any)?.payload
+          );
+        }
+      });
+  };
+
+  const startImport = async () => {
     setImporting(true);
     clearGenerated();
 
@@ -86,11 +130,16 @@ export const OrgArchiveImporter: OrgComponent<
       .dispatch({
         type: Client.ActionType.IMPORT_ORG,
         payload: {
-          filePath: props.filePath,
-          encryptionKey,
           importOrgUsers,
+          importCliUsers,
           importServers,
           regenServerKeys,
+          importOrgUserIds: orgUserIds,
+          importCliUserIds: cliUserIds,
+          importEnvParentIds:
+            appIds || blockIds
+              ? [...(appIds ?? []), ...(blockIds ?? [])]
+              : undefined,
         },
       })
       .then((res) => {
@@ -174,6 +223,12 @@ export const OrgArchiveImporter: OrgComponent<
       ];
     }
 
+    const header = (
+      <h3>
+        <strong>Import</strong> Org Archive
+      </h3>
+    );
+
     if (importComplete) {
       return [
         <h3>
@@ -232,16 +287,410 @@ export const OrgArchiveImporter: OrgComponent<
         <div className="field">
           <SmallLoader />
           <p className="org-import-status">
-            {props.core.importOrgStatus ?? "Starting import"}...
+            {props.ui.importStatus ??
+              props.core.importOrgStatus ??
+              "Starting import"}
+            ...
           </p>
+        </div>,
+      ];
+    } else if (decrypting) {
+      return [
+        <h3>
+          <strong>Decrypting</strong> Org Archive
+        </h3>,
+
+        <div className="field">
+          <SmallLoader />
+          <p className="org-import-status">Decrypting and parsing archive...</p>
+        </div>,
+      ];
+    } else if (props.core.filteredOrgArchive) {
+      if (importStep == "orgUsers") {
+        let nextStep: ImportStep | undefined;
+        if (props.core.filteredOrgArchive.cliUsers.length > 0) {
+          nextStep = "cliUsers";
+        } else if (props.core.filteredOrgArchive.apps.length > 0) {
+          nextStep = "apps";
+        } else if (props.core.filteredOrgArchive.blocks.length > 0) {
+          nextStep = "blocks";
+        } else if (props.core.filteredOrgArchive.servers.length > 0) {
+          nextStep = "servers";
+        }
+
+        return [
+          header,
+          <h4>Users</h4>,
+          <p>
+            Automatically re-invited users will use{" "}
+            <strong>email authentication.</strong> If you want to use{" "}
+            <strong>SSO</strong>, re-invite them yourself after the import
+            finishes and you've configured SSO.
+          </p>,
+          <div
+            className={"field checkbox" + (importOrgUsers ? " selected" : "")}
+            onClick={() => setImportOrgUsers(!importOrgUsers)}
+          >
+            <label>Automatically Re-Invite Users?</label>
+            <input type="checkbox" checked={importOrgUsers} />
+          </div>,
+
+          <div className="field">
+            <label>Re-Invite Everyone?</label>
+            <div className="select">
+              <select
+                value={selectAllForStep ? "all" : "choose"}
+                onChange={(e) => {
+                  const selectAll = e.target.value == "all";
+                  setSelectAllForStep(selectAll);
+                  if (selectAll) {
+                    setOrgUserIds(undefined);
+                  }
+                }}
+              >
+                <option value="all">Re-invite all users</option>
+                <option value="choose">Select which users to re-invite</option>
+              </select>
+              <SvgImage type="down-caret" />
+            </div>
+          </div>,
+
+          selectAllForStep ? (
+            ""
+          ) : (
+            <div className="field">
+              <label>Select Users</label>
+              <ui.CheckboxMultiSelect
+                winHeight={props.winHeight}
+                noSubmitButton={true}
+                emptyText={`No users to import`}
+                items={props.core.filteredOrgArchive.orgUsers.map((orgUser) => {
+                  const name = [orgUser.firstName, orgUser.lastName].join(" ");
+                  return {
+                    label: (
+                      <label>
+                        {name} <span className="small">{orgUser.email}</span>
+                      </label>
+                    ),
+                    searchText: name,
+                    id: orgUser.id,
+                  };
+                })}
+                onChange={(ids) => setOrgUserIds(ids)}
+              />
+            </div>
+          ),
+
+          <div className="field">
+            <button
+              className="primary"
+              onClick={() => {
+                if (nextStep) {
+                  setImportStep(nextStep);
+                  setSelectAllForStep(true);
+                } else {
+                  startImport();
+                }
+              }}
+              disabled={
+                importOrgUsers &&
+                !selectAllForStep &&
+                (!orgUserIds || orgUserIds.length == 0)
+              }
+            >
+              {nextStep ? "Next" : "Start Import"}
+            </button>
+          </div>,
+        ];
+      } else if (importStep == "cliUsers") {
+        let nextStep: ImportStep | undefined;
+        if (props.core.filteredOrgArchive.apps.length > 0) {
+          nextStep = "apps";
+        } else if (props.core.filteredOrgArchive.blocks.length > 0) {
+          nextStep = "blocks";
+        } else if (props.core.filteredOrgArchive.servers.length > 0) {
+          nextStep = "servers";
+        }
+
+        return [
+          header,
+          <h4>CLI Keys</h4>,
+          <div
+            className={"field checkbox" + (importCliUsers ? " selected" : "")}
+            onClick={() => setImportCliUsers(!importCliUsers)}
+          >
+            <label>Automatically Regenerate CLI Keys?</label>
+            <input type="checkbox" checked={importCliUsers} />
+          </div>,
+
+          <div className="field">
+            <label>Regenerate All?</label>
+            <div className="select">
+              <select
+                value={selectAllForStep ? "all" : "choose"}
+                onChange={(e) => {
+                  const selectAll = e.target.value == "all";
+                  setSelectAllForStep(selectAll);
+                  if (selectAll) {
+                    setCliUserIds(undefined);
+                  }
+                }}
+              >
+                <option value="all">Regenerate all CLI keys</option>
+                <option value="choose">
+                  Select which CLI keys to regenerate
+                </option>
+              </select>
+              <SvgImage type="down-caret" />
+            </div>
+          </div>,
+
+          selectAllForStep ? (
+            ""
+          ) : (
+            <div className="field">
+              <label>Select CLI Keys</label>
+              <ui.CheckboxMultiSelect
+                winHeight={props.winHeight}
+                noSubmitButton={true}
+                emptyText={`No CLI keys to import`}
+                items={props.core.filteredOrgArchive.cliUsers.map((cliUser) => {
+                  return {
+                    label: <label>{cliUser.name}</label>,
+                    searchText: cliUser.name,
+                    id: cliUser.id,
+                  };
+                })}
+                onChange={(ids) => setCliUserIds(ids)}
+              />
+            </div>
+          ),
+
+          <div className="field">
+            <button
+              className="primary"
+              onClick={() => {
+                if (nextStep) {
+                  setImportStep(nextStep);
+                  setSelectAllForStep(true);
+                } else {
+                  startImport();
+                }
+              }}
+              disabled={
+                importCliUsers &&
+                !selectAllForStep &&
+                (!cliUserIds || cliUserIds.length == 0)
+              }
+            >
+              {nextStep ? "Next" : "Start Import"}
+            </button>
+          </div>,
+        ];
+      } else if (importStep == "apps") {
+        let nextStep: ImportStep | undefined;
+        if (props.core.filteredOrgArchive.blocks.length > 0) {
+          nextStep = "blocks";
+        } else if (
+          props.core.filteredOrgArchive.servers.length > 0 &&
+          (!appIds || appIds.length > 0)
+        ) {
+          nextStep = "servers";
+        }
+
+        return [
+          header,
+          <h4>Apps</h4>,
+          <div className="field">
+            <label>Import All Apps?</label>
+            <div className="select">
+              <select
+                value={selectAllForStep ? "all" : "choose"}
+                onChange={(e) => {
+                  const selectAll = e.target.value == "all";
+                  setSelectAllForStep(selectAll);
+                  if (selectAll) {
+                    setAppIds(undefined);
+                  }
+                }}
+              >
+                <option value="all">Import all apps</option>
+                <option value="choose">Select which apps to import</option>
+              </select>
+              <SvgImage type="down-caret" />
+            </div>
+          </div>,
+
+          selectAllForStep ? (
+            ""
+          ) : (
+            <div className="field">
+              <label>Select Apps</label>
+              <ui.CheckboxMultiSelect
+                winHeight={props.winHeight}
+                noSubmitButton={true}
+                emptyText={`No apps to import`}
+                items={props.core.filteredOrgArchive.apps.map((app) => {
+                  return {
+                    label: <label>{app.name}</label>,
+                    searchText: app.name,
+                    id: app.id,
+                  };
+                })}
+                onChange={(ids) => setAppIds(ids)}
+              />
+            </div>
+          ),
+
+          <div className="field">
+            <button
+              className="primary"
+              onClick={() => {
+                if (nextStep) {
+                  setImportStep(nextStep);
+                  setSelectAllForStep(true);
+                } else {
+                  startImport();
+                }
+              }}
+            >
+              {nextStep ? "Next" : "Start Import"}
+            </button>
+          </div>,
+        ];
+      } else if (importStep == "blocks") {
+        let nextStep: ImportStep | undefined;
+        if (
+          props.core.filteredOrgArchive.servers.length > 0 &&
+          (!appIds || appIds.length > 0)
+        ) {
+          nextStep = "servers";
+        }
+
+        return [
+          header,
+          <h4>Blocks</h4>,
+          <div className="field">
+            <label>Import All Blocks?</label>
+            <div className="select">
+              <select
+                value={selectAllForStep ? "all" : "choose"}
+                onChange={(e) => {
+                  const selectAll = e.target.value == "all";
+                  setSelectAllForStep(selectAll);
+                  if (selectAll) {
+                    setBlockIds(undefined);
+                  }
+                }}
+              >
+                <option value="all">Import all blocks</option>
+                <option value="choose">Select which blocks to import</option>
+              </select>
+              <SvgImage type="down-caret" />
+            </div>
+          </div>,
+
+          selectAllForStep ? (
+            ""
+          ) : (
+            <div className="field">
+              <label>Select Blocks</label>
+              <ui.CheckboxMultiSelect
+                winHeight={props.winHeight}
+                noSubmitButton={true}
+                emptyText={`No blocks to import`}
+                items={props.core.filteredOrgArchive.blocks.map((block) => {
+                  return {
+                    label: <label>{block.name}</label>,
+                    searchText: block.name,
+                    id: block.id,
+                  };
+                })}
+                onChange={(ids) => setBlockIds(ids)}
+              />
+            </div>
+          ),
+
+          <div className="field">
+            <button
+              className="primary"
+              onClick={() => {
+                if (nextStep) {
+                  setImportStep(nextStep);
+                  setSelectAllForStep(true);
+                } else {
+                  startImport();
+                }
+              }}
+            >
+              {nextStep ? "Next" : "Start Import"}
+            </button>
+          </div>,
+        ];
+      } else if (importStep == "servers") {
+        return [
+          header,
+          <h4>Servers</h4>,
+          <p>
+            If you have many servers, you might prefer to regenerate them
+            gradually rather than automatically as part of the import. You can
+            recreate your servers as placeholders, but wait on generating their
+            associated ENVKEYs by checking{" "}
+            <strong>Automatically Re-Create Servers?</strong> below, but leaving{" "}
+            <strong>Regenerate Server ENVKEYs?</strong> unchecked.
+          </p>,
+
+          <div
+            className={"field checkbox" + (importServers ? " selected" : "")}
+            onClick={() => setImportServers(!importServers)}
+          >
+            <label>Automatically Re-Create Servers?</label>
+            <input type="checkbox" checked={importServers} />
+          </div>,
+
+          <div
+            className={
+              "field checkbox" +
+              (regenServerKeys ? " selected" : "") +
+              (importServers ? "" : " disabled")
+            }
+            onClick={() => {
+              if (importServers) {
+                setRegenServerKeys(!regenServerKeys);
+              }
+            }}
+          >
+            <label>Regenerate Server ENVKEYs?</label>
+            <input
+              type="checkbox"
+              disabled={!importServers}
+              checked={regenServerKeys}
+            />
+          </div>,
+
+          <div className="field">
+            <button className="primary" onClick={startImport}>
+              Start Import
+            </button>
+          </div>,
+        ];
+      }
+    }
+
+    if (props.core.filteredOrgArchive) {
+      return [
+        header,
+        <p>Archive decrypted and parsed successfully.</p>,
+        <div className="field">
+          <button className="primary" onClick={startImport}>
+            Start Import
+          </button>
         </div>,
       ];
     }
 
     return [
-      <h3>
-        <strong>Import</strong> Org Archive
-      </h3>,
+      header,
       <div className="field">
         <label>Encryption Key</label>
         <input
@@ -252,64 +701,13 @@ export const OrgArchiveImporter: OrgComponent<
         />
       </div>,
 
-      <p>
-        Automatically re-invited users will use{" "}
-        <strong>email authentication.</strong> If you want to use{" "}
-        <strong>SSO</strong>, re-invite them yourself after the import finishes
-        and you've configured SSO.
-      </p>,
-      <div
-        className={"field checkbox" + (importOrgUsers ? " selected" : "")}
-        onClick={() => setImportOrgUsers(!importOrgUsers)}
-      >
-        <label>Automatically Re-Invite Users?</label>
-        <input type="checkbox" checked={importOrgUsers} />
-      </div>,
-
-      <p>
-        If you have large numbers of servers in your org, you might prefer to
-        re-generate them gradually rather than automatically as part of the
-        import. You can recreate your servers as placeholders, but wait on
-        generating their associated ENVKEYs by checking{" "}
-        <strong>Automatically Re-Create Servers?</strong> below, but leaving{" "}
-        <strong>Regenerate Server ENVKEYs?</strong> unchecked.
-      </p>,
-
-      <div
-        className={"field checkbox" + (importServers ? " selected" : "")}
-        onClick={() => setImportServers(!importServers)}
-      >
-        <label>Automatically Re-Create Servers?</label>
-        <input type="checkbox" checked={importServers} />
-      </div>,
-
-      <div
-        className={
-          "field checkbox" +
-          (regenServerKeys ? " selected" : "") +
-          (importServers ? "" : " disabled")
-        }
-        onClick={() => {
-          if (importServers) {
-            setRegenServerKeys(!regenServerKeys);
-          }
-        }}
-      >
-        <label>Regenerate Server ENVKEYs?</label>
-        <input
-          type="checkbox"
-          disabled={!importServers}
-          checked={regenServerKeys}
-        />
-      </div>,
-
       <div className="field">
         <button
           className="primary"
-          onClick={startImport}
+          onClick={decryptArchive}
           disabled={!encryptionKey}
         >
-          Start Import
+          Next
         </button>
       </div>,
     ];
@@ -319,7 +717,14 @@ export const OrgArchiveImporter: OrgComponent<
     <div className={styles.OrgArchiveImporter}>
       <div
         className={"overlay" + (importing || importComplete ? " disabled" : "")}
-        onClick={() => (importing || importComplete ? null : props.close())}
+        onClick={() => {
+          if (!importing && !importComplete) {
+            props.dispatch({
+              type: Client.ActionType.RESET_ORG_IMPORT,
+            });
+            props.close();
+          }
+        }}
       >
         <span className="back">
           <span>← Back</span>

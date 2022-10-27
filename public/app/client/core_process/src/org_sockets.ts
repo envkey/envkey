@@ -20,11 +20,11 @@ const CONNECTION_TIMEOUT = 5000,
 
 let socketPingLoopTimeout: NodeJS.Timeout | undefined;
 
-let _localSocketUpdate: () => void;
+let _localSocketUpdate: Client.LocalSocketUpdateFn;
 
 export const resolveOrgSockets = async (
     store: Client.ReduxStore,
-    localSocketUpdate: () => void,
+    localSocketUpdate: Client.LocalSocketUpdateFn,
     skipJitter?: true
   ) => {
     _localSocketUpdate = localSocketUpdate;
@@ -211,7 +211,7 @@ const connectSocket = async (
         getContext(account.userId)
       ).then(() => {
         if (_localSocketUpdate) {
-          _localSocketUpdate();
+          _localSocketUpdate({ type: "update", accountId: account.userId });
         }
       });
     },
