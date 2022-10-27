@@ -1,4 +1,4 @@
-## End-to-end encryption for app secrets. Superpowers for config management.
+## End-to-end encryption for app secrets. Superpowers for managing config.
 
 - Protects API keys and other secrets.
 
