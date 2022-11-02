@@ -271,6 +271,7 @@ export const getUserGraph = (
           "reencryptionRequiredAt",
           "upgradedCrypto-2.1.0",
           "importId",
+          "requiresReinit",
         ];
 
         return obj.isSub

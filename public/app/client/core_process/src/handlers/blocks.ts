@@ -20,7 +20,7 @@ import {
   getEnvironmentsByEnvParentId,
   authz,
 } from "@core/lib/graph";
-import { initLocalsIfNeeded } from "../lib/envs";
+import { initEnvironmentsIfNeeded } from "../lib/envs";
 
 clientAction<Client.Action.ClientActions["CreateBlock"]>({
   type: "asyncClientAction",
@@ -251,7 +251,7 @@ clientAction<Client.Action.ClientActions["ConnectBlocks"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
+    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 

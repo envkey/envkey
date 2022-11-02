@@ -11,6 +11,8 @@ export type Env = {
   // '{"user": "root", "password": ""}'
   DATABASE_CREDENTIALS_JSON: string;
 
+  DATABASE_URI?: string;
+
   SOCKET_CLUSTER_AUTH?: string;
 
   EMAILS_PER_SECOND?: string;

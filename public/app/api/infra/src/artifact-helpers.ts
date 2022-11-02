@@ -62,11 +62,11 @@ export const getReleaseObject = async (params: {
 
   const url = `https://${params.bucket}.s3.amazonaws.com/${params.key}`;
 
-  console.log("fetching release object:", url);
+  // console.log("fetching release object:", url);
 
   const res = await fetch(url);
 
-  console.log("fetched release object:", url);
+  // console.log("fetched release object:", url);
 
   if (params.progress) {
     const totalBytes = Number(res.headers.get("content-length"));

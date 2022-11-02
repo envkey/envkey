@@ -3,7 +3,7 @@ import {
   fetchLoadedEnvs,
   fetchPendingEnvs,
   fetchRequiredEnvs,
-  initLocalsIfNeeded,
+  initEnvironmentsIfNeeded,
 } from "../lib/envs";
 import { Client, Api, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";
@@ -46,7 +46,7 @@ clientAction<
       throw new Error("Action requires authentication");
     }
     // this will init / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
-    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
+    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
   },
@@ -249,7 +249,7 @@ clientAction<
       throw new Error("Action requires authentication");
     }
     // this will init / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
-    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
+    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
   },

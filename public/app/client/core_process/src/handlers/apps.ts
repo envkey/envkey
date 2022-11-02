@@ -25,7 +25,7 @@ import {
 import { log } from "@core/lib/utils/logger";
 import fs from "fs";
 import path from "path";
-import { initLocalsIfNeeded } from "../lib/envs";
+import { initEnvironmentsIfNeeded } from "../lib/envs";
 
 clientAction<Client.Action.ClientActions["CreateApp"]>({
   type: "asyncClientAction",
@@ -297,7 +297,7 @@ clientAction<Client.Action.ClientActions["GrantAppsAccess"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
+    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 

@@ -17,7 +17,7 @@ import {
   fetchEnvsForUserOrAccessParams,
 } from "../lib/envs";
 import { renameObjectProducers, removeObjectProducers } from "../lib/status";
-import { initLocalsIfNeeded } from "../lib/envs";
+import { initEnvironmentsIfNeeded } from "../lib/envs";
 import * as R from "ramda";
 import { log } from "@core/lib/utils/logger";
 
@@ -124,7 +124,7 @@ clientAction<
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
+    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 

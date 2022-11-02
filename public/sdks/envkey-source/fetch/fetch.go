@@ -460,6 +460,8 @@ func getJson(envkeyHost string, envkeyIdPart string, options FetchOptions, respo
 				fetchCache.Delete(envkeyIdPart)
 			}
 			return errors.New("ENVKEY invalid")
+		} else if r != nil && r.StatusCode == 426 {
+			return errors.New("organization requires a newer version of envkey-source client")
 		} else if r != nil && r.StatusCode == 429 {
 			return errors.New("request limit exceeded")
 		}

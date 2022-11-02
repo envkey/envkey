@@ -380,7 +380,11 @@ export const setMaxPacketSize = (n: number) => {
 
     qs += ";";
 
-    // log("query - ", { qs, qargs });
+    // log("query - ", {
+    //   params: R.omit(["transactionConnOrPool", "transactionConn"], params),
+    //   qs,
+    //   qargs,
+    // });
 
     const [rows] = (<any>await execQuery(transactionConnOrPool, qs, qargs)) as [
       {

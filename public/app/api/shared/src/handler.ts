@@ -1755,6 +1755,13 @@ const apiActions: {
                 );
               }
             }, envBlobs);
+
+            if (!handlerEnvs.keysOnly) {
+              envEncryptedKeys = R.pickBy(
+                (v, k) => Boolean(envBlobs[k]),
+                envEncryptedKeys
+              );
+            }
           }
 
           if (handlerChangesets) {

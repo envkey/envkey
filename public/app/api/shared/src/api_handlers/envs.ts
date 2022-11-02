@@ -19,6 +19,7 @@ import {
   getActiveGeneratedEnvkeysByKeyableParentId,
   getConnectedBlockEnvironmentsForApp,
 } from "@core/lib/graph";
+import { getHandlerEnvsResponse } from "../blob";
 import { pick } from "@core/lib/utils/pick";
 import * as graphKey from "../graph_key";
 import { log } from "@core/lib/utils/logger";
@@ -500,104 +501,46 @@ apiAction<
 });
 
 const canCreateOrDeleteVariableGroup = (
-    userGraph: Client.Graph.UserGraph,
-    auth: Auth.DefaultAuthContext,
-    envParentId: string,
-    subEnvironmentId?: string
-  ) => {
-    const envParent = userGraph[envParentId];
-    if (!envParent) {
+  userGraph: Client.Graph.UserGraph,
+  auth: Auth.DefaultAuthContext,
+  envParentId: string,
+  subEnvironmentId?: string
+) => {
+  const envParent = userGraph[envParentId];
+  if (!envParent) {
+    return false;
+  }
+
+  if (subEnvironmentId) {
+    const subEnvironment = userGraph[subEnvironmentId];
+    if (!subEnvironment) {
       return false;
     }
 
-    if (subEnvironmentId) {
-      const subEnvironment = userGraph[subEnvironmentId];
-      if (!subEnvironment) {
-        return false;
-      }
+    const permissions = getEnvironmentPermissions(
+      userGraph,
+      subEnvironmentId,
+      auth.user.id
+    );
+    return permissions.has("write");
+  }
 
-      const permissions = getEnvironmentPermissions(
-        userGraph,
-        subEnvironmentId,
-        auth.user.id
-      );
-      return permissions.has("write");
-    }
+  const environments =
+    getEnvironmentsByEnvParentId(userGraph)[envParentId] || [];
+  if (environments.length == 0) {
+    return false;
+  }
 
-    const environments =
-      getEnvironmentsByEnvParentId(userGraph)[envParentId] || [];
-    if (environments.length == 0) {
+  for (let environment of environments) {
+    const permissions = getEnvironmentPermissions(
+      userGraph,
+      environment.id,
+      auth.user.id
+    );
+    if (!permissions.has("write")) {
       return false;
     }
+  }
 
-    for (let environment of environments) {
-      const permissions = getEnvironmentPermissions(
-        userGraph,
-        environment.id,
-        auth.user.id
-      );
-      if (!permissions.has("write")) {
-        return false;
-      }
-    }
-
-    return true;
-  },
-  getHandlerEnvsResponse = <
-    BlobType extends "env" | "inheritanceOverrides" | "changeset"
-  >(
-    orgGraph: Api.Graph.OrgGraph,
-    envParentIds: string[],
-    blobType: BlobType,
-    changesetsCreatedAfterByEnvParentId?: Record<string, number | undefined>,
-    keysOnly?: boolean
-  ) => {
-    return {
-      keysOnly,
-      scopes: R.flatten(
-        envParentIds.map((envParentId) => {
-          const envParent = orgGraph[envParentId] as Model.EnvParent;
-          let connectedScopes: Blob.ScopeParams[];
-          if (envParent.type == "app") {
-            const blockIds = getConnectedBlocksForApp(
-              orgGraph,
-              envParentId
-            ).map(R.prop("id"));
-            connectedScopes = blockIds.map(
-              (blockId) =>
-                ({
-                  blobType,
-                  envParentId: blockId,
-                  ...(blobType == "changeset" &&
-                  changesetsCreatedAfterByEnvParentId?.[blockId]
-                    ? {
-                        createdAfter:
-                          changesetsCreatedAfterByEnvParentId[blockId],
-                      }
-                    : {}),
-                } as Blob.ScopeParams)
-            );
-          } else {
-            connectedScopes = [];
-          }
-
-          return [
-            {
-              blobType,
-              envParentId,
-              ...(blobType == "changeset" &&
-              changesetsCreatedAfterByEnvParentId?.[envParentId]
-                ? {
-                    createdAfter:
-                      changesetsCreatedAfterByEnvParentId[envParentId],
-                  }
-                : {}),
-            },
-            ...connectedScopes,
-          ];
-        })
-      ),
-    } as BlobType extends "changeset"
-      ? Api.HandlerChangesetsResponse
-      : Api.HandlerEnvsResponse;
-  };
+  return true;
+};

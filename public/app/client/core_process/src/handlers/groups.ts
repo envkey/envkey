@@ -14,7 +14,7 @@ import {
   mergeAccessScopes,
 } from "@core/lib/graph";
 import { log } from "@core/lib/utils/logger";
-import { initLocalsIfNeeded } from "../lib/envs";
+import { initEnvironmentsIfNeeded } from "../lib/envs";
 
 clientAction<Client.Action.ClientActions["CreateGroupMemberships"]>({
   type: "asyncClientAction",
@@ -74,7 +74,7 @@ clientAction<Client.Action.ClientActions["CreateGroupMemberships"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
+    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 

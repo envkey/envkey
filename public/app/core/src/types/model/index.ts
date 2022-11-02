@@ -456,6 +456,7 @@ export namespace Model {
       encryptedById: z.string().optional(),
       reencryptionRequiredAt: z.number().optional(),
       "upgradedCrypto-2.1.0": z.boolean().optional(),
+      requiresReinit: z.boolean().optional(),
       importId: z.string().optional(),
     })
     .merge(TimestampsSchema);

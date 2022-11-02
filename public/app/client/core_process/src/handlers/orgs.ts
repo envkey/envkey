@@ -20,7 +20,7 @@ import { fetchRequiredEnvs } from "@core_proc/lib/envs";
 import fs from "fs";
 import { wait } from "@core/lib/utils/wait";
 import { log } from "@core/lib/utils/logger";
-import { initLocalsIfNeeded } from "../lib/envs";
+import { initEnvironmentsIfNeeded } from "../lib/envs";
 
 clientAction<Client.Action.ClientActions["UpdateUserRoles"]>({
   type: "asyncClientAction",
@@ -58,7 +58,7 @@ clientAction<Client.Action.ClientActions["UpdateUserRoles"]>({
       throw new Error("Action requires authentication");
     }
 
-    await initLocalsIfNeeded(state, auth.userId, context).catch((err) => {
+    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
       log("Error initializing locals", { err });
     });
 

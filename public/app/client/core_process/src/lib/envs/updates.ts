@@ -306,7 +306,7 @@ export const envUpdateAction = <
       };
     });
   },
-  initLocalsIfNeeded = async (
+  initEnvironmentsIfNeeded = async (
     state: Client.State,
     currentUserId: string,
     context: Client.Context
@@ -339,12 +339,20 @@ export const envUpdateAction = <
       })
     );
 
+    const environmentIds = graphTypes(state.graph)
+      .environments.filter(
+        (environment) =>
+          authz.canUpdateEnv(state.graph, currentUserId, environment.id) &&
+          (!environment.envUpdatedAt || environment.requiresReinit)
+      )
+      .map(R.prop("id"));
+
     if (localIds.length > 0) {
       await dispatch<Client.Action.ClientActions["CommitEnvs"]>(
         {
           type: Client.ActionType.COMMIT_ENVS,
           payload: {
-            pendingEnvironmentIds: localIds,
+            pendingEnvironmentIds: [...localIds, ...environmentIds],
             initEnvs: true,
           },
         },

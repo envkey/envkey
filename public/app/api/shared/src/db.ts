@@ -6,25 +6,39 @@ import * as db_fns from "./db_fns";
 
 type SecondaryIndex = string;
 
-let dbCredentials: {
-  user: string;
-  password: string;
-};
-try {
-  dbCredentials = JSON.parse(env.DATABASE_CREDENTIALS_JSON) as {
-    user: string;
-    password: string;
-  };
-} catch (err) {
-  log("Failed reading DATABASE_CREDENTIALS_JSON from environment!", { err });
+let dbCredentials:
+  | {
+      user: string;
+      password: string;
+    }
+  | undefined;
+
+if (env.DATABASE_CREDENTIALS_JSON) {
+  try {
+    dbCredentials = JSON.parse(env.DATABASE_CREDENTIALS_JSON) as {
+      user: string;
+      password: string;
+    };
+  } catch (err) {
+    log("Failed reading DATABASE_CREDENTIALS_JSON from environment!", { err });
+    process.exit(1);
+  }
+} else if (!env.DATABASE_URI) {
+  log("Either DATABASE_CREDENTIALS_JSON or DATABASE_URI required");
   process.exit(1);
 }
 
 export const poolConfig = {
-  ...dbCredentials,
-  host: env.DATABASE_HOST,
-  database: env.DATABASE_NAME,
-  port: env.DATABASE_PORT ? parseInt(env.DATABASE_PORT) : undefined,
+  ...(dbCredentials
+    ? {
+        ...dbCredentials,
+        host: env.DATABASE_HOST,
+        database: env.DATABASE_NAME,
+        port: env.DATABASE_PORT ? parseInt(env.DATABASE_PORT) : undefined,
+      }
+    : {
+        uri: env.DATABASE_URI!,
+      }),
   multipleStatements: true,
   charset: "utf8mb4",
   connectionLimit: 100,

@@ -1306,6 +1306,14 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
               context
             );
 
+            await updateImportStatus(
+              `Imported ${i * 10 + batch.length}/${
+                filteredEnvironmentIds.length
+              } environments`,
+              context,
+              i == batches.length - 1
+            );
+
             if (clearCachedRes.success) {
               state = clearCachedRes.state;
             } else {

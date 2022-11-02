@@ -162,9 +162,20 @@ export const getEncryptedBlobs = async (
       pkey: encryptedBlobPkey(p),
       scope: getScope(p),
     }));
+
+    const createdAfterForParams = params
+      .map((p) => "createdAfter" in p && p.createdAfter)
+      .filter((p): p is number => typeof p == "number");
+
+    const createdAfter =
+      createdAfterForParams.length > 0
+        ? Math.min(...createdAfterForParams)
+        : undefined;
+
     toQuery = {
       pkeysWithScopes,
       ...queryParams,
+      createdAfter,
     };
   } else {
     const pkey = encryptedBlobPkey(params);
@@ -173,6 +184,7 @@ export const getEncryptedBlobs = async (
       pkey,
       scope,
       ...queryParams,
+      createdAfter: "createdAfter" in params ? params.createdAfter : undefined,
     };
   }
 
@@ -1882,4 +1894,62 @@ const getQueueForReencryptionPaths = (
   }
 
   return queueForReencryptionPaths;
+};
+
+export const getHandlerEnvsResponse = <
+  BlobType extends "env" | "inheritanceOverrides" | "changeset"
+>(
+  orgGraph: Api.Graph.OrgGraph,
+  envParentIds: string[],
+  blobType: BlobType,
+  changesetsCreatedAfterByEnvParentId?: Record<string, number | undefined>,
+  keysOnly?: boolean
+) => {
+  return {
+    keysOnly,
+    scopes: R.flatten(
+      envParentIds.map((envParentId) => {
+        const envParent = orgGraph[envParentId] as Model.EnvParent;
+        let connectedScopes: Blob.ScopeParams[];
+        if (envParent.type == "app") {
+          const blockIds = getConnectedBlocksForApp(orgGraph, envParentId).map(
+            R.prop("id")
+          );
+          connectedScopes = blockIds.map(
+            (blockId) =>
+              ({
+                blobType,
+                envParentId: blockId,
+                ...(blobType == "changeset" &&
+                changesetsCreatedAfterByEnvParentId?.[blockId]
+                  ? {
+                      createdAfter:
+                        changesetsCreatedAfterByEnvParentId[blockId],
+                    }
+                  : {}),
+              } as Blob.ScopeParams)
+          );
+        } else {
+          connectedScopes = [];
+        }
+
+        return [
+          {
+            blobType,
+            envParentId,
+            ...(blobType == "changeset" &&
+            changesetsCreatedAfterByEnvParentId?.[envParentId]
+              ? {
+                  createdAfter:
+                    changesetsCreatedAfterByEnvParentId[envParentId],
+                }
+              : {}),
+          },
+          ...connectedScopes,
+        ];
+      })
+    ),
+  } as BlobType extends "changeset"
+    ? Api.HandlerChangesetsResponse
+    : Api.HandlerEnvsResponse;
 };
