@@ -228,6 +228,26 @@ export const handler = async (
 
   if (argv["local-override"]) {
     localOverrideForUserId = auth.userId;
+    if (
+      !authz.canUpdateLocals(
+        state.graph,
+        auth.userId,
+        envParent.id,
+        auth.userId
+      )
+    ) {
+      return exit(
+        1,
+        chalk.red.bold(
+          `You don't have permission to modify ${chalk.bold(
+            getEnvironmentName(
+              state.graph,
+              `${envParent.id}|${localOverrideForUserId}`
+            )
+          )}.`
+        )
+      );
+    }
   } else if (argv["override-user"]) {
     const otherUser =
       findUser(state.graph, argv["override-user"]) ||
@@ -247,7 +267,12 @@ export const handler = async (
       return exit(
         1,
         chalk.red.bold(
-          "You don't have permission to change the environment for that user."
+          `You don't have permission to modify ${chalk.bold(
+            getEnvironmentName(
+              state.graph,
+              `${envParent.id}|${localOverrideForUserId}`
+            )
+          )}.`
         )
       );
     }
@@ -285,6 +310,17 @@ export const handler = async (
       return exit(
         1,
         chalk.red("Environment is not found, or you don't have access.")
+      );
+    }
+
+    if (!authz.canUpdateEnv(state.graph, auth.userId, environment.id)) {
+      return exit(
+        1,
+        chalk.red.bold(
+          `You don't have permission to modify ${chalk.bold(
+            getEnvironmentName(state.graph, `${environment.id}`)
+          )}.`
+        )
       );
     }
   }
@@ -330,24 +366,6 @@ export const handler = async (
   envIdOrUserOverride = localOverrideForUserId
     ? [envParent.id, localOverrideForUserId].join("|")
     : environment!.id; // wont be undefined when localOverrideForUserId is set
-
-  if (
-    !authz.canUpdateLocals(
-      state.graph,
-      auth.userId,
-      envParent.id,
-      envIdOrUserOverride
-    )
-  ) {
-    return exit(
-      1,
-      chalk.red.bold(
-        `You don't have permission to modify the environment ${chalk.bold(
-          envIdOrUserOverride
-        )}.`
-      )
-    );
-  }
 
   for (let k of Object.keys(kv)) {
     let val: string | undefined = kv[k];
