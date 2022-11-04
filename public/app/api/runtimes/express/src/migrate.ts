@@ -28,7 +28,7 @@ export const runMigrationsIfNeeded = async () => {
     log("Waiting for DB...");
     await knex.raw("select 1 as ok;");
     log("Checking DB migrations...");
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && !process.env.FROM_SOURCE) {
       // Half-hearted attempt to avoid migration lock collisions that were happening when
       // two services started at the same time.
       const jitter = Math.round(Math.random() * 5); // up to 5 secs of jitter

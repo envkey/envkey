@@ -205,6 +205,7 @@ export const destroyHost = async (params: {
 
   console.log("Clearing out lambda stacks...");
   await Promise.all([
+    deleteStackAndWait(cfPrimary, CfStack.ENVKEY_CLOUD_BILLING),
     deleteStackAndWait(cfPrimary, CfStack.ENVKEY_FAILOVER_LAMBDA),
     cfSecondary
       ? deleteStackAndWait(cfSecondary, CfStack.ENVKEY_SECONDARY_LAMBDA)

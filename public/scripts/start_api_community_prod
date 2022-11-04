@@ -32,4 +32,4 @@ if [[ -z "${SMTP_TRANSPORT_JSON}" ]]; then
 fi
 
 cd $SCRIPT_DIR/../app/api/runtimes/express
-npm run start
+NODE_ENV=production FROM_SOURCE=1 npm run start
