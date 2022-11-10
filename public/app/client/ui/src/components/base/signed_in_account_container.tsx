@@ -22,6 +22,7 @@ import { style } from "typestyle";
 import * as styles from "@styles";
 import * as semver from "semver";
 import { wait } from "@core/lib/utils/wait";
+import { EnvkeyLogo, SmallLoader } from "@images";
 
 // controls rate off firing off ACCOUNT_ACTIVE events to prevent core proc from clearing cache when ui is active
 // refer to core proc IDLE_ACCOUNT_CACHE_EXPIRATION
@@ -209,6 +210,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     !props.core.isFetchingSession &&
       !props.core.fetchSessionError &&
       props.ui.loadedAccountId &&
+      props.core.orgUserAccounts[props.ui.loadedAccountId] &&
       auth &&
       auth.token &&
       auth.privkey &&
@@ -222,10 +224,15 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         if (document.documentElement.classList.contains("loaded")) {
           document.documentElement.classList.remove("loaded");
         }
-        await props.dispatch({
-          type: Client.ActionType.GET_SESSION,
-          payload: { omitGraphUpdatedAt: true },
-        });
+        await props.dispatch(
+          {
+            type: Client.ActionType.GET_SESSION,
+            payload: { omitGraphUpdatedAt: true },
+          },
+          undefined,
+          undefined,
+          props.ui.loadedAccountId
+        );
       }
     })();
   }, [props.ui.loadedAccountId, shouldFetchSession]);
@@ -526,9 +533,14 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     (async () => {
       if (auth && props.core.fetchSessionError) {
         console.log(new Date().toISOString(), "Retry GET_SESSION");
-        const res = await props.dispatch({
-          type: Client.ActionType.GET_SESSION,
-        });
+        const res = await props.dispatch(
+          {
+            type: Client.ActionType.GET_SESSION,
+          },
+          undefined,
+          undefined,
+          auth.userId
+        );
         if (!res.success) {
           if (sessionRetryTimeout) {
             clearTimeout(sessionRetryTimeout);
@@ -631,36 +643,17 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     !uiTree
   ) {
     return (
-      <div>
-        <section
-          className={style({
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: styles.layout.SIDEBAR_WIDTH,
-            transition: "height",
-            transitionDuration: "0.2s",
-            height: `calc(100% - ${props.ui.pendingFooterHeight}px)`,
-          })}
-        >
-          <div className={styles.SidebarContainer}>
-            <div className="account-menu">
-              <div className={styles.AccountMenu} />
-            </div>
-          </div>
-        </section>
-        <section
-          className={style({
-            position: "absolute",
-            top: 0,
-            left: styles.layout.SIDEBAR_WIDTH,
-            width: `calc(100% - ${styles.layout.SIDEBAR_WIDTH}px)`,
-            background: "#fff",
-            paddingBottom: 0,
-          })}
-        >
-          <header className={styles.SelectedObjectHeader} />
-        </section>
+      <div
+        id="preloader"
+        className={style({
+          opacity: "1 !important",
+          pointerEvents: "initial !important" as any,
+        })}
+      >
+        <div className="container">
+          <EnvkeyLogo scale={1.7} />
+          <SmallLoader />
+        </div>
       </div>
     );
   }

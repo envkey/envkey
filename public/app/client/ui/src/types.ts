@@ -51,7 +51,8 @@ export type LocalUiState = {
 export type CoreDispatchFn = (
   action: Client.Action.DispatchAction<Client.Action.EnvkeyAction>,
   hostUrlOverride?: string,
-  skipStateUpdate?: true
+  skipStateUpdate?: true,
+  accountId?: string
 ) => Promise<Client.DispatchResult & { status: number }>;
 
 export type ComponentBaseProps = {

@@ -233,7 +233,8 @@ const clientParams: Client.ClientParams<"app"> = {
       dispatch: ComponentProps["dispatch"] = async (
         action,
         hostUrlOverride?: string,
-        skipStateUpdate?: true
+        skipStateUpdate?: true,
+        accountId?: string
       ) => {
         console.log(new Date().toISOString(), "dispatch:", action.type);
 
@@ -242,7 +243,7 @@ const clientParams: Client.ClientParams<"app"> = {
         const res = await dispatchCore(
           action,
           clientParams,
-          uiStateRef.current.accountId,
+          accountId ?? uiStateRef.current.accountId,
           hostUrlOverride,
           undefined,
           returnFullState

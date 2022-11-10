@@ -269,7 +269,13 @@ clientAction<
 
     let auth = getAuth<Client.ClientUserAuth>(state, context.accountIdOrCliKey);
     if (!auth) {
-      throw new Error("Action requires authentication and decrypted privkey");
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: new Error("Action requires authentication"),
+        },
+        context
+      );
     }
 
     const apiRes = await dispatch(

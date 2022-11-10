@@ -52,11 +52,6 @@ export const getReleaseObject = async (params: {
       })
       .promise();
 
-    console.log(
-      "FETCHED release object from s3:",
-      JSON.stringify({ bucket: params.bucket, key: params.key })
-    );
-
     return Body as Buffer;
   }
 
