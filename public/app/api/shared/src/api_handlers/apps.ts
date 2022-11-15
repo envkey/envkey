@@ -342,7 +342,13 @@ apiAction<
           userId: targetAppUserGrant.userId,
           appId: targetAppUserGrant.appId,
         })
-      );
+      ),
+      generatedEnvkeys = localKeys
+        .map(
+          (localKey) =>
+            getActiveGeneratedEnvkeysByKeyableParentId(orgGraph)[localKey.id]
+        )
+        .filter(Boolean) as Api.Db.GeneratedEnvkey[];
 
     const connectedBlockIds = getConnectedBlocksForApp(
       orgGraph,
@@ -378,7 +384,11 @@ apiAction<
       type: "graphHandlerResult",
       graph: deleteGraphObjects(
         orgGraph,
-        [targetAppUserGrant.id, ...localKeys.map(R.prop("id"))],
+        [
+          targetAppUserGrant.id,
+          ...localKeys.map(R.prop("id")),
+          ...generatedEnvkeys.map(R.prop("id")),
+        ],
         now
       ),
       encryptedKeysScope: scope,

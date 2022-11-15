@@ -82,7 +82,7 @@ welcome_envkey () {
 
 cleanup () {
   echo "Cleaning up..."
-  cd $SCRIPT_DIR
+  cd "${SCRIPT_DIR}"
   rm -rf envkey_source_install_tmp
 }
 
@@ -116,9 +116,9 @@ download_envkey () {
     fi
   elif [ "$PLATFORM" == "windows" ]; then
     # ensure $HOME/bin exists (it's in PATH but not present in default git-bash install)
-    mkdir $HOME/bin 2> /dev/null
-    mv envkey-source.exe $HOME/bin/
-    echo "envkey-source is installed in $HOME/bin"
+    mkdir "$HOME/bin" 2> /dev/null
+    mv envkey-source.exe "$HOME/bin/"
+    echo "envkey-source is installed in '$HOME/bin'"
   else
     sudo mv envkey-source /usr/local/bin/
     echo "envkey-source is installed in /usr/local/bin"
@@ -129,7 +129,7 @@ download_envkey () {
     echo "creating es alias"
     LOC=$(which envkey-source)
     BIN_DIR=$(dirname $LOC)
-    ln -s $LOC $BIN_DIR/es
+    ln -s "$LOC" "$BIN_DIR/es"
   fi  
   
 }

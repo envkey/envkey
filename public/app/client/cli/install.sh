@@ -81,7 +81,7 @@ welcome_envkey () {
 
 cleanup () {  
   echo "Cleaning up..."
-  cd $SCRIPT_DIR
+  cd "$SCRIPT_DIR"
   rm -rf envkey_cli_install_tmp
 }
 
@@ -120,7 +120,7 @@ download_envkey () {
     mkdir "$HOME/bin" 2> /dev/null
     mv ./envkey.exe "$HOME/bin/"
     mv ./envkey-keytar.node "$HOME/bin/"
-    echo "EnvKey CLI is installed in $HOME/bin"
+    echo "EnvKey CLI is installed in '$HOME/bin'"
   else
     CAN_I_RUN_SUDO=$(sudo -n uptime 2>&1|grep "load"|wc -l)
     if [ "${CAN_I_RUN_SUDO}" -gt 0 ]; then
