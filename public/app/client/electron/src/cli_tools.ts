@@ -117,7 +117,7 @@ export const installCliAutocomplete = async () => {
         new Promise((resolve, reject) => {
           log("attempting to install CLI autocomplete...", { shell });
 
-          exec(`${cliPath} completion install --shell ${shell}`, (err) => {
+          exec(`"${cliPath}" completion install --shell ${shell}`, (err) => {
             if (err) {
               // errors are ok, just resolve with empty string so they can be filtered out
               log("CLI autocomplete installation error", { shell, err });
@@ -167,7 +167,7 @@ const hasV1Envkeysource = async () => {
   }
 
   const version = await new Promise<string | false>((resolve, reject) => {
-    exec(`${expectedBin} --version`, (err, res) => {
+    exec(`"${expectedBin}" --version`, (err, res) => {
       if (err) {
         reject(err);
       } else {
@@ -230,7 +230,7 @@ const getCurrentVersion = async (
   }
 
   return new Promise((resolve, reject) => {
-    exec(`${expectedBin} --version`, (err, res) => {
+    exec(`"${expectedBin}" --version`, (err, res) => {
       if (err) {
         reject(err);
       } else {
@@ -380,10 +380,10 @@ const install = async (
           try {
             log("attempting symlink with sudo-prompt on Windows");
             sudoPrompt.exec(
-              `mklink ${path.join(binDir, "es")} ${path.join(
+              `mklink "${path.join(binDir, "es")}" "${path.join(
                 binDir,
                 "envkey-source.exe"
-              )}`,
+              )}"`,
               {
                 name: `EnvKey CLI Tools Installer`,
               },
@@ -531,12 +531,12 @@ const copyExecFiles = async (
     ).then(R.filter(Boolean))) as [string, string][]);
 
   if (withSudoPrompt) {
-    const cmd = `mkdir -p ${destinationFolder} && chown ${
+    const cmd = `mkdir -p "${destinationFolder}" && chown ${
       process.env.USER
-    } ${destinationFolder} && ${files
+    } "${destinationFolder}" && ${files
       .map(
         ([folder, file]) =>
-          `cp -f ${path.resolve(folder, file)} ${destinationFolder}`
+          `cp -f "${path.resolve(folder, file)}" "${destinationFolder}"`
       )
       .join(" && ")}`;
 

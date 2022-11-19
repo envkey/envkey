@@ -54,7 +54,7 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
 
       await new Promise<void>((resolve, reject) => {
         const child = exec(
-          `${cliBinPath} core start`,
+          `"${cliBinPath}" core start`,
           {
             env: {
               LOG_REQUESTS: "1",
