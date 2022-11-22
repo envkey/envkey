@@ -9,6 +9,7 @@ import { isValidIPOrCIDR } from "@core/lib/utils/ip";
 import { SmallLoader, SvgImage } from "@images";
 import { Link } from "react-router-dom";
 import { logAndAlertError } from "@ui_lib/errors";
+import copyToClipboard from "copy-text-to-clipboard";
 
 const MERGE_STRATEGY_LABELS = {
   inherit: "Inherit From Org Trusted IPs",
@@ -32,6 +33,10 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
   const [environmentRoleIpsAllowed, setEnvironmentRolesIpsAllowed] = useState(
     app.environmentRoleIpsAllowed ?? {}
   );
+
+  const [environmentRoleInputVals, setEnvironmentRolesInputVals] = useState<
+    Record<string, string>
+  >({});
 
   const [
     environmentRoleIpsMergeStrategies,
@@ -190,6 +195,27 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
                     bgStyle="light"
                     hideIndicatorContainer={true}
                     noOptionsMessage={() => null}
+                    inputValue={
+                      environmentRoleInputVals[environmentRoleId] ?? ""
+                    }
+                    onInputChange={(newValue: string) => {
+                      const split = R.uniq(newValue.split(/(?:\s|\n|\r|,)+/));
+                      if (split.length > 1 && split.every(isValidIPOrCIDR)) {
+                        setEnvironmentRolesIpsAllowed({
+                          ...environmentRoleIpsAllowed,
+                          [environmentRoleId]: split,
+                        });
+                        setEnvironmentRolesInputVals({
+                          ...environmentRoleInputVals,
+                          [environmentRoleId]: "",
+                        });
+                      } else {
+                        setEnvironmentRolesInputVals({
+                          ...environmentRoleInputVals,
+                          [environmentRoleId]: newValue,
+                        });
+                      }
+                    }}
                     onChange={(selectedArg) => {
                       const selected = (selectedArg ??
                         []) as ReactSelectOption[];
@@ -230,6 +256,25 @@ export const AppFirewall: OrgComponent<{ appId: string }> = (props) => {
                     formatCreateLabel={(s: string) => s}
                     isValidNewOption={(s) => isValidIPOrCIDR(s)}
                   />
+
+                  {(environmentRoleIpsAllowed?.[environmentRoleId] ?? [])
+                    .length > 0 ? (
+                    <button
+                      title="Copy"
+                      className="small-copy"
+                      onClick={() =>
+                        copyToClipboard(
+                          environmentRoleIpsAllowed?.[environmentRoleId]!.join(
+                            ", "
+                          )
+                        )
+                      }
+                    >
+                      <SvgImage type="copy" width={25} height={25} />
+                    </button>
+                  ) : (
+                    ""
+                  )}
                 </div>
               ) : (
                 ""

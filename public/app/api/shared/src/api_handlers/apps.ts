@@ -19,7 +19,7 @@ import {
 import { v4 as uuid } from "uuid";
 import * as R from "ramda";
 import produce, { Draft } from "immer";
-import { log } from "@core/lib/utils/logger";
+import { log, logStderr } from "@core/lib/utils/logger";
 
 apiAction<
   Api.Action.RequestActions["CreateApp"],
@@ -238,8 +238,18 @@ apiAction<
   authenticated: true,
   shouldClearOrphanedLocals: true,
 
-  graphAuthorizer: async ({ payload }, orgGraph, userGraph, auth) =>
-    authz.canGrantAppRoleToUser(userGraph, auth.user.id, payload),
+  graphAuthorizer: async ({ payload }, orgGraph, userGraph, auth) => {
+    const res = authz.canGrantAppRoleToUser(userGraph, auth.user.id, payload);
+
+    if (!res) {
+      logStderr(
+        "GRANT_APP_ACCESS unauthorized",
+        pick(["appId", "appRoleId", "userId", "importId"], payload)
+      );
+    }
+
+    return res;
+  },
 
   graphHandler: async ({ type: actionType, payload }, orgGraph, auth, now) => {
     let updatedGraph: Api.Graph.OrgGraph = orgGraph;

@@ -92,7 +92,7 @@ Please [post an issue](https://github.com/envkey/envkey/issues) if you encounter
 
 ## Discussion and Community
 
-[Jump in](https://github.com/envkey/envkey/discussions) and ask a question, leave some feedback, ask for new features, or help out another EnvKey user.
+[Jump in](https://github.com/envkey/envkey/discussion) and ask a question, leave some feedback, ask for new features, or help out another EnvKey user.
 
 ## Support
 

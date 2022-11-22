@@ -6,8 +6,9 @@ import * as R from "ramda";
 import * as ui from "@ui";
 import * as styles from "@styles";
 import { isValidIPOrCIDR } from "@core/lib/utils/ip";
-import { SmallLoader } from "@images";
+import { SmallLoader, SvgImage } from "@images";
 import { logAndAlertError } from "@ui_lib/errors";
+import copyToClipboard from "copy-text-to-clipboard";
 
 export const OrgFirewall: OrgComponent = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -21,10 +22,15 @@ export const OrgFirewall: OrgComponent = (props) => {
   const [updating, setUpdating] = useState(false);
 
   const [localIpsAllowed, setLocalIpsAllowed] = useState(org.localIpsAllowed);
+  const [localInputVal, setLocalInputVal] = useState("");
 
   const [environmentRoleIpsAllowed, setEnvironmentRolesIpsAllowed] = useState<
     Record<string, string[] | undefined>
   >(org.environmentRoleIpsAllowed ?? {});
+
+  const [environmentRoleInputVals, setEnvironmentRolesInputVals] = useState<
+    Record<string, string>
+  >({});
 
   const hasUpdate = !(
     R.equals(localIpsAllowed, org.localIpsAllowed) &&
@@ -109,6 +115,16 @@ export const OrgFirewall: OrgComponent = (props) => {
           bgStyle="light"
           hideIndicatorContainer={true}
           noOptionsMessage={() => null}
+          inputValue={localInputVal}
+          onInputChange={(newValue: string) => {
+            const split = R.uniq(newValue.split(/(?:\s|\n|\r|,)+/));
+            if (split.length > 1 && split.every(isValidIPOrCIDR)) {
+              setLocalIpsAllowed(split);
+              setLocalInputVal("");
+            } else {
+              setLocalInputVal(newValue);
+            }
+          }}
           onChange={(selectedArg) => {
             const selected = (selectedArg ?? []) as ReactSelectOption[];
 
@@ -133,6 +149,17 @@ export const OrgFirewall: OrgComponent = (props) => {
           formatCreateLabel={(s: string) => s}
           isValidNewOption={(s) => isValidIPOrCIDR(s)}
         />
+        {(localIpsAllowed ?? []).length > 0 ? (
+          <button
+            title="Copy"
+            className="small-copy"
+            onClick={() => copyToClipboard(localIpsAllowed!.join(", "))}
+          >
+            <SvgImage type="copy" width={25} height={25} />
+          </button>
+        ) : (
+          ""
+        )}
       </div>
 
       {g
@@ -148,6 +175,25 @@ export const OrgFirewall: OrgComponent = (props) => {
               hideIndicatorContainer={true}
               noOptionsMessage={() => null}
               bgStyle="light"
+              inputValue={environmentRoleInputVals[environmentRoleId] ?? ""}
+              onInputChange={(newValue: string) => {
+                const split = R.uniq(newValue.split(/(?:\s|\n|\r|,)+/));
+                if (split.length > 1 && split.every(isValidIPOrCIDR)) {
+                  setEnvironmentRolesIpsAllowed({
+                    ...environmentRoleIpsAllowed,
+                    [environmentRoleId]: split,
+                  });
+                  setEnvironmentRolesInputVals({
+                    ...environmentRoleInputVals,
+                    [environmentRoleId]: "",
+                  });
+                } else {
+                  setEnvironmentRolesInputVals({
+                    ...environmentRoleInputVals,
+                    [environmentRoleId]: newValue,
+                  });
+                }
+              }}
               onChange={(selectedArg) => {
                 const selected = (selectedArg ?? []) as ReactSelectOption[];
 
@@ -184,6 +230,22 @@ export const OrgFirewall: OrgComponent = (props) => {
               formatCreateLabel={(s: string) => s}
               isValidNewOption={(s) => isValidIPOrCIDR(s)}
             />
+            {(environmentRoleIpsAllowed?.[environmentRoleId] ?? []).length >
+            0 ? (
+              <button
+                title="Copy"
+                className="small-copy"
+                onClick={() =>
+                  copyToClipboard(
+                    environmentRoleIpsAllowed?.[environmentRoleId]!.join(", ")
+                  )
+                }
+              >
+                <SvgImage type="copy" width={25} height={25} />
+              </button>
+            ) : (
+              ""
+            )}
           </div>
         ))}
 

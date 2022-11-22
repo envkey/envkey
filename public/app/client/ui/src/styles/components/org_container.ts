@@ -302,6 +302,25 @@ export const OrgContainer = style(
           },
         },
 
+        "button.small-copy": {
+          position: "absolute",
+          left: "100%",
+          marginLeft: 15,
+          bottom: 0,
+          cursor: "pointer",
+          border: "1px solid rgba(0,0,0,0.1)",
+          borderRadius: 2,
+          padding: "6px 8px 2px",
+          $nest: {
+            svg: {
+              opacity: 0.65,
+            },
+            "&:hover": {
+              background: "rgba(0,0,0,0.1)",
+            },
+          },
+        },
+
         ".back-link": {
           marginTop: 0,
           marginBottom: 20,
