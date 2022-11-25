@@ -6,6 +6,7 @@ import { wait } from "@core/lib/utils/wait";
 import { log } from "@core/lib/utils/logger";
 import { decode as decodeBase58 } from "bs58";
 import naclUtil from "tweetnacl-util";
+import { openExternalUrl } from "@core_proc/lib/open";
 
 clientAction<Api.Action.RequestActions["CreateOrgSamlProvider"]>({
   type: "apiRequestAction",
@@ -518,7 +519,7 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForLogin"]>({
 
     const backgroundWork = () => {
       // User's web browser will open and ask them to log in.
-      open(authResPayload.authUrl);
+      openExternalUrl(authResPayload.authUrl);
 
       // BACKGROUND
       // Check for successful external auth, or time out.
@@ -631,7 +632,7 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForInvite"]>(
       externalAuthSessionId = authResPayload.id;
 
       // User's web browser will open and ask them to log in.
-      await open(authResPayload.authUrl!);
+      openExternalUrl(authResPayload.authUrl);
 
       // BACKGROUND
       // Check for successful external auth, or time out.

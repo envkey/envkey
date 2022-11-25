@@ -40,6 +40,7 @@ import * as R from "ramda";
 import { createPatch, Patch } from "rfc6902";
 import { version as cliVersion } from "../../cli/package.json";
 import { pick } from "@core/lib/utils/pick";
+import { openExternalUrl } from "./lib/open";
 
 export const start = async (port = 19047, wsport = 19048) => {
   log("Starting EnvKey core process...", { cliVersion });
@@ -141,7 +142,7 @@ export const start = async (port = 19047, wsport = 19048) => {
 
       // shortcut to speed this up
       if (action.type == Client.ActionType.OPEN_URL) {
-        open(action.payload.url, { newInstance: true });
+        openExternalUrl(action.payload.url);
         res.status(301).json({ success: true });
         return;
       }

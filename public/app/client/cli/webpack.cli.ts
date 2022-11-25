@@ -17,6 +17,7 @@ const externals = {
   // ws package for browser - unnecessary packages
   bufferutil: "bufferutil",
   "utf-8-validate": "utf-8-validate",
+  electron: "electron",
 };
 
 if (os.platform() === "linux") {
