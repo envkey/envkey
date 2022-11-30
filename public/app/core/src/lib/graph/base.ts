@@ -132,7 +132,7 @@ export const graphTypes = memoize((graph: Graph.Graph) => {
       return environment.createdAt;
     }
 
-    if (role.orderIndex) {
+    if (typeof role.orderIndex == "number") {
       return role.orderIndex;
     }
 

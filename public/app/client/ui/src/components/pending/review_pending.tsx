@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { applyPatch } from "rfc6902";
+import { forceApplyPatch } from "@core/lib/utils/patch";
 import { OrgComponent } from "@ui_types";
 import {
   getPendingUpdateDetails,
@@ -198,12 +198,15 @@ export const ReviewPending: OrgComponent<
             <div>
               {conflicts.map((conflict) => {
                 const envWithMetaPrevious = R.clone(envWithMeta);
-                applyPatch(
+                forceApplyPatch(
                   envWithMetaPrevious,
                   conflict.action.payload.reverse
                 );
                 const envWithMetaToUpdate = R.clone(envWithMeta);
-                applyPatch(envWithMetaToUpdate, conflict.action.payload.diffs);
+                forceApplyPatch(
+                  envWithMetaToUpdate,
+                  conflict.action.payload.diffs
+                );
 
                 return (
                   <div className={styles.KeyChange + " key-change conflict"}>

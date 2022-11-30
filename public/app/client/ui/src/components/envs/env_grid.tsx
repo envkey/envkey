@@ -457,19 +457,6 @@ export const EnvGrid: EnvManagerComponent<
     }
   }, [pendingEntryKeysJson]);
 
-  if (props.editingMultiline && props.ui.envManager.editingEnvironmentId) {
-    const editingEnvironment = props.core.graph[
-      props.ui.envManager.editingEnvironmentId
-    ] as Model.Environment;
-    const editingEnvParent = props.core.graph[
-      editingEnvironment.envParentId
-    ] as Model.EnvParent;
-
-    if (editingEnvParent.type != props.envParentType) {
-      return <div></div>;
-    }
-  }
-
   return (
     <div className={styles.EnvGrid + " env-grid"} ref={el}>
       {displayEntryKeys.map(renderRow)}

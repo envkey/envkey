@@ -31,7 +31,13 @@ export const CopyableDisplay: Component<
       <label>
         {label}{" "}
         {value ? (
-          <button className="copy" onClick={() => copy(value)}>
+          <button
+            className="copy"
+            onClick={(e) => {
+              e.preventDefault();
+              copy(value);
+            }}
+          >
             Copy
           </button>
         ) : (

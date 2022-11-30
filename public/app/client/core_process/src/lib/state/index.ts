@@ -85,10 +85,7 @@ export const newAccountStateProducer: NewAccountStateProducer = (
     ),
     privkey: meta.dispatchContext!.privkey,
     orgName: org.name,
-    externalAuthProviderId:
-      draft.completedExternalAuth?.externalAuthProviderId ??
-      draft.completedInviteExternalAuth?.externalAuthProviderId ??
-      undefined,
+    externalAuthProviderId: draft.completedExternalAuth?.externalAuthProviderId,
     deviceName: meta.rootAction.payload.device.name,
     hostUrl: meta.dispatchContext!.hostUrl,
     addedAt: payload.timestamp,

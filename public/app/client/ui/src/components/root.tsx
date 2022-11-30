@@ -29,7 +29,7 @@ import {
 } from "@core/types/electron";
 import { SmallLoader } from "@images";
 import { ClientUpgrades } from "@ui";
-import { applyPatch } from "rfc6902";
+import { forceApplyPatch } from "@core/lib/utils/patch";
 import { version } from "../../../electron/package.json";
 
 declare var window: ElectronWindow;
@@ -214,12 +214,25 @@ const clientParams: Client.ClientParams<"app"> = {
             }
           } else if (msg.type == "diffs") {
             const newState = R.clone(coreStateRef.current!);
-            applyPatch(newState, msg.diffs);
+            console.log(
+              new Date().toISOString(),
+              `received ${msg.diffs.length} socket message diffs`
+            );
+            forceApplyPatch(newState, msg.diffs);
+            console.log(
+              new Date().toISOString(),
+              `applied socket message diffs`
+            );
             setCoreStateIfLatest(newState);
+            console.log(new Date().toISOString(), `set new state`);
           } else if (msg.type == "envActionStatus") {
             setLocalUiState({ envActionStatus: msg.status });
           } else if (msg.type == "importStatus") {
-            console.log("received import status update:", msg.status);
+            console.log(
+              new Date().toISOString(),
+              "received import status update:",
+              msg.status
+            );
             setLocalUiState({ importStatus: msg.status });
           } else {
             console.log(
@@ -267,12 +280,14 @@ const clientParams: Client.ClientParams<"app"> = {
               action.type,
               `${res.diffs.length} diffs to apply`
             );
+            // console.log(res.diffs);
             newState = R.clone(coreStateRef.current!);
-            // console.log(new Date().toISOString(), "cloned existing state");
-            applyPatch(newState, res.diffs);
-            // console.log(new Date().toISOString(), "applied patch");
+            const patchRes = forceApplyPatch(newState, res.diffs);
+            console.log(new Date().toISOString(), "applied patch");
+            // console.log(patchRes);
             setCoreStateIfLatest(newState);
             console.log(new Date().toISOString(), "set new state");
+            // console.log(newState);
           }
         }
 

@@ -690,27 +690,7 @@ export namespace Action {
       type: ActionType.SET_EXTERNAL_AUTH_SESSION_RESULT;
       payload:
         | { authorizingExternallyErrorMessage: string }
-        | {
-            externalAuthSessionId: string;
-            externalAuthProviderId: string;
-            orgId: string;
-            userId: string;
-            authType: "sign_in";
-          };
-    };
-
-    SetInviteExternalAuthSessionResult: {
-      type: ActionType.SET_INVITE_EXTERNAL_AUTH_SESSION_RESULT;
-      payload:
-        | { authorizingExternallyErrorMessage: string }
-        | {
-            externalAuthSessionId: string;
-            externalAuthProviderId: string;
-            orgId: string;
-            authType: "accept_invite" | "accept_device_grant";
-            userId: string;
-            sentById: string;
-          };
+        | NonNullable<State["completedExternalAuth"]>;
     };
 
     WaitForExternalAuth: {
@@ -719,7 +699,6 @@ export namespace Action {
         externalAuthProviderId: string;
         externalAuthSessionId: string;
         authType: "sign_in";
-        // TODO: extend invites to oauth
         authMethod: "saml";
         provider: "saml";
       };

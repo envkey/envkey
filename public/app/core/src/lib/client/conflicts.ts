@@ -13,7 +13,7 @@ import {
   getPendingActionsByEnvironmentId,
   getEnvWithMeta,
 } from "./envs";
-import { applyPatch } from "rfc6902";
+import { forceApplyPatch } from "../utils/patch";
 
 export const getEnvironmentPendingConflicts = memoize(
     (
@@ -77,7 +77,7 @@ export const getEnvironmentPendingConflicts = memoize(
           // don't count actions that have an equivalent outcome as conflicts
           for (let entryKey of overlappingEntryKeys) {
             const envWithMetaToUpdate = R.clone(envWithMeta);
-            applyPatch(envWithMetaToUpdate, action.payload.diffs);
+            forceApplyPatch(envWithMetaToUpdate, action.payload.diffs);
 
             if (
               !R.equals(
@@ -179,9 +179,8 @@ export const getEnvironmentPendingConflicts = memoize(
           if (!allConflicts[environment.envParentId]) {
             allConflicts[environment.envParentId] = {};
           }
-          allConflicts[environment.envParentId][
-            environmentId
-          ] = environmentConflicts;
+          allConflicts[environment.envParentId][environmentId] =
+            environmentConflicts;
         }
       }
 

@@ -1,7 +1,7 @@
 import { getEnvWithMeta, getPendingEnvWithMeta } from "./envs";
 import { pick } from "../utils/pick";
 import { Client } from "../../types";
-import { applyPatch } from "rfc6902";
+import { forceApplyPatch } from "../utils/patch";
 import memoize from "../utils/memoize";
 import * as R from "ramda";
 // import { log } from "../utils/logger";
@@ -77,7 +77,7 @@ export const getEnvWithMetaForVersion = memoize(
     for (let {
       payload: { diffs, reverse },
     } of actions) {
-      applyPatch(res, reverseDiffs ? reverse : diffs);
+      forceApplyPatch(res, reverseDiffs ? reverse : diffs);
     }
 
     return res;

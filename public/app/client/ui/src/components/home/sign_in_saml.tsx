@@ -4,18 +4,34 @@ import { Client } from "@core/types";
 import { HomeContainer } from "./home_container";
 import * as styles from "@styles";
 import { wait } from "@core/lib/utils/wait";
-import { SmallLoader } from "@images";
 import { Link } from "react-router-dom";
+import { CopyableDisplay } from "../settings/copyable_display";
 
-let runningLoop = false;
-
-// immediately start the sign-in process upon visiting this page
+let _runningSSOLoop = false;
+let dispatchedCreateSession = false;
 
 export const SignInSaml: Component<{ accountId: string }> = (props) => {
   const { core, dispatch, history, setUiState, routeParams } = props;
   const account = core.orgUserAccounts[routeParams.accountId];
-
   const [errorMessage, setErrorMessage] = useState<string | undefined>("");
+  const [runningSSOLoop, _setRunningSSOLoop] = useState(false);
+  const setRunningSSOLoop = (val: boolean) => {
+    _runningSSOLoop = val;
+    _setRunningSSOLoop(val);
+  };
+
+  const authenticatingSSO = core.startingExternalAuthSession || runningSSOLoop;
+
+  useEffect(() => {
+    _runningSSOLoop = false;
+    dispatchedCreateSession = false;
+
+    dispatch({ type: Client.ActionType.RESET_EXTERNAL_AUTH });
+
+    return () => {
+      _runningSSOLoop = false;
+    };
+  }, []);
 
   // Redirection from invalid state, or from successful completion of login.
   useEffect(() => {
@@ -26,12 +42,10 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
       props.ui.loadedAccountId === account.userId;
 
     if (!account) {
-      runningLoop = false;
       history.push("/home");
       return;
     }
     if (needsEmailAuth) {
-      runningLoop = false;
       console.log(
         "Account is not externally authorized, redirecting to email sign-in"
       );
@@ -42,7 +56,6 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
       return;
     }
     if (isLoggedIn) {
-      runningLoop = false;
       console.log("Logged in, redirecting for org", account.orgId);
       history.push("/org/" + account.orgId);
       return;
@@ -62,7 +75,7 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
     if (!e) {
       return;
     }
-    runningLoop = false;
+    setRunningSSOLoop(false);
 
     setErrorMessage(
       typeof e === "string" ? e : "errorReason" in e ? e.errorReason : e.type
@@ -78,13 +91,14 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
     if (
       !account ||
       !core.completedExternalAuth ||
-      !runningLoop ||
-      core.creatingExternalAuthSession
+      !runningSSOLoop ||
+      core.creatingExternalAuthSession ||
+      dispatchedCreateSession
     ) {
       return;
     }
-    runningLoop = false;
 
+    dispatchedCreateSession = true;
     dispatch(
       {
         type: Client.ActionType.CREATE_SESSION,
@@ -101,6 +115,7 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
           console.log(loginRes);
           const e = (core.createSessionError || loginRes.resultAction) as any;
           setErrorMessage(e.errorReason || e.type);
+          setRunningSSOLoop(false);
           return;
         }
         console.log(
@@ -109,6 +124,7 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
         );
       })
       .catch((err) => {
+        setRunningSSOLoop(false);
         setErrorMessage(err.message);
       });
   }, [props.ui.loadedAccountId, core.completedExternalAuth]);
@@ -118,15 +134,15 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
       if (!core.startingExternalAuthSession) {
         return;
       }
-      if (runningLoop) {
-        console.log("runningLoop already started");
+      if (_runningSSOLoop) {
+        console.log("runningSSOLoop already started");
         return;
       }
-      console.log("starting runningLoop");
-      runningLoop = true;
+      console.log("starting runningSSOLoop");
+      setRunningSSOLoop(true);
       await props.refreshCoreState();
-      while (runningLoop) {
-        console.log("runningLoop waiting for saml auth");
+      while (_runningSSOLoop) {
+        console.log("runningSSOLoop waiting for saml auth");
         await wait(500);
         await props.refreshCoreState();
       }
@@ -163,90 +179,13 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
     return <HomeContainer />;
   }
 
-  if (errorMessage) {
-    return (
-      <HomeContainer>
-        <h3>There was a problem signing in with SAML.</h3>
-        <pre className="error">{errorMessage}</pre>
-        <form className={styles.SignIn}>
-          <div className="buttons">
-            <div className="back-link">
-              <a
-                onClick={(e) => {
-                  e.preventDefault();
-                  setErrorMessage("");
-                  dispatch({ type: Client.ActionType.RESET_EXTERNAL_AUTH });
-                }}
-              >
-                ← Back
-              </a>
-            </div>
-          </div>
-        </form>
-      </HomeContainer>
-    );
-  }
-
-  if (core.startingExternalAuthSession) {
-    return (
-      <HomeContainer>
-        <h3>
-          Redirecting to login...
-          <br />
-          <SmallLoader />
-        </h3>
-        <form className={styles.SignIn}>
-          <div className="buttons">
-            <div className="home-link">
-              <Link to="/select-account">Cancel</Link>
-            </div>
-          </div>
-        </form>
-      </HomeContainer>
-    );
-  }
-
-  if (core.isAuthorizingExternallyForSessionId) {
-    return (
-      <HomeContainer>
-        <h3>
-          Waiting for SAML authentication...
-          <br />
-          <SmallLoader />
-        </h3>
-        <form className={styles.SignIn}>
-          <div className="buttons">
-            <div className="back-link">
-              <Link to="/select-account">Cancel</Link>
-            </div>
-          </div>
-        </form>
-      </HomeContainer>
-    );
-  }
-
-  if (core.completedExternalAuth) {
-    return (
-      <HomeContainer>
-        <h3>
-          Creating session from successful external auth...
-          <br />
-          <SmallLoader />
-        </h3>
-        <form className={styles.SignIn}>
-          <div className="buttons">
-            <div className="back-link">
-              <Link to="/select-account">Cancel</Link>
-            </div>
-          </div>
-        </form>
-      </HomeContainer>
-    );
-  }
-
   return (
     <HomeContainer>
       <div>
+        <h3>
+          <strong>Sign In</strong> to {account.orgName}
+        </h3>
+
         <form
           className={styles.SignIn}
           onSubmit={(e) => {
@@ -254,20 +193,52 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
             authorizeExernally();
           }}
         >
-          <div className="field saml-user-info">
-            <label>{account.orgName}</label>
-            <p>
-              <strong>{account.email}</strong>
-            </p>
+          <div className="field no-margin">
+            <label className="initial-email">
+              <span>{account.email}</span>
+            </label>
+          </div>
+
+          <div className="field">
             <input
               className="primary"
               type="submit"
-              value="Sign in with SAML"
+              disabled={authenticatingSSO}
+              value={
+                authenticatingSSO
+                  ? "Authenticating With SSO..."
+                  : "Sign in with SSO"
+              }
             />
           </div>
+          {errorMessage ? <p className="error">{errorMessage}</p> : ""}
+
+          {authenticatingSSO && core.pendingExternalAuthSession
+            ? [
+                <p className="important">
+                  Your system's default browser should now pop up so you can
+                  authenticate with your org's SSO provider. You can also paste
+                  the URL into a browser manually:
+                </p>,
+                <CopyableDisplay
+                  {...props}
+                  label="SSO Authentication Url"
+                  value={core.pendingExternalAuthSession.authUrl}
+                />,
+              ]
+            : ""}
+
           <div className="buttons">
             <div className="back-link">
-              <Link to="/select-account">← Back</Link>
+              <Link
+                onClick={() => {
+                  setRunningSSOLoop(false);
+                  dispatch({ type: Client.ActionType.RESET_EXTERNAL_AUTH });
+                }}
+                to="/select-account"
+              >
+                ← Back
+              </Link>
             </div>
           </div>
         </form>

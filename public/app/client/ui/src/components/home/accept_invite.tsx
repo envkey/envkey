@@ -9,11 +9,12 @@ import { wait } from "@core/lib/utils/wait";
 import { logAndAlertError } from "@ui_lib/errors";
 import { SmallLoader } from "@images";
 import { CryptoStatus } from "../shared";
+import { CopyableDisplay } from "../settings/copyable_display";
 
 const INVITE_TOKEN_REGEX = /^(i|dg)_[a-zA-Z0-9]{22}_.+$/;
 const ENCRYPTION_TOKEN_REGEX = /^[a-fA-F0-9]{64}_[a-zA-Z0-9]{22}$/;
 
-let runningLoop = false;
+let _runningSSOLoop = false;
 
 export const AcceptInvite: Component = (props) => {
   const [emailToken, setEmailToken] = useState("");
@@ -33,6 +34,11 @@ export const AcceptInvite: Component = (props) => {
   const [externalAuthErrorMessage, setExternalAuthErrorMessage] = useState<
     string | undefined
   >();
+  const [runningSSOLoop, _setRunningSSOLoop] = useState(false);
+  const setRunningSSOLoop = (val: boolean) => {
+    _runningSSOLoop = val;
+    _setRunningSSOLoop(val);
+  };
 
   const [loadActionType, acceptActionType] = useMemo(() => {
     if (!emailToken) {
@@ -112,7 +118,7 @@ export const AcceptInvite: Component = (props) => {
       return;
     }
     console.error("External auth error", e);
-    runningLoop = false;
+    setRunningSSOLoop(false);
 
     setExternalAuthErrorMessage(
       typeof e === "string" ? e : "errorReason" in e ? e.errorReason : e.type
@@ -127,9 +133,9 @@ export const AcceptInvite: Component = (props) => {
 
   // Creation of session from successful external auth.
   useEffect(() => {
-    if (props.core.completedInviteExternalAuth) {
-      if (runningLoop) {
-        runningLoop = false;
+    if (props.core.completedExternalAuth) {
+      if (runningSSOLoop) {
+        setRunningSSOLoop(false);
       }
       return;
     }
@@ -137,7 +143,7 @@ export const AcceptInvite: Component = (props) => {
       !needsExternalAuthError ||
       loadedInviteOrDeviceGrant ||
       props.core.creatingExternalAuthSession ||
-      runningLoop
+      runningSSOLoop
     ) {
       return;
     }
@@ -174,22 +180,22 @@ export const AcceptInvite: Component = (props) => {
           );
         }
       });
-  }, [needsExternalAuthError, props.core.completedInviteExternalAuth]);
+  }, [needsExternalAuthError, props.core.completedExternalAuth]);
 
   useEffect(() => {
     (async () => {
       if (!props.core.startingExternalAuthSessionInvite) {
         return;
       }
-      if (runningLoop) {
-        console.log("runningLoop already started");
+      if (_runningSSOLoop) {
+        console.log("runningSSOLoop already started");
         return;
       }
-      console.log("starting runningLoop");
-      runningLoop = true;
+      console.log("starting runningSSOLoop");
+      setRunningSSOLoop(true);
       await props.refreshCoreState();
-      while (runningLoop) {
-        console.log("runningLoop waiting for saml invite");
+      while (_runningSSOLoop) {
+        console.log("runningSSOLoop waiting for saml invite");
         await wait(500);
         await props.refreshCoreState();
       }
@@ -202,6 +208,14 @@ export const AcceptInvite: Component = (props) => {
       return;
     }
   }, [props.core.completedExternalAuth]);
+
+  useEffect(() => {
+    props.dispatch({ type: Client.ActionType.RESET_EXTERNAL_AUTH });
+
+    return () => {
+      _runningSSOLoop = false;
+    };
+  }, []);
 
   const existingDeviceNames = useMemo(() => {
     if (!inviteeOrGranteeId) {
@@ -364,16 +378,18 @@ export const AcceptInvite: Component = (props) => {
   };
 
   const renderButtons = () => {
-    const samlWaiting =
-      runningLoop ||
+    const authenticatingSSO =
+      props.core.startingExternalAuthSessionInvite ||
+      runningSSOLoop ||
       (needsExternalAuthError && !props.core.completedExternalAuth);
+
     const disabledDueToLoading =
-      samlWaiting || !formValid || isLoading || isAccepting;
+      authenticatingSSO || !formValid || isLoading || isAccepting;
 
     let label: React.ReactChild;
     if (isLoading) {
       label = <SmallLoader />;
-    } else if (samlWaiting) {
+    } else if (authenticatingSSO) {
       label = "Authenticating with SSO...";
     } else if (isAccepting) {
       label = <SmallLoader />;
@@ -385,11 +401,27 @@ export const AcceptInvite: Component = (props) => {
 
     return (
       <div>
-        <div className="buttons">
+        <div className="field">
           <button className="primary" disabled={disabledDueToLoading}>
             {label}
           </button>
         </div>
+
+        {authenticatingSSO && props.core.pendingExternalAuthSession
+          ? [
+              <p className="important">
+                Your system's default browser should now pop up so you can
+                authenticate with your org's SSO provider. You can also paste
+                the URL into a browser manually:
+              </p>,
+              <CopyableDisplay
+                {...props}
+                label="SSO Authentication Url"
+                value={props.core.pendingExternalAuthSession?.authUrl}
+              />,
+            ]
+          : ""}
+
         {isLoading || isAccepting ? <CryptoStatus {...props} /> : ""}
         <div className="back-link">
           <a
@@ -401,7 +433,10 @@ export const AcceptInvite: Component = (props) => {
                 setDeviceName(props.core.defaultDeviceName);
               }
 
-              props.dispatch({ type: Client.ActionType.RESET_EXTERNAL_AUTH });
+              if (authenticatingSSO) {
+                setRunningSSOLoop(false);
+                props.dispatch({ type: Client.ActionType.RESET_EXTERNAL_AUTH });
+              }
 
               if (props.core.loadedInvite) {
                 props.dispatch({ type: Client.ActionType.RESET_INVITE });

@@ -172,22 +172,13 @@ export type PartialClientState = {
         externalAuthProviderId: string;
         orgId: string;
         userId: string;
-        authType: "sign_in";
+        sentById?: string;
+        authType: "sign_in" | "accept_invite" | "accept_device_grant";
       }
     | undefined;
 
   startingExternalAuthSessionInvite: true | undefined;
   startingExternalAuthSessionInviteError: Client.ClientError | undefined;
-  completedInviteExternalAuth:
-    | {
-        externalAuthSessionId: string;
-        externalAuthProviderId: string;
-        orgId: string;
-        userId: string;
-        sentById: string;
-        authType: "accept_invite" | "accept_device_grant";
-      }
-    | undefined;
 
   generatingDeviceGrants: Record<
     string,
@@ -511,7 +502,6 @@ export const defaultAccountState: PartialAccountState = {
     completedExternalAuth: undefined,
     startingExternalAuthSessionInvite: undefined,
     startingExternalAuthSessionInviteError: undefined,
-    completedInviteExternalAuth: undefined,
     isAuthorizingExternallyForSessionId: undefined,
     authorizingExternallyErrorMessage: undefined,
     generatedRecoveryKey: undefined,

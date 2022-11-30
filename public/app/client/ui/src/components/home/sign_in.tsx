@@ -89,6 +89,9 @@ export const SignIn: Component<{ accountId: string }> = (props) => {
             onValid: ({ email, token }) => {
               dispatchCreateSession(token);
             },
+            onBack: () => {
+              history.push("/select-account");
+            },
           }}
         />
       </div>

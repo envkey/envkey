@@ -1,7 +1,6 @@
 import { clientAction, dispatch } from "../handler";
 import { Api, Client } from "@core/types";
 import { statusProducers } from "../lib/status";
-import open from "open";
 import { wait } from "@core/lib/utils/wait";
 import { log } from "@core/lib/utils/logger";
 import { decode as decodeBase58 } from "bs58";
@@ -127,39 +126,6 @@ clientAction<Client.Action.ClientActions["SetExternalAuthSessionResult"]>({
   },
 });
 
-clientAction<Client.Action.ClientActions["SetInviteExternalAuthSessionResult"]>(
-  {
-    type: "clientAction",
-    actionType: Client.ActionType.SET_INVITE_EXTERNAL_AUTH_SESSION_RESULT,
-    stateProducer: (draft, { payload }) => {
-      delete draft.isAuthorizingExternallyForSessionId;
-      delete draft.pendingExternalAuthSession;
-
-      if ("authorizingExternallyErrorMessage" in payload) {
-        draft.authorizingExternallyErrorMessage =
-          payload.authorizingExternallyErrorMessage;
-      } else {
-        const {
-          externalAuthSessionId,
-          externalAuthProviderId,
-          orgId,
-          userId,
-          sentById,
-          authType,
-        } = payload;
-        draft.completedInviteExternalAuth = {
-          externalAuthSessionId,
-          externalAuthProviderId,
-          orgId,
-          userId,
-          sentById,
-          authType,
-        };
-      }
-    },
-  }
-);
-
 clientAction<Client.Action.ClientActions["WaitForExternalAuth"]>({
   type: "clientAction",
   actionType: Client.ActionType.WAIT_FOR_EXTERNAL_AUTH,
@@ -176,7 +142,7 @@ clientAction<Client.Action.ClientActions["WaitForExternalAuth"]>({
     let loadResSuccessContext: Client.Context | undefined;
 
     let awaitingLogin = true;
-    let iterationsLeft = 60;
+    let iterationsLeft = 120;
     let orgId: string | undefined;
     let userId: string | undefined;
 
@@ -226,7 +192,7 @@ clientAction<Client.Action.ClientActions["WaitForExternalAuth"]>({
         externalAuthSessionId !==
         loadRes.state.isAuthorizingExternallyForSessionId;
       if (wasDeleted || newSessionSpawned) {
-        log("Another external login took over; aborting", {
+        log("External auth session cancelled", {
           thisLoop: payload,
           otherSession: loadRes.state.isAuthorizingExternallyForSessionId,
         });
@@ -298,7 +264,7 @@ clientAction<Client.Action.ClientActions["WaitForInviteExternalAuth"]>({
   actionType: Client.ActionType.WAIT_FOR_INVITE_EXTERNAL_AUTH,
   stateProducer: (draft, { payload }) => {
     draft.isAuthorizingExternallyForSessionId = payload.externalAuthSessionId;
-    draft.completedInviteExternalAuth = undefined;
+    draft.completedExternalAuth = undefined;
     draft.authorizingExternallyErrorMessage = undefined;
   },
   handler: async (state, { payload }, context) => {
@@ -315,7 +281,7 @@ clientAction<Client.Action.ClientActions["WaitForInviteExternalAuth"]>({
       emailToken,
       encryptionToken,
     };
-    let successPayload: typeof state.completedInviteExternalAuth | undefined;
+    let successPayload: typeof state.completedExternalAuth | undefined;
     let loadResSuccessContext: Client.Context | undefined;
     let userId: string | undefined;
     let sentById: string | undefined;
@@ -329,7 +295,7 @@ clientAction<Client.Action.ClientActions["WaitForInviteExternalAuth"]>({
         log("External login timed out", { payload });
         const res = await dispatch(
           {
-            type: Client.ActionType.SET_INVITE_EXTERNAL_AUTH_SESSION_RESULT,
+            type: Client.ActionType.SET_EXTERNAL_AUTH_SESSION_RESULT,
             payload: {
               authorizingExternallyErrorMessage: `External login timed out for session ${externalAuthSessionId}`,
             },
@@ -363,7 +329,7 @@ clientAction<Client.Action.ClientActions["WaitForInviteExternalAuth"]>({
         externalAuthSessionId !==
         loadRes.state.isAuthorizingExternallyForSessionId
       ) {
-        log("Another external login took over; aborting", {
+        log("External auth session cancelled", {
           thisLoop: payload,
           otherSession: loadRes.state.isAuthorizingExternallyForSessionId,
         });
@@ -381,7 +347,7 @@ clientAction<Client.Action.ClientActions["WaitForInviteExternalAuth"]>({
         }
         await dispatch(
           {
-            type: Client.ActionType.SET_INVITE_EXTERNAL_AUTH_SESSION_RESULT,
+            type: Client.ActionType.SET_EXTERNAL_AUTH_SESSION_RESULT,
             payload: {
               authorizingExternallyErrorMessage: ("errorReason" in
               resultAction.payload
@@ -430,7 +396,7 @@ clientAction<Client.Action.ClientActions["WaitForInviteExternalAuth"]>({
 
     await dispatch(
       {
-        type: Client.ActionType.SET_INVITE_EXTERNAL_AUTH_SESSION_RESULT,
+        type: Client.ActionType.SET_EXTERNAL_AUTH_SESSION_RESULT,
         payload: successPayload,
       },
       loadResSuccessContext!
@@ -549,11 +515,14 @@ clientAction<Client.Action.ClientActions["ResetExternalAuth"]>({
   actionType: Client.ActionType.RESET_EXTERNAL_AUTH,
   stateProducer: (draft) => {
     delete draft.completedExternalAuth;
-    delete draft.completedInviteExternalAuth;
+    delete draft.startingExternalAuthSession;
+    delete draft.startingExternalAuthSessionInvite;
     delete draft.startingExternalAuthSessionError;
     delete draft.startingExternalAuthSessionInviteError;
     delete draft.externalAuthSessionCreationError;
     delete draft.authorizingExternallyErrorMessage;
+    delete draft.isAuthorizingExternallyForSessionId;
+    delete draft.pendingExternalAuthSession;
   },
 });
 
@@ -565,7 +534,7 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForInvite"]>(
     stateProducer: (draft) => {
       draft.startingExternalAuthSessionInvite = true;
       delete draft.startingExternalAuthSessionInviteError;
-      delete draft.completedInviteExternalAuth;
+      delete draft.completedExternalAuth;
     },
     failureStateProducer: (draft, { payload }) => {
       draft.startingExternalAuthSessionInviteError = payload;
@@ -590,9 +559,16 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForInvite"]>(
         provider,
       } = payload;
       let externalAuthSessionId: string | undefined;
-      const hostUrl = naclUtil.encodeUTF8(
-        decodeBase58(emailToken.split("_")[2])
-      );
+
+      const encodedHostUrl = emailToken.split("_")[2];
+      if (!encodedHostUrl) {
+        return dispatchFailure(
+          { type: "clientError", error: new Error("Invalid invite token") },
+          context
+        );
+      }
+
+      const hostUrl = naclUtil.encodeUTF8(decodeBase58(encodedHostUrl));
       const reqContext = { ...context, hostUrl };
 
       const sessionPayload: Api.Net.CreateExternalAuthSession = {

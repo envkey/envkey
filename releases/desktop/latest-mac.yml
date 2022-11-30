@@ -1,17 +1,17 @@
-version: 2.2.4
+version: 2.2.5
 files:
-  - url: EnvKey-2.2.4-mac.zip
-    sha512: eM7aZcKKhZFmPJofL9cdf+/IH/vkH/8GHarNGjZyZ9lPNn2TvHdC9/CVPCy9chAaOhDGQJ4hwEu+aKXaMsx1lA==
-    size: 88796266
-  - url: EnvKey-2.2.4-arm64-mac.zip
-    sha512: twy6MS8BIXcEMFP5VZlHb0k/vqQhwOzQ892NvWuJBRiVQimXYX+0H7XpSylmWcuYDiMfc/O6iY1I0KMOkvLjQw==
-    size: 90456045
-  - url: EnvKey-2.2.4.dmg
-    sha512: oIrsg6EYzeT8yWiT1y4Aa7a7Xcj0TcvRcPT3OjlX3hiDBsnl/4EP9N1SlKaEi6JKN2zKPGB9z6Watpqda2J2qQ==
-    size: 92158218
-  - url: EnvKey-2.2.4-arm64.dmg
-    sha512: S6/xJ9GybxWSVyHDcBGagy02ysBW4ik4BPOWsfRFpTqDrOeBmAMgBuYcKXLEtuAE6I4BocjXrQFVsKx9Y7pOhg==
-    size: 94094006
-path: EnvKey-2.2.4-mac.zip
-sha512: eM7aZcKKhZFmPJofL9cdf+/IH/vkH/8GHarNGjZyZ9lPNn2TvHdC9/CVPCy9chAaOhDGQJ4hwEu+aKXaMsx1lA==
-releaseDate: '2022-11-24T23:59:49.984Z'
+  - url: EnvKey-2.2.5-mac.zip
+    sha512: sy0W+p/uh/0zqW3CSw5GJ91PnbZB79UOFKLjxuaSzNkTot8IAQPCnTMGtm2XYr7gZqhmeKJuEnXqnTsR1lCZzQ==
+    size: 88807543
+  - url: EnvKey-2.2.5-arm64-mac.zip
+    sha512: YDXWGqV/K9wF7QyvI6h8dricCHPQ3kGkJFkTWyzehMWgIaU+G5g0cJtMMqVXFV0HcBKq57JZHEAFcFlM1/SAEQ==
+    size: 90467316
+  - url: EnvKey-2.2.5.dmg
+    sha512: yXXHcx4eVaqRf88DHUhsbHzCgSOo4w/3pCPUkOxwaakfAgjUp4NvE0kmkdXH/XIV2GOLpaTJI2HgAMDygGZJcQ==
+    size: 92159471
+  - url: EnvKey-2.2.5-arm64.dmg
+    sha512: COcNzCOZzk3yYnNpVb5uFxoRw7TDDXr2RpE3Y1dZqQIXeNr4xYeOcjr79VB/V06GrOutmxJOHqLj5LVx2I5Trg==
+    size: 94129354
+path: EnvKey-2.2.5-mac.zip
+sha512: sy0W+p/uh/0zqW3CSw5GJ91PnbZB79UOFKLjxuaSzNkTot8IAQPCnTMGtm2XYr7gZqhmeKJuEnXqnTsR1lCZzQ==
+releaseDate: '2022-11-30T07:04:22.249Z'

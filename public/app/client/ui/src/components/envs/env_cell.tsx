@@ -23,10 +23,7 @@ import * as EntryForm from "./entry_form";
 import { isMultiline } from "@core/lib/utils/string";
 import copy from "copy-text-to-clipboard";
 import { logAndAlertError } from "@ui_lib/errors";
-import {
-  getCurrentUserEntryKeys,
-  getPendingEnvWithMeta,
-} from "@core/lib/client";
+import { getCurrentUserEntryKeys } from "@core/lib/client";
 
 type Props = {
   entryKey: string;
@@ -61,12 +58,19 @@ const maskDots = <span>{"●●●●●●●●●●●"}</span>,
   entryPlaceholder = "VARIABLE_NAME";
 
 const getCellId = (props: EnvManagerComponentProps<{}, Props>) =>
-  [props.envParentId, props.entryKey, props.environmentId]
+  [
+    props.editingMultiline
+      ? props.ui.envManager.editingEnvParentId
+      : props.envParentId,
+    props.entryKey,
+    props.editingMultiline
+      ? props.ui.envManager.editingEnvironmentId
+      : props.environmentId,
+  ]
     .filter(Boolean)
     .join("|");
 
 const getIsEditing = (props: EnvManagerComponentProps<{}, Props>) =>
-  props.ui.envManager.editingEnvParentId == props.envParentId &&
   props.ui.envManager.editingEntryKey == props.entryKey &&
   ((props.type == "entry" && !props.ui.envManager.editingEnvironmentId) ||
     (props.type == "entryVal" &&
@@ -304,6 +308,17 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
 
       setInputVal("");
       delete cursorPositionByCellId[cellId];
+
+      const envParentId =
+        props.editingMultiline && props.ui.envManager.editingEnvParentId
+          ? props.ui.envManager.editingEnvParentId
+          : props.envParentId;
+
+      const environmentId =
+        props.editingMultiline && props.ui.envManager.editingEnvironmentId
+          ? props.ui.envManager.editingEnvironmentId
+          : props.environmentId;
+
       props.setEnvManagerState({
         ...CLEARED_EDIT_STATE,
         committingToCore: {
@@ -318,8 +333,8 @@ export const EnvCell: EnvManagerComponent<{}, Props> = React.memo(
         .dispatch({
           type: Client.ActionType.UPDATE_ENTRY_VAL,
           payload: {
-            envParentId: props.envParentId,
-            environmentId: props.environmentId,
+            envParentId,
+            environmentId,
             entryKey: props.entryKey,
             update,
           },

@@ -1,4 +1,4 @@
-import { applyPatch } from "rfc6902";
+import { forceApplyPatch } from "@core/lib/utils/patch";
 import { exit } from "./process";
 import * as R from "ramda";
 import { Client, Model } from "@core/types";
@@ -84,7 +84,7 @@ export const printPendingConflictsReport = (
         }
 
         const envWithMetaPrevious = R.clone(envWithMeta);
-        applyPatch(envWithMetaPrevious, conflict.action.payload.reverse);
+        forceApplyPatch(envWithMetaPrevious, conflict.action.payload.reverse);
         const previousDisplay = getEnvWithMetaCellDisplay(
           state.graph,
           envWithMetaPrevious.variables[conflict.entryKey]
@@ -92,7 +92,7 @@ export const printPendingConflictsReport = (
         table.push([chalk.red("Was"), chalk.red(chalk.bold(previousDisplay))]);
 
         const envWithMetaToUpdate = R.clone(envWithMeta);
-        applyPatch(envWithMetaToUpdate, conflict.action.payload.diffs);
+        forceApplyPatch(envWithMetaToUpdate, conflict.action.payload.diffs);
         const updatedDisplay = getEnvWithMetaCellDisplay(
           state.graph,
           envWithMetaToUpdate.variables[conflict.entryKey]

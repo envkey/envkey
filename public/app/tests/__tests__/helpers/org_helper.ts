@@ -207,6 +207,10 @@ export const testRemoveUser = async (
   const res1 = await promise;
 
   if (canRemove) {
+    if (!res1.success) {
+      log("", { res: res1.resultAction });
+    }
+
     expect(res1.success).toBeTrue();
   }
 

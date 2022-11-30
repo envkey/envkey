@@ -41,9 +41,7 @@ export const handler = async (
   const prompt = getPrompt();
   const { state: initialState } = await initCore(argv, false);
   let state = initialState;
-  let completedInviteExternalAuth:
-    | typeof state.completedInviteExternalAuth
-    | undefined;
+  let completedExternalAuth: typeof state.completedExternalAuth | undefined;
   const emailToken = (argv["invite-token"] ??
     (
       await prompt<{ invite_token: string }>({
@@ -132,7 +130,7 @@ export const handler = async (
           orgId,
         });
         state = await refreshState();
-        while (!state.completedInviteExternalAuth) {
+        while (!state.completedExternalAuth) {
           process.stderr.write(".");
           await wait(950);
           state = await refreshState();
@@ -143,7 +141,7 @@ export const handler = async (
             );
           }
         }
-        completedInviteExternalAuth = state.completedInviteExternalAuth!;
+        completedExternalAuth = state.completedExternalAuth!;
         break;
       case "oauth_hosted":
         return exit(1, "Hosted OAuth is not supported");
@@ -165,10 +163,10 @@ export const handler = async (
   console.log(chalk.bold("Invite loaded and verified."));
 
   const accountId =
-    completedInviteExternalAuth?.userId ??
+    completedExternalAuth?.userId ??
     (state.loadedInvite?.inviteeId ?? state.loadedDeviceGrant?.granteeId)!;
   const sentById =
-    completedInviteExternalAuth?.sentById ??
+    completedExternalAuth?.sentById ??
     (state.loadedInvite?.invitedByUserId ??
       state.loadedDeviceGrant?.grantedByUserId)!;
 

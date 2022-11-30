@@ -11,7 +11,7 @@ import { authenticate } from "./auth";
 import { resolveUpgrades } from "./upgrades";
 import { unlock, enforceDeviceSecuritySettings } from "./crypto";
 import { exit } from "./process";
-import { applyPatch } from "rfc6902";
+import { forceApplyPatch } from "@core/lib/utils/patch";
 import * as semver from "semver";
 import { version as cliVersion } from "../../package.json";
 
@@ -229,7 +229,7 @@ export const getState = () => state,
     const newState = R.clone(state);
 
     if (res.diffs && res.diffs.length > 0) {
-      applyPatch(newState, res.diffs);
+      forceApplyPatch(newState, res.diffs);
     }
 
     state = newState;
