@@ -2,6 +2,7 @@ from __future__ import print_function
 import sys
 import platform
 import subprocess
+import os
 import os.path
 import pkg_resources
 import json
@@ -45,14 +46,19 @@ def __lib_path():
   root = os.path.abspath(os.path.dirname(__file__))
   return os.path.join(root, 'ext',__lib_dir(), __lib_file_name())
 
-def fetch_env(legacy_unused_envkey_arg=None, cache_enabled=False):
+def fetch_env(envkey_arg=None, cache_enabled=False):
+  try: 
+    env = {"ENVKEY": envkey_arg if envkey_arg else os.environ["ENVKEY"]}
+  except KeyError:
+    env = {}
+
   path = __lib_path()
   args = [path, "--json", "--client-name", "envkey-python", "--client-version", pkg_resources.get_distribution("envkey").version]
   if cache_enabled:
     args.append("--cache")
 
   try:
-    res = subprocess.check_output(args).decode(encoding="utf-8").rstrip()
+    res = subprocess.check_output(args, env=env).decode(encoding="utf-8").rstrip()
   except subprocess.CalledProcessError as err:
     print("envkey-source " + err.output.decode(encoding="utf-8"), file=sys.stderr)
     raise ValueError("ENVKEY invalid. Couldn't load vars.")

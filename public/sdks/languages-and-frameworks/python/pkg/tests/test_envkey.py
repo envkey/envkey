@@ -62,6 +62,9 @@ def test_autoload_disabled():
   assert(envkey.fetch_env()['TEST'] == "it")
   assert(envkey.fetch_env(cache_enabled=False)['TEST'] == "it")
 
+  with pytest.raises(ValueError):
+    envkey.fetch_env(INVALID_ENVKEY)
+
   # test calling load directly
   envkey.load()
   assert(os.environ["TEST"] == "it")
