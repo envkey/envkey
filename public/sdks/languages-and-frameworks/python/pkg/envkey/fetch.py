@@ -45,7 +45,7 @@ def __lib_path():
   root = os.path.abspath(os.path.dirname(__file__))
   return os.path.join(root, 'ext',__lib_dir(), __lib_file_name())
 
-def fetch_env(cache_enabled=False):
+def fetch_env(legacy_unused_envkey_arg=None, cache_enabled=False):
   path = __lib_path()
   args = [path, "--json", "--client-name", "envkey-python", "--client-version", pkg_resources.get_distribution("envkey").version]
   if cache_enabled:

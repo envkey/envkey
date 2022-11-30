@@ -58,6 +58,9 @@ def test_autoload_disabled():
 
   # test calling fetch directly
   assert(envkey.fetch_env(VALID_ENVKEY)['TEST'] == "it")
+  assert(envkey.fetch_env(VALID_ENVKEY, cache_enabled=False)['TEST'] == "it")
+  assert(envkey.fetch_env()['TEST'] == "it")
+  assert(envkey.fetch_env(cache_enabled=False)['TEST'] == "it")
 
   # test calling load directly
   envkey.load()
