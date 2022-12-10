@@ -1,5 +1,5 @@
 import { Format } from "../../lib/parse";
-import { Api, Auth, Trust, Infra, Rbac } from "../";
+import { Api, Auth, Trust, Infra } from "../";
 import ActionType from "./action_type";
 import { State } from "./state";
 import { Env } from "./envs";

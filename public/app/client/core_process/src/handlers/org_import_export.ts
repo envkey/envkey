@@ -147,35 +147,15 @@ clientAction<
         throw new Error("Error parsing decrypted archive");
       }
 
-      const fetchDeletedRes = await dispatch(
-        {
-          type: Api.ActionType.FETCH_DELETED_GRAPH,
-          payload: {},
-        },
-        context
-      );
-
-      if (fetchDeletedRes.success) {
-        state = fetchDeletedRes.state;
-      } else {
-        return dispatchFailure(
-          (fetchDeletedRes.resultAction as any)?.payload,
-          context
-        );
-      }
-
       const existingEmails = new Set([
         ...g.graphTypes(state.graph).orgUsers.map(R.prop("email")),
       ]);
 
-      const alreadyImportedIds = new Set([
-        ...(Object.values(state.graph)
+      const alreadyImportedIds = new Set(
+        Object.values(state.graph)
           .map((o) => ("importId" in o ? o.importId : undefined))
-          .filter(Boolean) as string[]),
-        ...(Object.values(state.deletedGraph)
-          .map((o) => ("importId" in o ? o.importId : undefined))
-          .filter(Boolean) as string[]),
-      ]);
+          .filter(Boolean) as string[]
+      );
 
       const filteredArchive: Client.OrgArchiveV1 = {
         ...pick(
@@ -1118,7 +1098,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
                 .map((id) => idMap[id]);
             }
 
-            if (!mappedEnvParentId && !(environment || mappedLocalsUserId)) {
+            if (!(mappedEnvParentId && (environment || mappedLocalsUserId))) {
               return undefined;
             }
 
@@ -1180,7 +1160,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
             .map((id) => idMap[id]);
         }
 
-        if (!mappedEnvParentId && !(environment || mappedLocalsUserId)) {
+        if (!(mappedEnvParentId && (environment || mappedLocalsUserId))) {
           return false;
         }
 
@@ -1207,12 +1187,12 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           return true;
         }
 
-        return (
-          getChangesets(state, {
-            envParentId: mappedEnvParentId,
-            environmentId: mappedEnvironmentId,
-          }).length == 0
-        );
+        const changesets = getChangesets(state, {
+          envParentId: mappedEnvParentId,
+          environmentId: mappedEnvironmentId,
+        });
+
+        return changesets.length == 0;
       });
 
       await dispatch(
