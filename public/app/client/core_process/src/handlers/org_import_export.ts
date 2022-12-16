@@ -16,6 +16,7 @@ import fs from "fs";
 import { wait } from "@core/lib/utils/wait";
 import { log } from "@core/lib/utils/logger";
 import { updateLocalSocketImportStatusIfNeeded } from "@core_proc/lib/envs/status";
+import { getAuth } from "@core/lib/client";
 
 const updateImportStatus = async (
   status: string,
@@ -267,6 +268,11 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
     { context, dispatchSuccess, dispatchFailure }
   ) => {
     let state = initialState;
+
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
 
     const unfilteredArchive = state.unfilteredOrgArchive;
     const archive = state.filteredOrgArchive;
@@ -1000,7 +1006,14 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       const batches = R.splitEvery(
         25,
         filteredAgainArchive.appUserGrants.filter(
-          ({ appId, userId }) => idMap[appId] && idMap[userId]
+          ({ appId, userId, appRoleId }) =>
+            idMap[appId] &&
+            idMap[userId] &&
+            g.authz.canGrantAppRoleToUser(state.graph, auth.userId, {
+              appId: idMap[appId],
+              userId: idMap[userId],
+              appRoleId: idMap[appRoleId],
+            })
         )
       );
 

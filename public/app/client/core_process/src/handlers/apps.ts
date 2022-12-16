@@ -285,7 +285,14 @@ clientAction<Client.Action.ClientActions["GrantAppsAccess"]>({
       action: {
         type: actionType!,
         payload: pickDefined(
-          ["appId", "appGroupId", "userId", "userGroupId", "appRoleId"],
+          [
+            "appId",
+            "appGroupId",
+            "userId",
+            "userGroupId",
+            "appRoleId",
+            "importId",
+          ],
           payload as any
         ),
       },
