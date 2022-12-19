@@ -52,6 +52,10 @@ def fetch_env(envkey_arg=None, cache_enabled=False):
   except KeyError:
     env = {}
 
+  for key in os.environ.keys():
+    if key != "ENVKEY":
+      env[key] = os.environ[key]
+
   path = __lib_path()
   args = [path, "--json", "--client-name", "envkey-python", "--client-version", pkg_resources.get_distribution("envkey").version]
   if cache_enabled:
