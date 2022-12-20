@@ -83,6 +83,7 @@ apiAction<
               environmentRoleId: environmentRole.id,
               isSub: false,
               settings: {},
+              "upgradedCrypto-2.1.0": true,
               createdAt: now,
               updatedAt: now,
             };
@@ -104,6 +105,7 @@ apiAction<
               environmentRoleId: environmentRole.id,
               isSub: false,
               settings: {},
+              "upgradedCrypto-2.1.0": true,
               createdAt: now,
               updatedAt: now,
             };
