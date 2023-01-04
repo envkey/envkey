@@ -64,6 +64,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 
 	var envkey string
 	var appConfig env.AppConfig
+	var overrides parser.EnvMap
 	var err error
 	/*
 	* ENVKEY lookup order:
@@ -75,7 +76,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	*	  5 - .env file at ~/.env
 	 */
 
-	envkey, appConfig = env.GetEnvkey(verboseOutput, envFileOverride, execCmdArg != "", localDevHost)
+	envkey, appConfig, overrides = env.GetEnvkey(verboseOutput, envFileOverride, execCmdArg != "", localDevHost)
 
 	if envkey == "" {
 		if ignoreMissing {
@@ -142,6 +143,18 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 
 		os.Exit(0)
 	}()
+
+	for k, v := range overrides {
+		if k != "ENVKEY" {
+			res[k] = v
+		}
+	}
+
+	for k, _ := range res {
+		if os.Getenv(k) != "" {
+			res[k] = os.Getenv(k)
+		}
+	}
 
 	execWithEnv(envkey, res, clientName, clientVersion)
 }

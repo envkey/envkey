@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/envkey/envkey/public/sdks/envkey-source/parser"
 	"github.com/envkey/envkey/public/sdks/envkey-source/utils"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -28,7 +29,7 @@ type LocalKeyRes struct {
 	LocalKey string `json:"localKey"`
 }
 
-func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localDevHost bool) (string, AppConfig) {
+func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localDevHost bool) (string, AppConfig, parser.EnvMap) {
 	/*
 	* ENVKEY lookup order:
 	*		1 - ENVKEY environment variable is set
@@ -40,13 +41,20 @@ func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localD
 
 	var envkey string
 	var appConfig AppConfig
+	var overrides parser.EnvMap
+
+	envkey = os.Getenv("ENVKEY")
+
+	if envkey != "" {
+		return envkey, appConfig, overrides
+	}
 
 	envFile := ".env"
 	if envFileOverride != "" {
 		envFile = envFileOverride
 	}
-	godotenv.Load(envFile)
-	envkey = os.Getenv("ENVKEY")
+	overrides, _ = godotenv.Read(envFile)
+	envkey = overrides["ENVKEY"]
 
 	if envkey == "" {
 		if verboseOutput {
@@ -67,7 +75,7 @@ func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localD
 				fmt.Fprintln(os.Stderr, "loaded app config")
 			}
 
-			envkey, err = EnvkeyFromAppId(appConfig.OrgId, appConfig.AppId, verboseOutput, localDevHost)
+			envkey, overrides, err = EnvkeyFromAppId(appConfig.OrgId, appConfig.AppId, verboseOutput, localDevHost)
 			utils.CheckError(err, toStderr)
 		}
 	}
@@ -75,36 +83,38 @@ func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localD
 	if envkey == "" && envFileOverride == "" {
 		home, err := os.UserHomeDir()
 		if err == nil {
-			godotenv.Load(filepath.Join(home, ".env"))
-			envkey = os.Getenv("ENVKEY")
+			overrides, _ = godotenv.Read(filepath.Join(home, ".env"))
+			envkey = overrides["ENVKEY"]
 		}
 	}
 
-	return envkey, appConfig
+	return envkey, appConfig, overrides
 }
 
-func EnvkeyFromAppId(orgId string, appId string, verboseOutput bool, localDevHost bool) (string, error) {
+func EnvkeyFromAppId(orgId string, appId string, verboseOutput bool, localDevHost bool) (string, parser.EnvMap, error) {
 	_, path, err := appEnvkeyPath(appId)
 	if err != nil {
-		return "", err
+		return "", parser.EnvMap{}, err
 	}
 
 	if verboseOutput {
 		fmt.Fprintln(os.Stderr, "got app ENVKEY path:", path)
 	}
 
-	godotenv.Load(path)
-	envkey := os.Getenv("ENVKEY")
+	overrides, _ := godotenv.Read(path)
+	envkey := overrides["ENVKEY"]
 
 	if verboseOutput {
 		fmt.Fprintln(os.Stderr, "loaded ENVKEY: ", envkey)
 	}
 
 	if envkey != "" {
-		return envkey, nil
+		return envkey, overrides, nil
 	}
 
-	return genLocalKey(orgId, appId, verboseOutput, localDevHost, 0)
+	envkey, err = genLocalKey(orgId, appId, verboseOutput, localDevHost, 0)
+
+	return envkey, overrides, err
 }
 
 func ClearAppEnvkey(appId string) error {
