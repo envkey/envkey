@@ -5,7 +5,7 @@ var path = require('path'),
     execFile = childProcess.execFile,
     execFileSync = childProcess.execFileSync
 
-var ENVKEY_SOURCE_VERSION = "2.1.1"
+var ENVKEY_SOURCE_VERSION = "2.1.2"
 
 function keyError(){
   return "ENVKEY invalid. Couldn't load vars."

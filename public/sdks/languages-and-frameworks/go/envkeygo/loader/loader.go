@@ -6,11 +6,13 @@ import (
 
 	"github.com/envkey/envkey/public/sdks/envkey-source/env"
 	"github.com/envkey/envkey/public/sdks/envkey-source/fetch"
+	"github.com/envkey/envkey/public/sdks/envkey-source/parser"
 )
 
 func Load(shouldCache bool, firstAttempt bool) {
 	var envkey string
 	var appConfig env.AppConfig
+	var overrides parser.EnvMap
 	var err error
 
 	/*
@@ -22,7 +24,7 @@ func Load(shouldCache bool, firstAttempt bool) {
 	*	  4 - .env file at ~/.env
 	 */
 
-	envkey, appConfig = env.GetEnvkey(false, "", true, false)
+	envkey, appConfig, overrides = env.GetEnvkey(false, "", true, false)
 
 	if envkey == "" {
 		panic(errors.New("missing ENVKEY"))
@@ -37,6 +39,10 @@ func Load(shouldCache bool, firstAttempt bool) {
 		return
 	} else if err != nil {
 		panic(err)
+	}
+
+	for k, v := range overrides {
+		resMap[k] = v
 	}
 
 	for k, v := range resMap {
