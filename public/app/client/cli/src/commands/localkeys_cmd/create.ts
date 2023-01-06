@@ -242,9 +242,10 @@ export const handler = async (
 
   state = res.state;
 
-  const newGeneratedEnvkey = graphTypes(state.graph).generatedEnvkeys.find(
-    R.propEq("createdAt", state.graphUpdatedAt)
+  const newGeneratedEnvkey = R.last(
+    R.sort(R.prop("createdAt"), graphTypes(state.graph).generatedEnvkeys)
   );
+
   if (!newGeneratedEnvkey) {
     return exit(1, chalk.bold("Error fetching new local key."));
   }

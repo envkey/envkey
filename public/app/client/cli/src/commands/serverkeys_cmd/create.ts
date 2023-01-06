@@ -262,10 +262,15 @@ export const handler = async (
 
   state = res.state;
 
-  const newServer = graphTypes(state.graph).servers.find(
-    // normally matched to graphUpdatedAt, but perhaps it is different because of key being local
-    R.whereEq({ appId: app.id, environmentId: appEnv.id, name: serverName })
+  const newServer = R.last(
+    R.sort(
+      R.prop("createdAt"),
+      graphTypes(state.graph).servers.filter(
+        R.whereEq({ appId: app.id, environmentId: appEnv.id, name: serverName })
+      )
+    )
   );
+
   if (!newServer) {
     return exit(
       1,
@@ -319,7 +324,7 @@ export const handler = async (
   await dispatch({
     type: Client.ActionType.CLEAR_GENERATED_ENVKEY,
     payload: {
-      keyableParentId: serverKey.id,
+      keyableParentId: newServer.id,
     },
   });
 
