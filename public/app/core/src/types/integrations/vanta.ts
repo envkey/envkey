@@ -6,4 +6,4 @@ export const VANTA_CLIENT_ID =
 export const VANTA_REDIRECT_URI =
   process.env.NODE_ENV == "development"
     ? "http://localhost:3000/integrations/vanta/oauth"
-    : "https://api-v2-staging.envkey.com/integrations/vanta/oauth";
+    : "https://api-v2.envkey.com/integrations/vanta/oauth";
