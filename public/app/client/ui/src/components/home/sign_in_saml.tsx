@@ -160,7 +160,7 @@ export const SignInSaml: Component<{ accountId: string }> = (props) => {
     const createSessRes = await dispatch({
       type: Client.ActionType.CREATE_EXTERNAL_AUTH_SESSION_FOR_LOGIN,
       payload: {
-        waitBeforeOpenMillis: 0,
+        waitOpenMs: 0,
         authMethod: "saml",
         provider: "saml",
         externalAuthProviderId: account!.externalAuthProviderId!,

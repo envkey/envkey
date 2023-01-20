@@ -158,6 +158,12 @@ export type PartialClientState = {
   didAcceptInvite: true | undefined;
   acceptInviteError: Client.ClientError | undefined;
 
+  isFetchingExternalAuthSession: true | undefined;
+  fetchExternalAuthSessionError: Client.ClientError | undefined;
+
+  vantaIsFetchingExternalAuthSession: true | undefined;
+  vantaFetchExternalAuthSessionError: Client.ClientError | undefined;
+
   creatingExternalAuthSession: true | undefined;
   externalAuthSessionCreationError: Client.ClientError | undefined;
   pendingExternalAuthSession: { id: string; authUrl: string } | undefined;
@@ -179,6 +185,24 @@ export type PartialClientState = {
 
   startingExternalAuthSessionInvite: true | undefined;
   startingExternalAuthSessionInviteError: Client.ClientError | undefined;
+
+  vantaConnectingAccount: true | undefined;
+  vantaCreatingExternalAuthSession: true | undefined;
+  vantaExternalAuthSessionCreationError: Client.ClientError | undefined;
+  vantaPendingExternalAuthSession: { id: string; authUrl: string } | undefined;
+  vantaIsAuthorizingExternallyForSessionId: string | undefined;
+  vantaAuthorizingExternallyErrorMessage: string | undefined;
+
+  vantaStartingExternalAuthSession: true | undefined;
+  vantaStartingExternalAuthSessionError: Client.ClientError | undefined;
+  vantaCompletedExternalAuth:
+    | {
+        externalAuthSessionId: string;
+      }
+    | undefined;
+
+  vantaIsRemovingConnection: true | undefined;
+  vantaRemovingConnectionError: Client.ClientError | undefined;
 
   generatingDeviceGrants: Record<
     string,
@@ -659,6 +683,12 @@ export const defaultAccountState: PartialAccountState = {
     isReorderingOrgRoles: undefined,
     reorderOrgRolesError: undefined,
 
+    isFetchingExternalAuthSession: undefined,
+    fetchExternalAuthSessionError: undefined,
+
+    vantaIsFetchingExternalAuthSession: undefined,
+    vantaFetchExternalAuthSessionError: undefined,
+
     isFetchingAuthProviders: undefined,
     fetchAuthProvidersError: undefined,
     samlSettingsByProviderId: {},
@@ -708,6 +738,18 @@ export const defaultAccountState: PartialAccountState = {
     cloudBillingInvoices: [],
 
     cloudBillingPromotionCode: undefined,
+
+    vantaConnectingAccount: undefined,
+    vantaCreatingExternalAuthSession: undefined,
+    vantaExternalAuthSessionCreationError: undefined,
+    vantaPendingExternalAuthSession: undefined,
+    vantaIsAuthorizingExternallyForSessionId: undefined,
+    vantaAuthorizingExternallyErrorMessage: undefined,
+    vantaStartingExternalAuthSession: undefined,
+    vantaStartingExternalAuthSessionError: undefined,
+    vantaCompletedExternalAuth: undefined,
+    vantaIsRemovingConnection: undefined,
+    vantaRemovingConnectionError: undefined,
 
     throttleError: undefined,
 

@@ -39,7 +39,8 @@ export namespace Graph {
     | Db.Price
     | Db.Customer
     | Db.Subscription
-    | Db.PaymentSource;
+    | Db.PaymentSource
+    | Db.VantaConnectedAccount;
 
   export type OrgGraph = {
     [id: string]: GraphObject;

@@ -696,4 +696,17 @@ export namespace Model {
     | "pending"
     | "expired"
     | "failed";
+
+  export type VantaConnectedAccount = z.infer<
+    typeof VantaConnectedAccountSchema
+  >;
+  export const VantaConnectedAccountSchema = z
+    .object({
+      type: z.literal("vantaConnectedAccount"),
+      id: z.string(),
+      lastSyncAt: z.number().optional(),
+      status: z.enum(["active", "error"]),
+      error: z.string().optional(),
+    })
+    .merge(TimestampsSchema);
 }

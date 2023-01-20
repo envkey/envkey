@@ -132,6 +132,9 @@ export const getObjectName = (graph: Graph.Graph, id: string): string => {
     case "scimProvisioningProvider":
       return `SCIM Connection '${object.nickname ?? object.endpointBaseUrl}'`;
 
+    case "vantaConnectedAccount":
+      return `Vanta Integration Connection`;
+
     // The following aren't printed out anywhere yet, but could be in the future
     case "deviceGrant":
     case "invite":

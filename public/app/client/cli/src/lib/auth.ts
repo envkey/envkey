@@ -358,7 +358,7 @@ export async function signIn(
         const createSessRes = await dispatch({
           type: Client.ActionType.CREATE_EXTERNAL_AUTH_SESSION_FOR_LOGIN,
           payload: {
-            waitBeforeOpenMillis: 1500,
+            waitOpenMs: 1500,
             authMethod: "saml",
             provider: "saml",
             externalAuthProviderId: auth.externalAuthProviderId!,

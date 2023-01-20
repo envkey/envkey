@@ -42,7 +42,8 @@ export namespace Graph {
     | Billing.Price
     | Billing.Customer
     | Billing.Subscription
-    | Billing.PaymentSource;
+    | Billing.PaymentSource
+    | Model.VantaConnectedAccount;
 
   export type UserGraph = { [id: string]: UserGraphObject };
 }

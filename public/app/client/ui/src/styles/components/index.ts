@@ -28,3 +28,4 @@ export * from "./rbac";
 export * from "./onboard";
 export * from "./archive";
 export * from "./upgrades";
+export * from "./integrations";

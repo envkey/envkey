@@ -66,6 +66,7 @@
     "enquirer": "^2.3.6",
     "express": "^4.17.1",
     "express-async-handler": "^1.1.4",
+    "got": "^11.8.3",
     "immer": "^9.0.7",
     "knex": "^0.21.12",
     "marked": "^4.0.12",

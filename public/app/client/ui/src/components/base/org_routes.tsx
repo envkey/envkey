@@ -160,6 +160,18 @@ const getRouterTree = (): RouterTree => [
         component: ui.SSOSettings,
       },
 
+      // integration routes
+      {
+        routerPath: "/integrations",
+        component: ui.Integrations,
+        tree: [
+          {
+            routerPath: "/vanta",
+            component: ui.VantaIntegration,
+          },
+        ],
+      },
+
       // remaining org routes
       {
         routerPath: `/billing/subscription`,

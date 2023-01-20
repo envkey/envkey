@@ -64,6 +64,9 @@ export const orgPermissions = {
     org_archive_import_export: {
       description: "import or export .envkey-archive files",
     },
+    org_manage_integrations: {
+      description: "manage integrations for the org",
+    },
     org_delete: {
       description: "delete organization",
     },

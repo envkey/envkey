@@ -71,6 +71,8 @@ export enum CfStack {
   ENVKEY_WAF_FAILOVER = "envkey-waf-failover",
   ENVKEY_WAF_SECONDARY = "envkey-waf-secondary",
   ENVKEY_CLOUD_BILLING = "envkey-cloud-billing",
+  ENVKEY_CLOUD_OUTGOING_PROXY = "envkey-cloud-outgoing",
+  ENVKEY_CLOUD_INTEGRATION_VANTA = "envkey-cloud-integration-vanta",
 }
 
 export const CAPABILITIES = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"];

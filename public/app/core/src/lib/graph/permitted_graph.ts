@@ -72,6 +72,7 @@ export const getPermittedGraphObjects = (
       customer: undefined,
       subscription: undefined,
       paymentSource: undefined,
+      vantaConnectedAccount: undefined,
     };
   }
 
@@ -319,6 +320,10 @@ export const getPermittedGraphObjects = (
       : undefined,
     paymentSource: currentOrgPermissions.has("org_manage_billing")
       ? byType.paymentSource
+      : undefined,
+
+    vantaConnectedAccount: currentOrgPermissions.has("org_manage_integrations")
+      ? byType.vantaConnectedAccount
       : undefined,
   };
 

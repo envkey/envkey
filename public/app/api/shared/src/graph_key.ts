@@ -81,4 +81,6 @@ export const org = (orgId: string) => graphKey(orgId, "org"),
   subscription = (orgId: string, id: string) =>
     graphKey(orgId, "subscription", id),
   paymentSource = (orgId: string, id: string) =>
-    graphKey(orgId, "paymentSource", id);
+    graphKey(orgId, "paymentSource", id),
+  vantaConnectedAccount = (orgId: string, id: string) =>
+    graphKey(orgId, "vantaConnectedAccount", id);

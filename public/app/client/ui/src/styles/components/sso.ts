@@ -29,6 +29,10 @@ export const SSOSettings =
         },
       },
 
+      ".providers": {
+        width: "100%",
+      },
+
       ".providers > div": listItem(),
 
       ".buttons": {

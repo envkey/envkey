@@ -62,7 +62,10 @@ clientAction<Api.Action.RequestActions["GetExternalAuthSession"]>({
   type: "apiRequestAction",
   actionType: Api.ActionType.GET_EXTERNAL_AUTH_SESSION,
   loggableType: "hostAction",
-  ...statusProducers("isFetchingSession", "fetchSessionError"),
+  ...statusProducers(
+    "isFetchingExternalAuthSession",
+    "fetchExternalAuthSessionError"
+  ),
 });
 
 clientAction<Api.Action.RequestActions["CreateExternalAuthSession"]>({
@@ -439,7 +442,7 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForLogin"]>({
     { context, dispatchSuccess, dispatchFailure }
   ) => {
     const {
-      waitBeforeOpenMillis,
+      waitOpenMs,
       authMethod,
       externalAuthProviderId,
       orgId,
@@ -504,7 +507,7 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForLogin"]>({
       );
     };
 
-    setTimeout(backgroundWork, waitBeforeOpenMillis);
+    setTimeout(backgroundWork, waitOpenMs);
 
     return dispatchSuccess(null, context);
   },

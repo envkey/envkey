@@ -664,4 +664,32 @@ export namespace Db {
   export type PaymentSource = z.infer<typeof PaymentSourceSchema>;
   export const PaymentSourceSchema =
     Billing.PaymentSourceSchema.merge(DbObjectSchema);
+
+  export type VantaExternalAuthSession = z.infer<
+    typeof VantaExternalAuthSessionSchema
+  >;
+  export const VantaExternalAuthSessionSchema = z
+    .object({
+      type: z.literal("vantaExternalAuthSession"),
+      id: z.string(),
+      orgId: z.string(),
+      userId: z.string(),
+      verifiedAt: z.number().optional(),
+      errorAt: z.number().optional(),
+      error: z.string().optional(),
+    })
+    .merge(DbObjectSchema);
+
+  export type VantaConnectedAccount = z.infer<
+    typeof VantaConnectedAccountSchema
+  >;
+  export const VantaConnectedAccountSchema =
+    Model.VantaConnectedAccountSchema.merge(
+      z.object({
+        accessToken: z.string(),
+        refreshToken: z.string(),
+        accessTokenExpiresAt: z.number(),
+        tertiaryIndex: z.enum(["syncing", "idle"]),
+      })
+    ).merge(DbObjectSchema.omit({ tertiaryIndex: true }));
 }

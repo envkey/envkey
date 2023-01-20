@@ -87,6 +87,15 @@ export namespace Action {
       },
       Net.ApiParamTypes["InitSelfHosted"]
     >;
+
+    IntegrationsVantaOauthCallback: {
+      type: ActionType.INTEGRATIONS_VANTA_OAUTH_CALLBACK;
+      payload: Net.ApiParamTypes["IntegrationsVantaOauthCallback"];
+      meta: {
+        loggableType: "hostAction";
+        client?: undefined;
+      };
+    };
   };
 
   export type AuthActions = {
@@ -241,6 +250,23 @@ export namespace Action {
         loggableType: "authAction";
       },
       Net.ApiParamTypes["UnsubscribeCloudLifecycleEmails"]
+    >;
+
+    IntegrationsVantaCreateExternalAuthSession: RequestActionType<
+      ActionType.INTEGRATIONS_VANTA_CREATE_EXTERNAL_AUTH_SESSION,
+      {
+        loggableType: "authAction";
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["IntegrationsVantaCreateExternalAuthSession"]
+    >;
+    IntegrationsVantaGetExternalAuthSession: RequestActionType<
+      ActionType.INTEGRATIONS_VANTA_GET_EXTERNAL_AUTH_SESSION,
+      {
+        loggableType: "authAction";
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["IntegrationsVantaGetExternalAuthSession"]
     >;
   };
 
@@ -1333,6 +1359,15 @@ export namespace Action {
         auth: Auth.TokenAuthParams;
       },
       Net.ApiParamTypes["CloudBillingUpdatePaymentMethod"]
+    >;
+
+    IntegrationsVantaRemoveConnection: RequestActionType<
+      ActionType.INTEGRATIONS_VANTA_REMOVE_CONNECTION,
+      {
+        loggableType: "orgAction";
+        auth: Auth.TokenAuthParams;
+      },
+      Net.ApiParamTypes["IntegrationsVantaRemoveConnection"]
     >;
   };
 

@@ -17,8 +17,9 @@ export const useMyOrgTabs = (props: OrgComponentProps<{ orgId: string }>) => {
     canManageEnvironmentRoles,
     canImportExportArchive,
     canManageFirewall,
+    canManageIntegrations,
   ] = useMemo(() => {
-    const { org } = g.graphTypes(graph);
+    const { org, license } = g.graphTypes(graph);
 
     return [
       g.authz.hasOrgPermission(graph, currentUserId, "org_manage_settings"),
@@ -53,6 +54,13 @@ export const useMyOrgTabs = (props: OrgComponentProps<{ orgId: string }>) => {
       ),
 
       g.authz.hasOrgPermission(graph, currentUserId, "org_manage_firewall"),
+
+      license.hostType == "cloud" &&
+        g.authz.hasOrgPermission(
+          graph,
+          currentUserId,
+          "org_manage_integrations"
+        ),
     ];
   }, [props.core.graphUpdatedAt, currentUserId]);
 
@@ -100,6 +108,11 @@ export const useMyOrgTabs = (props: OrgComponentProps<{ orgId: string }>) => {
       label: "Import/Export",
       path: "/archive",
       permitted: () => canImportExportArchive,
+    },
+    {
+      label: "Integrations",
+      path: "/integrations",
+      permitted: () => canManageIntegrations,
     },
   ];
 

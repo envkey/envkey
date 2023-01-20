@@ -104,6 +104,8 @@ export const graphTypes = memoize((graph: Graph.Graph) => {
     customer?: Billing.Customer;
     subscription?: Billing.Subscription;
     paymentSource?: Billing.PaymentSource;
+
+    vantaConnectedAccount?: Model.VantaConnectedAccount;
   };
 
   if (grouped.orgs) {
@@ -123,6 +125,10 @@ export const graphTypes = memoize((graph: Graph.Graph) => {
 
   if (grouped.paymentSources) {
     byType.paymentSource = grouped.paymentSources[0];
+  }
+
+  if (grouped.vantaConnectedAccounts) {
+    byType.vantaConnectedAccount = grouped.vantaConnectedAccounts[0];
   }
 
   byType.environments = R.sortBy((environment) => {

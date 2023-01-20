@@ -527,5 +527,8 @@ export const getUserGraph = (
           ],
           obj
         );
+
+      case "vantaConnectedAccount":
+        return pick([...baseProps, "lastSyncAt", "status", "error"], obj);
     }
   };

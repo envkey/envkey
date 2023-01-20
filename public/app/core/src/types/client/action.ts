@@ -715,8 +715,7 @@ export namespace Action {
       type: ActionType.CREATE_EXTERNAL_AUTH_SESSION_FOR_LOGIN;
       payload: {
         // how long to wait before triggering a web browser to open the auth url. allows injecting UI messages.
-        waitBeforeOpenMillis: number;
-        // TODO: extend invites to oauth
+        waitOpenMs: number;
         authMethod: "saml";
         provider: "saml";
         externalAuthProviderId: string;
@@ -728,12 +727,43 @@ export namespace Action {
     CreateExternalAuthSessionForInvite: {
       type: ActionType.CREATE_EXTERNAL_AUTH_SESSION_FOR_INVITE;
       payload: Client.ExternalAuthSetupPayload & {
-        // TODO: extend invites to oauth
         authMethod: "saml";
         provider: "saml";
         // invite or device grant ID
         authObjectId: string;
       };
+    };
+
+    IntegrationsVantaClearPendingExternalAuthSession: {
+      type: ActionType.INTEGRATIONS_VANTA_CLEAR_PENDING_EXTERNAL_AUTH_SESSION;
+    };
+
+    IntegrationsVantaSetExternalAuthSessionResult: {
+      type: ActionType.INTEGRATIONS_VANTA_SET_EXTERNAL_AUTH_SESSION_RESULT;
+      payload:
+        | { errorMessage: string }
+        | {
+            externalAuthSessionId: string;
+          };
+    };
+
+    IntegrationsVantaWaitForExternalAuth: {
+      type: ActionType.INTEGRATIONS_VANTA_WAIT_FOR_EXTERNAL_AUTH;
+      payload: {
+        externalAuthSessionId: string;
+      };
+    };
+
+    IntegrationsVantaCreateExternalAuthSessionForConnection: {
+      type: ActionType.INTEGRATIONS_VANTA_CREATE_EXTERNAL_AUTH_SESSION_FOR_CONNECTION;
+      payload: {
+        // how long to wait before triggering a web browser to open the auth url. allows injecting UI messages.
+        waitOpenMs: number;
+      };
+    };
+
+    IntegrationsVantaResetExternalAuth: {
+      type: ActionType.INTEGRATIONS_VANTA_RESET_EXTERNAL_AUTH;
     };
 
     ClearCached: {

@@ -2,9 +2,8 @@ import { exit } from "../../lib/process";
 import { Argv } from "yargs";
 import { dispatch, initCore } from "../../lib/core";
 import { BaseArgs } from "../../types";
-import { authz, getAppRoleForUserOrInvitee, graphTypes } from "@core/lib/graph";
-
-import { Api } from "@core/types";
+import { authz, graphTypes } from "@core/lib/graph";
+import { Api, Client } from "@core/types";
 import chalk from "chalk";
 import * as R from "ramda";
 import Table from "cli-table3";
@@ -60,7 +59,7 @@ export const handler = async (
   state = res.state;
 
   const newBlock = R.last(
-    R.sortBy(R.prop("createdAt"), graphTypes(state.graph))
+    R.sortBy(R.prop("createdAt"), graphTypes(state.graph).blocks)
   )!;
 
   console.log(chalk.bold("Block created.\n"));

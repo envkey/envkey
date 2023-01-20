@@ -295,6 +295,13 @@ export namespace Net {
     id: string;
   } & Pick<Db.OrgUser, "provider" | "externalAuthProviderId" | "uid">;
 
+  export type RequiresVantaExternalAuthResult = {
+    type: "requiresExternalAuthError";
+    error: true;
+    errorStatus: 422;
+    errorReason: "External auth required";
+  };
+
   export type NotModifiedResult = {
     type: "notModified";
     status: 304;
@@ -1483,6 +1490,14 @@ export namespace Net {
 
     [ActionType.CLOUD_BILLING_FETCH_INVOICES]: z.object({}),
 
+    [ActionType.INTEGRATIONS_VANTA_CREATE_EXTERNAL_AUTH_SESSION]: z.object({}),
+    [ActionType.INTEGRATIONS_VANTA_GET_EXTERNAL_AUTH_SESSION]: z.object({
+      id: z.string(),
+    }),
+    [ActionType.INTEGRATIONS_VANTA_OAUTH_CALLBACK]: OauthCallbackQuerySchema,
+
+    [ActionType.INTEGRATIONS_VANTA_REMOVE_CONNECTION]: z.object({}),
+
     // BULK_GRAPH_ACTION schema isn't used anywhere as bulk actions are validated individually,
     // but it makes this object exhaustive so the compiler's happy
     [ActionType.BULK_GRAPH_ACTION]: z.any(),
@@ -1849,6 +1864,19 @@ export namespace Net {
     CloudBillingCheckPromotionCode: z.infer<
       typeof ApiParamSchemas[ActionType.CLOUD_BILLING_CHECK_PROMOTION_CODE]
     >;
+
+    IntegrationsVantaCreateExternalAuthSession: z.infer<
+      typeof ApiParamSchemas[ActionType.INTEGRATIONS_VANTA_CREATE_EXTERNAL_AUTH_SESSION]
+    >;
+    IntegrationsVantaGetExternalAuthSession: z.infer<
+      typeof ApiParamSchemas[ActionType.INTEGRATIONS_VANTA_GET_EXTERNAL_AUTH_SESSION]
+    >;
+    IntegrationsVantaOauthCallback: z.infer<
+      typeof ApiParamSchemas[ActionType.INTEGRATIONS_VANTA_OAUTH_CALLBACK]
+    >;
+    IntegrationsVantaRemoveConnection: z.infer<
+      typeof ApiParamSchemas[ActionType.INTEGRATIONS_VANTA_REMOVE_CONNECTION]
+    >;
   };
 
   export type ApiResultTypes = {
@@ -2089,6 +2117,19 @@ export namespace Net {
       amountOff?: number;
       percentOff?: number;
     };
+
+    IntegrationsVantaCreateExternalAuthSession: {
+      type: "pendingExternalAuthSession";
+      id: string;
+    };
+    IntegrationsVantaGetExternalAuthSession:
+      | {
+          type: "vantaExternalAuthSession";
+          session: Pick<Db.VantaExternalAuthSession, "id" | "error">;
+        }
+      | RequiresVantaExternalAuthResult;
+    IntegrationsVantaOauthCallback: { type: "oauthCallback"; result: string };
+    IntegrationsVantaRemoveConnection: GraphDiffsResult;
   };
 
   export type ApiParams = ApiParamTypes[keyof ApiParamTypes];

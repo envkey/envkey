@@ -1826,6 +1826,15 @@ const getSummary = (
     case Api.ActionType.CLOUD_BILLING_CHECK_PROMOTION_CODE:
       return `+verify+ promotion code`;
 
+    case Api.ActionType.INTEGRATIONS_VANTA_OAUTH_CALLBACK:
+      return `+process+ Vanta integration authentication callback`;
+    case Api.ActionType.INTEGRATIONS_VANTA_CREATE_EXTERNAL_AUTH_SESSION:
+      return `+start+ a Vanta integration authentication session`;
+    case Api.ActionType.INTEGRATIONS_VANTA_GET_EXTERNAL_AUTH_SESSION:
+      return `+check+ the status of a Vanta integration authentication session`;
+    case Api.ActionType.INTEGRATIONS_VANTA_REMOVE_CONNECTION:
+      return `+remove+ an active Vanta integration connection `;
+
     case Api.ActionType.UPDATE_ENVS:
       return null; // handled by LogEnvsUpdated component
 
