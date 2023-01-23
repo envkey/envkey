@@ -144,15 +144,17 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 		os.Exit(0)
 	}()
 
-	for k, v := range overrides {
-		if k != "ENVKEY" {
-			res[k] = v
+	if !force {
+		for k, v := range overrides {
+			if k != "ENVKEY" {
+				res[k] = v
+			}
 		}
-	}
 
-	for k, _ := range res {
-		if os.Getenv(k) != "" {
-			res[k] = os.Getenv(k)
+		for k, _ := range res {
+			if os.Getenv(k) != "" {
+				res[k] = os.Getenv(k)
+			}
 		}
 	}
 
