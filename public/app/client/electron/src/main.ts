@@ -4,7 +4,7 @@ import { initFileLogger, log } from "@core/lib/utils/logger";
 import url from "url";
 import { app, screen, BrowserWindow, Menu, MenuItem, ipcMain } from "electron";
 import { Client } from "../../../core/src/types";
-import { stopCoreProcess } from "./core_proc";
+import { stopInlineCoreProcess } from "./core_proc";
 import { terminateWorkerPool } from "@core/worker/start";
 import path from "path";
 import {
@@ -95,7 +95,7 @@ app.on("before-quit", async (e) => {
     stopCheckUpgradesLoop();
     // if it's running inline, core process must be stopped before the worker pool, since the core process itself relies on workers.
     log("stopping core process if it's running inline...");
-    stopCoreProcess(async (stopped) => {
+    stopInlineCoreProcess(async (stopped) => {
       if (stopped) {
         log("stopped inline core process.");
       } else {

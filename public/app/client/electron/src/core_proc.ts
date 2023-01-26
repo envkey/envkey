@@ -12,7 +12,11 @@ let keepAliveTimeout: ReturnType<typeof setTimeout> | undefined;
 
 let gracefulShutdown: (onShutdown?: () => void) => void;
 
-export const startCore = async (keepAlive = true): Promise<boolean> => {
+export const startCore = async (
+  keepAlive = true,
+  inlineOnly = false
+): Promise<boolean> => {
+  log("startCore", { keepAlive, inlineOnly });
   try {
     let alive = await isAlive();
     log("Core process status", { alive });
@@ -48,7 +52,8 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
     if (
       cliBinPath &&
       cliCurrent != false &&
-      semver.gte(cliCurrent, cliVersion)
+      semver.gte(cliCurrent, cliVersion) &&
+      !inlineOnly
     ) {
       log("Starting core process daemon via CLI");
 
@@ -96,13 +101,15 @@ export const startCore = async (keepAlive = true): Promise<boolean> => {
     log("Successfully started core process");
     return true;
   } finally {
-    // if (keepAlive) {
-    //   setTimeout(keepAliveLoop, 10000);
-    // }
+    if (keepAlive) {
+      setTimeout(keepAliveLoop, 10000);
+    }
   }
 };
 
-export const stopCoreProcess = (onShutdown?: (stopped: boolean) => void) => {
+export const stopInlineCoreProcess = (
+  onShutdown?: (stopped: boolean) => void
+) => {
   if (keepAliveTimeout) {
     clearTimeout(keepAliveTimeout);
     keepAliveTimeout = undefined;

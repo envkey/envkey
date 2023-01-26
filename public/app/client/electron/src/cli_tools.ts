@@ -19,6 +19,8 @@ import tempDir from "temp-dir";
 import * as sudoPrompt from "@vscode/sudo-prompt";
 import { UpgradeProgress } from "@core/types/electron";
 import * as R from "ramda";
+import { stop } from "@core/lib/core_proc";
+import { stopInlineCoreProcess, startCore } from "./core_proc";
 
 const MINISIGN_PUBKEY =
   "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK";
@@ -50,7 +52,8 @@ export const downloadAndInstallCliTools = async (
     };
   },
   installType: "install" | "upgrade",
-  onProgress?: (p: UpgradeProgress) => void
+  onProgress?: (p: UpgradeProgress) => void,
+  upgradingDesktop?: boolean
 ) => {
   let cliFolder: string | undefined;
   let envkeysourceFolder: string | undefined;
@@ -70,7 +73,13 @@ export const downloadAndInstallCliTools = async (
   }
 
   try {
-    await install(params, cliFolder, envkeysourceFolder, installType);
+    await install(
+      params,
+      cliFolder,
+      envkeysourceFolder,
+      installType,
+      upgradingDesktop
+    );
   } catch (err) {
     log("Error installing CLI tools upgrade", { err });
     throw err;
@@ -146,6 +155,10 @@ const isLatestInstalled = async (
     getCurrentVersion(project),
     getLatestVersion(project),
   ]);
+
+  if (project == "cli") {
+    log("", { currentVersion, nextVersion });
+  }
 
   if (!currentVersion || currentVersion != nextVersion) {
     return [nextVersion, currentVersion];
@@ -307,7 +320,8 @@ const install = async (
   },
   cliFolder: string | undefined,
   envkeysourceFolder: string | undefined,
-  installType: "install" | "upgrade"
+  installType: "install" | "upgrade",
+  upgradingDesktop?: boolean
 ): Promise<void> => {
   // installs envkey-source as envkey-source-v2 if envkey-source v1 is already installed to avoid overwriting it and breaking things
   if (envkeysourceFolder && (await hasV1Envkeysource())) {
@@ -336,6 +350,18 @@ const install = async (
       throw new Error(
         `Cannot install CLI tools to unsupported platform ${platform}`
       );
+  }
+
+  // If we're on windows and upgrading the CLI, first kill core process and move to inline prior to upgrade
+  if (platform == "win32" && installType == "upgrade" && cliFolder) {
+    log("first kill core process and move to inline prior to upgrade");
+    await stop();
+    await new Promise((resolve, reject) => {
+      stopInlineCoreProcess((stopped) => {
+        resolve(stopped);
+      });
+    });
+    await startCore(false, true);
   }
 
   await copyExecFiles(cliFolder, envkeysourceFolder, binDir);
@@ -409,6 +435,23 @@ const install = async (
           });
       }
     }
+  }
+
+  // If we're on windows and upgrading the CLI, now kill inline core proc and restart with latest version
+  if (
+    platform == "win32" &&
+    installType == "upgrade" &&
+    cliFolder &&
+    !upgradingDesktop
+  ) {
+    log("now kill inline core proc and restart with latest version");
+    await new Promise((resolve, reject) => {
+      stopInlineCoreProcess((stopped) => {
+        resolve(stopped);
+      });
+    });
+
+    await startCore(true);
   }
 
   log(`CLI tools upgrade: completed successfully`, {
@@ -602,7 +645,7 @@ const copyExecFiles = async (
         files
       );
     } else {
-      if (platform == "win32" && err.code == "EBUSY") {
+      if (platform == "win32" && err.code == "EBUSY" && envkeysourceFolder) {
         await dialog.showMessageBox({
           title: "EnvKey CLI",
           message: `In order to upgrade, any running envkey-source.exe processes will be closed`,

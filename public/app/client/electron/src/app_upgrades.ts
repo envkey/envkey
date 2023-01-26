@@ -152,6 +152,7 @@ export const checkUpgrade = async (
 
   const hasCliUpgrade =
     currentCliVersion && nextCliVersion && currentCliVersion != nextCliVersion;
+
   const hasEnvkeysourceUpgrade =
     currentEnvkeysourceVersion &&
     nextEnvkeysourceVersion &&
@@ -274,8 +275,12 @@ export const downloadAndInstallUpgrade = async () => {
 
   await Promise.all([
     upgradeAvailable.cli || upgradeAvailable.envkeysource
-      ? downloadAndInstallCliTools(upgradeAvailable, "upgrade", (progress) =>
-          getWin()!.webContents.send("upgrade-progress", progress)
+      ? downloadAndInstallCliTools(
+          upgradeAvailable,
+          "upgrade",
+          (progress) =>
+            getWin()!.webContents.send("upgrade-progress", progress),
+          Boolean(upgradeAvailable.desktop)
         )
           .then(() => {
             log("CLI tools upgraded ok");
