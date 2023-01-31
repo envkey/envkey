@@ -154,7 +154,7 @@ test('it not ovewrrite existing process.env var with "permitted" option', () => 
   clearEnv()
 })
 
-test.only('ENVKEY_VERSION from loader.js should match package.json version', ()=> {
+test('ENVKEY_VERSION from loader.js should match package.json version', ()=> {
   var loader = require("../loader.js")
   var pkg = require("../package.json")
 
