@@ -1,4 +1,3 @@
-
 const VALID_ENVKEY = "ekAc8p6PiPp1Di7nQu5vGomx-qXknocWWVYqyVMaxaBco12",
   INVALID_ENVKEY = "ekunDrefdPeELwPpupdzJpsz-2Hs3HCiscoY1TfGinvalid",
   INVALID_ENVKEY2 = "ekunDrefdPeELwPpuinvalid-2Hs3HCiscoY1TfGcVdefum",
@@ -153,5 +152,12 @@ test('it not ovewrrite existing process.env var with "permitted" option', () => 
   expect(process.env.TEST).toBe("otherthing")
   expect(process.env.TEST_2).toBeUndefined()
   clearEnv()
+})
+
+test.only('ENVKEY_VERSION from loader.js should match package.json version', ()=> {
+  var loader = require("../loader.js")
+  var pkg = require("../package.json")
+
+  expect(loader.ENVKEY_VERSION).toBe(pkg.version)
 })
 

@@ -6,6 +6,7 @@ var path = require('path'),
     execFileSync = childProcess.execFileSync
 
 var ENVKEY_SOURCE_VERSION = "2.1.3"
+var ENVKEY_VERSION = "2.1.2"
 
 function keyError(){
   return "ENVKEY invalid. Couldn't load vars."
@@ -134,7 +135,7 @@ function fetch(optsOrCb, maybeCb){
 
   var ext = platformPart == "windows" ? ".exe" : "",
       filePath = path.join(__dirname, "ext", ["envkey-source", ENVKEY_SOURCE_VERSION, platformPart, archPart].join("_"), ("envkey-source" + ext)),
-      execArgs = ["--json", (shouldCache ? "--cache" : ""), "--client-name", "envkey-node", "--client-version", "2.1.2"]
+      execArgs = ["--json", (shouldCache ? "--cache" : ""), "--client-name", "envkey-node", "--client-version", ENVKEY_VERSION]
 
   if (cb){
     execFile(filePath, execArgs, { env: process.env }, function(err, stdoutStr, stderrStr){
@@ -176,4 +177,4 @@ function fetch(optsOrCb, maybeCb){
   }
 }
 
-module.exports = { load: load, fetch: fetch}
+module.exports = { load: load, fetch: fetch, ENVKEY_VERSION: ENVKEY_VERSION}
