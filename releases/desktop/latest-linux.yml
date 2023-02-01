@@ -1,9 +1,9 @@
-version: 2.2.10
+version: 2.2.11
 files:
-  - url: EnvKey-2.2.10.AppImage
-    sha512: ET/teAByOuStHnPEIm1EaqRaklabvpzb/P83G0R4HGdCPRVWkCu0Oua5xnRBgqcIPfLAfHbY9BdHB2KVzj1RJA==
-    size: 90247115
-    blockMapSize: 94175
-path: EnvKey-2.2.10.AppImage
-sha512: ET/teAByOuStHnPEIm1EaqRaklabvpzb/P83G0R4HGdCPRVWkCu0Oua5xnRBgqcIPfLAfHbY9BdHB2KVzj1RJA==
-releaseDate: '2023-01-26T19:25:18.106Z'
+  - url: EnvKey-2.2.11.AppImage
+    sha512: U06jD93VgvNZjguC66dkXcytLw4KxTCKxtcioKZdy1KHkbAxJN+OfV0IIudnoLECxGHNUu84nrxg8qOnzlluhA==
+    size: 90247060
+    blockMapSize: 94120
+path: EnvKey-2.2.11.AppImage
+sha512: U06jD93VgvNZjguC66dkXcytLw4KxTCKxtcioKZdy1KHkbAxJN+OfV0IIudnoLECxGHNUu84nrxg8qOnzlluhA==
+releaseDate: '2023-02-01T18:40:21.615Z'

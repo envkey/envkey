@@ -1,4 +1,3 @@
-import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import * as R from "ramda";
 import { Client, Model, Api } from "@core/types";
 import { EnvsUiPermissions, OrgComponentProps } from "@ui_types";
@@ -63,8 +62,6 @@ export const getEnvsUiPermissions = (
     props: OrgComponentProps,
     envParentIdOrIds: string | string[]
   ) => {
-    const currentUserId = props.ui.loadedAccountId!;
-
     let shouldFetch = false;
     const toFetchEnvs: Api.Net.FetchEnvsParams["byEnvParentId"] = {};
 
@@ -86,7 +83,6 @@ export const getEnvsUiPermissions = (
     }
 
     for (let envParentId of envParentIds) {
-      const envParent = props.core.graph[envParentId] as Model.EnvParent;
       if (props.core.isFetchingEnvs[envParentId]) {
         continue;
       }
@@ -97,26 +93,6 @@ export const getEnvsUiPermissions = (
       ) {
         shouldFetch = true;
         toFetchEnvs[envParentId] = { envs: true };
-      } else if (
-        !props.core.fetchEnvsErrors[envParentId] &&
-        envParent.envsUpdatedAt
-      ) {
-        const visibleEnvironments = g.authz.getVisibleBaseEnvironments(
-          props.core.graph,
-          currentUserId,
-          envParentId
-        );
-
-        for (let { id: environmentId } of visibleEnvironments) {
-          const composite = getUserEncryptedKeyOrBlobComposite({
-            environmentId,
-          });
-          if (!props.core.envs[composite]) {
-            shouldFetch = true;
-            toFetchEnvs[envParentId] = { envs: true };
-            break;
-          }
-        }
       }
     }
 

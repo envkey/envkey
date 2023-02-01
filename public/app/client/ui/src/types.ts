@@ -61,6 +61,7 @@ export type ComponentBaseProps = {
   ui: LocalUiState;
   setUiState: (state: Partial<LocalUiState>) => void;
   refreshCoreState: (params?: {
+    forceUpdate?: boolean;
     keys?: (keyof Client.State)[];
   }) => Promise<void>;
   winWidth: number;
