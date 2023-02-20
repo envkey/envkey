@@ -316,7 +316,8 @@ export const envUpdateAction = <
       ...graphTypes(state.graph).blocks,
     ].map(R.prop("id"));
 
-    const userIds = graphTypes(state.graph).orgUsers.map(R.prop("id"));
+    const { orgUsers, cliUsers } = graphTypes(state.graph);
+    const userIds = [...orgUsers, ...cliUsers].map(R.prop("id"));
 
     const localIds = R.flatten(
       envParentIds.map((envParentId) => {

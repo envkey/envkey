@@ -390,7 +390,18 @@ export const verifyCurrentUser = async (
 
         return state;
       } else {
-        if (!signedById || !signedByPubkeyId || !invitePubkey) {
+        if (!signedById || !signedByPubkeyId) {
+          log("Keyable could not be verified.", {
+            currentKeyableId,
+            pubkeyId,
+            keyableType,
+            signedById,
+            signedByPubkeyId,
+            pubkey,
+            invitePubkey,
+            isRoot,
+            verifyingChain,
+          });
           throw new Error("Keyable could not be verified.");
         }
 

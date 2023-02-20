@@ -32,14 +32,19 @@ describe("cli users", () => {
       deviceId: ownerDeviceId,
     } = await registerWithEmail(email));
 
+    // console.log("create app and block");
     [{ id: appId }, { id: blockId }] = [
       await createApp(ownerId),
       await createBlock(ownerId),
     ];
 
+    // console.log("update envs");
     await updateEnvs(ownerId, appId);
+    // console.log("update locals");
     await updateLocals(ownerId, appId);
+    // console.log("update envs");
     await updateEnvs(ownerId, blockId);
+    // console.log("update locals");
     await updateLocals(ownerId, blockId);
   });
 
@@ -49,6 +54,7 @@ describe("cli users", () => {
     const { orgRoles } = graphTypes(state.graph),
       orgAdminRole = R.indexBy(R.prop("name"), orgRoles)["Org Admin"];
 
+    // console.log("create cli user");
     const createPromise = dispatch(
       {
         type: Client.ActionType.CREATE_CLI_USER,
@@ -70,6 +76,7 @@ describe("cli users", () => {
 
     const { cliKey } = state.generatedCliUsers[0];
 
+    // console.log("test envs update with cli user");
     // test envs update with cli user
     for (let envParentId of [appId, blockId]) {
       const environments = getEnvironments(ownerId, envParentId),
@@ -103,6 +110,7 @@ describe("cli users", () => {
       );
     }
 
+    // console.log("commit envs");
     await dispatch(
       {
         type: Client.ActionType.COMMIT_ENVS,
@@ -113,6 +121,7 @@ describe("cli users", () => {
 
     let cliUserId: string;
 
+    // console.log("authenticate cli user");
     const authPromise = dispatch(
       {
         type: Client.ActionType.AUTHENTICATE_CLI_KEY,
@@ -136,6 +145,7 @@ describe("cli users", () => {
 
     cliUserId = cliAuth!.userId;
 
+    // console.log("fetch envs with changesets");
     await dispatch(
       {
         type: Client.ActionType.FETCH_ENVS,
@@ -230,14 +240,18 @@ describe("cli users", () => {
       ])
     );
 
+    // console.log("create app with cli user");
     const { id: newAppId } = await createApp(cliKey);
 
+    // console.log("update new app envs with cli user");
     await updateEnvs(cliKey, newAppId);
+    // console.log("update new app locals with cli user");
     await updateLocals(cliKey, newAppId);
 
+    // console.log("fetch envs with changesets with cli user");
     await fetchEnvsWithChangesets(cliKey, newAppId);
 
-    // delete cli user
+    // console.log("delete cli user");
     await testRemoveUser({
       actorId: ownerId,
       targetId: cliUserId,

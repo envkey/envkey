@@ -1,4 +1,3 @@
-import { getTempStore } from "../redux_store";
 import { getDefaultApiHostUrl } from "./../../../shared/src/env";
 import { Client, Api, Crypto, Model } from "@core/types";
 import { clientAction, dispatch } from "../handler";

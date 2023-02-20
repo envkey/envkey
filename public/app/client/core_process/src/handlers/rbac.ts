@@ -1,4 +1,3 @@
-import { getTempStore } from "../redux_store";
 import * as R from "ramda";
 import { Client, Api } from "@core/types";
 import { clientAction, dispatch } from "../handler";

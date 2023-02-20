@@ -496,7 +496,6 @@ clientAction<
           context
         );
       }
-
       state = fetchRes.state;
     }
 
@@ -736,19 +735,18 @@ clientAction<
 
         return res;
       }, {} as Client.State["envs"]),
-      changesets:
-        payload.initEnvs || payload.upgradeCrypto
-          ? ({} as Client.State["changesets"])
-          : pendingEnvironmentIds.reduce(
-              (agg, environmentId) => ({
-                ...agg,
-                [environmentId]: {
-                  key: changesetKeysByEnvironmentId[environmentId],
-                  changesets: state.changesets[environmentId]?.changesets ?? [],
-                },
-              }),
-              {} as Client.State["changesets"]
-            ),
+      changesets: payload.upgradeCrypto
+        ? ({} as Client.State["changesets"])
+        : pendingEnvironmentIds.reduce(
+            (agg, environmentId) => ({
+              ...agg,
+              [environmentId]: {
+                key: changesetKeysByEnvironmentId[environmentId],
+                changesets: state.changesets[environmentId]?.changesets ?? [],
+              },
+            }),
+            {} as Client.State["changesets"]
+          ),
     };
 
     // log("got dispatchContext: " + (Date.now() - start).toString());

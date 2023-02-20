@@ -192,9 +192,17 @@ export const encryptedKeyParamsForEnvironments = async (params: {
     }
 
     let changesetsToReencrypt: Client.Env.Changeset[] | undefined;
-    if ((pending || initEnvs) && !reencryptChangesets) {
-      changesetsSymmetricKey =
-        state.changesets[environmentId]?.key ?? symmetricEncryptionKey();
+    if (pending && !reencryptChangesets) {
+      changesetsSymmetricKey = state.changesets[environmentId]?.key;
+
+      if (!changesetsSymmetricKey) {
+        const msg = "Missing changesets symmetric key for pending changes";
+        const err = new Error(msg);
+        log(msg, { environmentId, pending, initEnvs, stack: err.stack });
+        throw err;
+      }
+    } else if (initEnvs && !reencryptChangesets) {
+      changesetsSymmetricKey = symmetricEncryptionKey();
     } else if (reencryptChangesets) {
       ensureChangesetsFetched(state, envParentId);
 

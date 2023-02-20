@@ -1,4 +1,3 @@
-import { getTempStore } from "../redux_store";
 import { clearNonPendingEnvsProducer } from "./../lib/envs/updates";
 import {
   processRootPubkeyReplacementsIfNeeded,

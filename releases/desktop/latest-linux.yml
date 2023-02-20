@@ -1,9 +1,0 @@
-version: 2.2.11
-files:
-  - url: EnvKey-2.2.11.AppImage
-    sha512: U06jD93VgvNZjguC66dkXcytLw4KxTCKxtcioKZdy1KHkbAxJN+OfV0IIudnoLECxGHNUu84nrxg8qOnzlluhA==
-    size: 90247060
-    blockMapSize: 94120
-path: EnvKey-2.2.11.AppImage
-sha512: U06jD93VgvNZjguC66dkXcytLw4KxTCKxtcioKZdy1KHkbAxJN+OfV0IIudnoLECxGHNUu84nrxg8qOnzlluhA==
-releaseDate: '2023-02-01T18:40:21.615Z'

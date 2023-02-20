@@ -1,4 +1,3 @@
-import { getTempStore } from "../redux_store";
 import { Draft } from "immer";
 import { deleteProposer } from "../lib/graph";
 import { stripEmptyRecursive, pickDefined } from "@core/lib/utils/object";
@@ -97,8 +96,10 @@ clientAction<Client.Action.ClientActions["CreateApp"]>({
       getEnvironmentsByEnvParentId(state.graph)[app.id] ?? []
     ).map(R.prop("id"));
 
-    const localIds = graphTypes(state.graph)
-      .orgUsers.filter((user) =>
+    const { orgUsers, cliUsers } = graphTypes(state.graph);
+
+    const localIds = [...orgUsers, ...cliUsers]
+      .filter((user) =>
         authz.canUpdateLocals(state.graph, auth.userId, app.id, user.id)
       )
       .map((user) => `${app.id}|${user.id}`);

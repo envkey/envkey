@@ -1,4 +1,3 @@
-import { getTempStore } from "../redux_store";
 import { deleteProposer } from "../lib/graph";
 import * as R from "ramda";
 import { Client, Api, Model } from "@core/types";
@@ -66,8 +65,10 @@ clientAction<Client.Action.ClientActions["CreateBlock"]>({
       getEnvironmentsByEnvParentId(state.graph)[block.id] ?? []
     ).map(R.prop("id"));
 
-    const localIds = graphTypes(state.graph)
-      .orgUsers.filter((user) =>
+    const { orgUsers, cliUsers } = graphTypes(state.graph);
+
+    const localIds = [...orgUsers, ...cliUsers]
+      .filter((user) =>
         authz.canUpdateLocals(state.graph, auth.userId, block.id, user.id)
       )
       .map((user) => `${block.id}|${user.id}`);
