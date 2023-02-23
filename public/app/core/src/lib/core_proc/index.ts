@@ -54,6 +54,18 @@ export const clientId = uuid(), // unique per client (ephemeral)
       .catch((err) => {
         return false;
       }),
+  isInline = (timeout?: number) =>
+    coreMethod("inline", undefined, { timeout: timeout ?? 5000 })
+      .then((res) => {
+        if (!res.ok) {
+          return false;
+        }
+
+        return res.json().then((json) => json.isInline);
+      })
+      .catch((err) => {
+        return false;
+      }),
   stop = async () => {
     try {
       const res = await coreMethod("stop", undefined, { timeout: 2000 });

@@ -52,33 +52,37 @@ export const startCore = async (
     if (
       cliBinPath &&
       cliCurrent != false &&
-      semver.gte(cliCurrent, cliVersion) &&
-      !inlineOnly
+      semver.gte(cliCurrent, cliVersion)
     ) {
-      log("Starting core process daemon via CLI");
+      if (inlineOnly) {
+        log("inlineOnly, not starting core process via CLI");
+      } else {
+        log("Starting core process daemon via CLI");
 
-      await new Promise<void>((resolve, reject) => {
-        const child = exec(
-          `"${cliBinPath}" core start`,
-          {
-            env: {
-              LOG_REQUESTS: "1",
+        await new Promise<void>((resolve, reject) => {
+          const child = exec(
+            `"${cliBinPath}" core start`,
+            {
+              env: {
+                LOG_REQUESTS: "1",
+              },
             },
-          },
-          (err) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve();
+            (err) => {
+              if (err) {
+                reject(err);
+              } else {
+                log("Executed core start command");
+                resolve();
+              }
             }
-          }
-        );
-        child.unref();
-        startedCore = true;
-      }).catch((err) => {
-        log("Error starting core process daemon from CLI");
-        error = true;
-      });
+          );
+          child.unref();
+          startedCore = true;
+        }).catch((err) => {
+          log("Error starting core process daemon from CLI");
+          error = true;
+        });
+      }
     } else if (!cliBinPath) {
       log("Couldn't find CLI");
     } else {
@@ -91,6 +95,7 @@ export const startCore = async (
       ({ gracefulShutdown } = await start(19047, 19048));
     }
 
+    log("Waiting for core proc alive...");
     while (true) {
       alive = await isAlive(200);
       if (alive) {

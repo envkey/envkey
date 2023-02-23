@@ -61,6 +61,10 @@ export const start = async (port = 19047, wsport = 19048) => {
     res.status(200).json({ cliVersion });
   });
 
+  app.get("/inline", (req, res) => {
+    res.status(200).json({ isInline: Boolean(process.env.IS_ELECTRON) });
+  });
+
   app.use(loggerMiddleware);
 
   app.get("/stop", (req, res) => {

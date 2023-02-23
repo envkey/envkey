@@ -19,7 +19,7 @@ import tempDir from "temp-dir";
 import * as sudoPrompt from "@vscode/sudo-prompt";
 import { UpgradeProgress } from "@core/types/electron";
 import * as R from "ramda";
-import { stop } from "@core/lib/core_proc";
+import { isInline, stop } from "@core/lib/core_proc";
 import { stopInlineCoreProcess, startCore } from "./core_proc";
 
 const MINISIGN_PUBKEY =
@@ -354,14 +354,17 @@ const install = async (
 
   // If we're on windows and upgrading the CLI, first kill core process and move to inline prior to upgrade
   if (platform == "win32" && installType == "upgrade" && cliFolder) {
-    log("first kill core process and move to inline prior to upgrade");
-    await stop();
-    await new Promise((resolve, reject) => {
-      stopInlineCoreProcess((stopped) => {
-        resolve(stopped);
+    const runningInline = await isInline();
+
+    if (!runningInline) {
+      await stop();
+      await new Promise((resolve, reject) => {
+        stopInlineCoreProcess((stopped) => {
+          resolve(stopped);
+        });
       });
-    });
-    await startCore(false, true);
+      await startCore(false, true);
+    }
   }
 
   await copyExecFiles(cliFolder, envkeysourceFolder, binDir);

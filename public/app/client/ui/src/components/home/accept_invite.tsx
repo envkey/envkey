@@ -121,7 +121,13 @@ export const AcceptInvite: Component = (props) => {
     setRunningSSOLoop(false);
 
     setExternalAuthErrorMessage(
-      typeof e === "string" ? e : "errorReason" in e ? e.errorReason : e.type
+      typeof e === "string"
+        ? e
+        : "errorReason" in e
+        ? e.errorReason
+        : e.type == "clientError"
+        ? e.error.name + " - " + e.error.message
+        : e.type
     );
   }, [
     props.core.startingExternalAuthSessionError,
@@ -590,7 +596,10 @@ export const AcceptInvite: Component = (props) => {
           </div>
 
           {externalAuthErrorMessage ? (
-            <p className={"error"}>{externalAuthErrorMessage}</p>
+            <p className={"error"}>
+              There was an error authorizing with SSO:{" "}
+              {externalAuthErrorMessage}
+            </p>
           ) : null}
         </div>
         {renderButtons()}

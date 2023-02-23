@@ -49,13 +49,15 @@ const getDevicesComponent = (isTopLevel?: true) => {
       }
 
       let userId = props.routeParams.userId ?? currentUserId;
-      if (!userIds.has(userId)) {
+      if (!userIds.has(userId) && users.length > 0) {
         userId = users[0].id;
       }
 
-      const devices = (
-        g.getActiveOrgUserDevicesByUserId(graph)[userId] ?? []
-      ).filter(({ approvedAt }) => approvedAt);
+      const devices = userId
+        ? (g.getActiveOrgUserDevicesByUserId(graph)[userId] ?? []).filter(
+            ({ approvedAt }) => approvedAt
+          )
+        : [];
 
       return [users, userId, devices];
     }, [graphUpdatedAt, currentUserId, props.routeParams.userId]);

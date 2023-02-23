@@ -252,11 +252,11 @@ const maybeLog = (msg: string, data?: object) => {
     return fallbackStore().delete(k);
   },
   getKey = async (k: string) => {
-    if (cache[k]) {
-      return cache[k];
-    }
     if (promiseCache[k]) {
       return promiseCache[k];
+    }
+    if (cache[k]) {
+      return cache[k];
     }
 
     if (needsKeytar) {
@@ -265,6 +265,7 @@ const maybeLog = (msg: string, data?: object) => {
         .getPassword(SERVICE_NAME, k)
         .then((v) => (v ? JSON.parse(v) : v));
       cache[k] = await promiseCache[k];
+      delete promiseCache[k];
     } else {
       maybeLog(`Fetching ${k} from file store...`);
       cache[k] = (fallbackStore().get(k) ?? null) as {} | null;
