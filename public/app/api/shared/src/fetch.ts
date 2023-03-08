@@ -55,6 +55,7 @@ export const getFetchResponse = (
                 ])
               )
             : undefined,
+        v1Payload: generatedEnvkey.v1Payload,
       },
       responseBlocksById: { [blockId: string]: Fetch.KeyableBlob } = {};
 

@@ -47,6 +47,7 @@ export const ProductSchema = z
   .object({
     type: z.literal("product"),
     id: z.string(),
+    plan: PlanTypeSchema,
 
     name: z.string(),
 
@@ -103,7 +104,7 @@ export const SubscriptionSchema = z
     canceledAt: z.number().optional(),
     currentPeriodStartsAt: z.number().optional(),
     currentPeriodEndsAt: z.number().optional(),
-    promotionCode: z.string().optional(),
+    hasPromotionCode: z.boolean().optional(),
     amountOff: z.number().optional(),
     percentOff: z.number().optional(),
   })

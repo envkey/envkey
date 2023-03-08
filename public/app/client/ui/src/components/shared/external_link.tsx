@@ -1,7 +1,7 @@
 import React from "react";
 import * as styles from "@styles";
 import { Client } from "@core/types";
-import { Component } from "@ui_types";
+import { ComponentBaseProps } from "@ui_types";
 import { logAndAlertError } from "@ui_lib/errors";
 
 type Props = {
@@ -9,7 +9,7 @@ type Props = {
   className?: string;
 };
 
-export const ExternalLink: Component<{}, Props> = ({
+export const ExternalLink: React.FC<ComponentBaseProps & Props> = ({
   to,
   className,
   children,

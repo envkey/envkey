@@ -1,3 +1,4 @@
+import { getDefaultApiHostUrl } from "./../../../shared/src/env";
 import { clearNonPendingEnvsProducer } from "./../lib/envs/updates";
 import {
   processRootPubkeyReplacementsIfNeeded,
@@ -98,14 +99,16 @@ clientAction<
         res = await dispatch<Api.Action.BulkGraphAction>(
           {
             type: Api.ActionType.BULK_GRAPH_ACTION,
-            payload: inviteRes.map(([payload]) => ({
-              type: Api.ActionType.CREATE_INVITE,
-              payload,
-              meta: {
-                loggableType: "orgAction",
-                graphUpdatedAt: stateWithFetched?.graphUpdatedAt,
-              },
-            })) as Api.Action.BulkGraphAction["payload"],
+            payload: inviteRes.map(([payload]) => {
+              return {
+                type: Api.ActionType.CREATE_INVITE,
+                payload,
+                meta: {
+                  loggableType: "orgAction",
+                  graphUpdatedAt: stateWithFetched?.graphUpdatedAt,
+                },
+              };
+            }) as Api.Action.BulkGraphAction["payload"],
           },
           { ...context, rootClientAction: action }
         );
@@ -218,7 +221,7 @@ clientAction<
 >({
   type: "asyncClientAction",
   actionType: Client.ActionType.LOAD_INVITE,
-  stateProducer: (draft) => {
+  stateProducer: (draft, { payload }) => {
     draft.isLoadingInvite = true;
     delete draft.loadedInviteIdentityHash;
     delete draft.loadedInvitePrivkey;
@@ -226,11 +229,15 @@ clientAction<
     delete draft.loadInviteError;
     delete draft.loadedInviteEmailToken;
     delete draft.loadedInviteOrgId;
+
+    if (payload.isV1Upgrade) {
+      draft.v1UpgradeStatus = "upgrading";
+    }
   },
   endStateProducer: (draft) => {
     delete draft.isLoadingInvite;
   },
-  failureStateProducer: (draft, { payload }) => {
+  failureStateProducer: (draft, { payload, meta }) => {
     draft.loadInviteError = payload;
 
     draft.graph = {};
@@ -239,6 +246,10 @@ clientAction<
     delete draft.trustedRoot;
     draft.trustedSessionPubkeys = {};
     delete draft.loadedInvite;
+
+    if (meta.rootAction.payload.isV1Upgrade) {
+      draft.v1UpgradeStatus = "error";
+    }
   },
 
   successStateProducer: (draft, action) => {
@@ -257,10 +268,13 @@ clientAction<
   ) => {
     let state = initialState;
     const { payload } = action;
-    const [identityHash, encryptionKey] = payload.encryptionToken.split("_"),
-      hostUrl = naclUtil.encodeUTF8(
-        decodeBase58(payload.emailToken.split("_")[2])
-      ),
+    const [identityHash, encryptionKey] = payload.encryptionToken.split("_");
+
+    const isUpgradeToken = !payload.emailToken.startsWith("i_");
+
+    const hostUrl = isUpgradeToken
+        ? getDefaultApiHostUrl()
+        : naclUtil.encodeUTF8(decodeBase58(payload.emailToken.split("_")[2])),
       apiRes = await dispatch(
         {
           type: Api.ActionType.LOAD_INVITE,
@@ -467,8 +481,13 @@ clientAction<Client.Action.ClientActions["AcceptInvite"]>({
   stateProducer: (draft) => {
     draft.isAcceptingInvite = true;
   },
-  successStateProducer: (draft) => {
+  successStateProducer: (draft, { payload, meta }) => {
     draft.didAcceptInvite = true;
+
+    if (meta.rootAction.payload.isV1Upgrade) {
+      draft.v1UpgradeStatus = "finished";
+      draft.v1UpgradeAcceptedInvite = true;
+    }
   },
   endStateProducer: (draft) => {
     delete draft.isAcceptingInvite;
@@ -479,13 +498,17 @@ clientAction<Client.Action.ClientActions["AcceptInvite"]>({
     delete draft.loadedInviteEmailToken;
     delete draft.loadedInviteHostUrl;
   },
-  failureStateProducer: (draft, { payload }) => {
+  failureStateProducer: (draft, { payload, meta }) => {
     draft.acceptInviteError = payload;
     draft.graph = {};
     delete draft.graphUpdatedAt;
     delete draft.trustedRoot;
     delete draft.signedTrustedRoot;
     draft.trustedSessionPubkeys = {};
+
+    if (meta.rootAction.payload.isV1Upgrade) {
+      draft.v1UpgradeStatus = "error";
+    }
   },
   handler: async (
     state,
@@ -523,18 +546,20 @@ clientAction<Client.Action.ClientActions["AcceptInvite"]>({
         privkey: state.loadedInvitePrivkey!,
         pubkey,
       }),
-      trustedRoot = state.trustedRoot!,
-      [envParams, signedTrustedRoot] = await Promise.all([
-        encryptedKeyParamsForDeviceOrInvitee({
-          state,
-          privkey,
-          pubkey: signedPubkey,
-          userId: state.loadedInvite.inviteeId,
-          context,
-        }),
-        signJson({ data: trustedRoot, privkey }),
-      ]),
-      authProps = {
+      trustedRoot = state.trustedRoot!;
+
+    const [envParams, signedTrustedRoot] = await Promise.all([
+      encryptedKeyParamsForDeviceOrInvitee({
+        state,
+        privkey,
+        pubkey: signedPubkey,
+        userId: state.loadedInvite.inviteeId,
+        context,
+      }),
+      signJson({ data: trustedRoot, privkey }),
+    ]);
+
+    const authProps = {
         type: <const>"acceptInviteAuthParams",
         identityHash: state.loadedInviteIdentityHash,
         emailToken: state.loadedInviteEmailToken,
@@ -580,6 +605,14 @@ clientAction<Client.Action.ClientActions["AcceptInvite"]>({
 
     if (apiRes.success) {
       await verifyCurrentUser(apiRes.state, apiSuccessContext);
+
+      if (action.payload.isV1Upgrade) {
+        await dispatch(
+          { type: Client.ActionType.RESET_V1_UPGRADE, payload: {} },
+          apiSuccessContext
+        );
+      }
+
       return dispatchSuccess(null, context);
     } else {
       return dispatchFailure((apiRes.resultAction as any).payload, context);
@@ -697,6 +730,7 @@ const inviteUser = async (
         user: clientParams.user,
         scim: clientParams.scim,
         appUserGrants: clientParams.appUserGrants,
+        v1Token: clientParams.v1Token,
       },
       encryptionKey,
     ];

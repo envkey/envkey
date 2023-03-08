@@ -30,6 +30,24 @@ import {
   getResolveProductAndQuantityFn,
   getCancelSubscriptionFn,
 } from "../billing";
+import { PoolConnection } from "mysql2/promise";
+
+let initV1UpgradeBillingFn:
+  | ((
+      transactionConn: PoolConnection,
+      org: Api.Db.Org,
+      orgUser: Api.Db.OrgUser,
+      orgGraph: Api.Graph.OrgGraph,
+      now: number,
+      v1Upgrade: Api.V1Upgrade.Upgrade,
+      isExistingOrgUpgrade?: boolean
+    ) => Promise<[Api.Graph.OrgGraph, Api.Db.ObjectTransactionItems]>)
+  | undefined;
+export const registerInitV1UpgradeBillingFn = (
+  fn: typeof initV1UpgradeBillingFn
+) => {
+  initV1UpgradeBillingFn = fn;
+};
 
 apiAction<
   Api.Action.RequestActions["UpdateOrgSettings"],
@@ -90,16 +108,29 @@ apiAction<
 
 apiAction<
   Api.Action.RequestActions["StartedOrgImport"],
-  Api.Net.ApiResultTypes["StartedOrgImport"]
+  Api.Net.ApiResultTypes["StartedOrgImport"],
+  Auth.TokenAuthContext
 >({
   type: Api.ActionType.STARTED_ORG_IMPORT,
   graphAction: true,
   authenticated: true,
   graphScopes: [(auth) => () => [auth.user.skey + "$"]],
   graphAuthorizer: async (action, orgGraph, userGraph, auth) =>
-    authz.canRenameOrg(userGraph, auth.user.id),
-  graphHandler: async ({ payload }, orgGraph, auth, now) => {
+    authz.hasOrgPermission(
+      userGraph,
+      auth.user.id,
+      "org_archive_import_export"
+    ),
+  graphHandler: async (
+    { payload },
+    orgGraph,
+    auth,
+    now,
+    requestParams,
+    transactionConn
+  ) => {
     let updatedGraph = orgGraph;
+    let transactionItems: Api.Db.ObjectTransactionItems = {};
 
     if (env.IS_CLOUD) {
       // on cloud, don't send lifecycle emails if it's an imported org
@@ -111,6 +142,26 @@ apiAction<
           (graphDraft[id] as Draft<Api.Db.OrgUser>).updatedAt = now;
         }
       });
+
+      // if upgrading into an existing org, init v2 billing
+      if (payload.isV1UpgradeIntoExistingOrg) {
+        if (!initV1UpgradeBillingFn) {
+          throw new Error("initV1UpgradeBillingFn not registered");
+        }
+
+        const res = await initV1UpgradeBillingFn(
+          transactionConn,
+          auth.org,
+          auth.user,
+          updatedGraph,
+          now,
+          payload.v1Upgrade,
+          true
+        );
+
+        updatedGraph = res[0];
+        transactionItems = res[1];
+      }
     }
 
     return {
@@ -124,6 +175,7 @@ apiAction<
           updatedAt: now,
         },
       },
+      transactionItems,
       logTargetIds: [],
     };
   },
@@ -138,7 +190,11 @@ apiAction<
   authenticated: true,
   graphScopes: [(auth) => () => [auth.user.skey + "$"]],
   graphAuthorizer: async (action, orgGraph, userGraph, auth) =>
-    authz.canRenameOrg(userGraph, auth.user.id),
+    authz.hasOrgPermission(
+      userGraph,
+      auth.user.id,
+      "org_archive_import_export"
+    ),
   graphHandler: async ({ payload }, orgGraph, auth, now) => {
     return {
       type: "graphHandlerResult",
@@ -485,6 +541,7 @@ apiAction<
       await cancelSubscriptionFn({
         stripeCustomerId: customer.stripeId,
         stripeSubscriptionId: subscription.stripeId,
+        removePaymentMethods: true,
       });
     }
 

@@ -12,7 +12,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func (response *FetchResponse) Parse(encryptionKey string) (EnvMap, *crypto.Privkey, *crypto.SignedData, []string, error) {
+func (response *FetchResponse) Parse(encryptionKey string, forceV2Only bool) (EnvMap, *crypto.Privkey, *crypto.SignedData, []string, bool, error) {
 	var err error
 	var responseWithKeys *ResponseWithKeys
 	var responseWithTrustChains *ResponseWithTrustChains
@@ -20,31 +20,42 @@ func (response *FetchResponse) Parse(encryptionKey string) (EnvMap, *crypto.Priv
 	var replacementIds []string
 	var decrypted *DecryptedResponse
 
+	if response.V1Payload != nil && !forceV2Only {
+		var v1Map EnvMap
+		v1Map, err = response.V1Payload.LegacyV1Parse(encryptionKey)
+
+		if err != nil {
+			return nil, nil, nil, []string{}, true, err
+		}
+
+		return v1Map, nil, nil, []string{}, true, nil
+	}
+
 	err = response.validate()
 	if err != nil {
-		return nil, nil, nil, []string{}, err
+		return nil, nil, nil, []string{}, false, err
 	}
 
 	responseWithKeys, err = response.parseKeys(encryptionKey)
 	if err != nil {
-		return nil, nil, nil, []string{}, err
+		return nil, nil, nil, []string{}, false, err
 	}
 
 	responseWithTrustChains, newSignedTrustedRoot, replacementIds, err = responseWithKeys.parseTrustChain()
 
 	if err != nil {
-		return nil, nil, nil, []string{}, err
+		return nil, nil, nil, []string{}, false, err
 	}
 
 	decrypted, err = responseWithTrustChains.verifyAndDecrypt()
 
 	if err != nil {
-		return nil, nil, nil, []string{}, err
+		return nil, nil, nil, []string{}, false, err
 	}
 
 	res, err := decrypted.toMap()
 
-	return res, responseWithKeys.DecryptedPrivkey, newSignedTrustedRoot, replacementIds, err
+	return res, responseWithKeys.DecryptedPrivkey, newSignedTrustedRoot, replacementIds, false, err
 }
 
 func (env EnvMap) ToJson() (string, error) {

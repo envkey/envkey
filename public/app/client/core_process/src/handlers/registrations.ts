@@ -88,6 +88,7 @@ clientAction<
         hostType: payload.hostType,
         provider: "email",
         emailVerificationToken: payload.emailVerificationToken,
+        v1Upgrade: payload.v1Upgrade,
       };
     } else {
       registerPayload = {

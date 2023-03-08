@@ -1825,6 +1825,8 @@ const getSummary = (
       return `+updated+ billing settings`;
     case Api.ActionType.CLOUD_BILLING_CHECK_PROMOTION_CODE:
       return `+verify+ promotion code`;
+    case Api.ActionType.CLOUD_BILLING_LOAD_PRODUCTS:
+      return `+load+ cloud plans`;
 
     case Api.ActionType.INTEGRATIONS_VANTA_OAUTH_CALLBACK:
       return `+process+ Vanta integration authentication callback`;

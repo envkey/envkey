@@ -152,6 +152,12 @@ enum ActionType {
   IMPORT_ORG = "envkey/client/IMPORT_ORG",
   SET_IMPORT_ORG_STATUS = "envkey/client/SET_IMPORT_ORG_STATUS",
 
+  LOAD_V1_UPGRADE = "envkey/client/LOAD_V1_UPGRADE",
+  RESET_V1_UPGRADE = "envkey/client/RESET_V1_UPGRADE",
+  START_V1_UPGRADE = "envkey/client/START_V1_UPGRADE",
+
+  LOAD_V1_UPGRADE_INVITE = "envkey/client/LOAD_V1_UPGRADE_INVITE",
+
   EXPORT_ORG = "envkey/client/EXPORT_ORG",
 
   CLEAR_THROTTLE_ERROR = "envkey/client/CLEAR_THROTTLE_ERROR",

@@ -1,9 +1,6 @@
 import { clientAction } from "../handler";
-import { Api, Client } from "@core/types";
+import { Api } from "@core/types";
 import { statusProducers } from "../lib/status";
-import * as R from "ramda";
-import fs from "fs";
-import { log } from "@core/lib/utils/logger";
 
 clientAction<Api.Action.RequestActions["UpdateLicense"]>({
   type: "apiRequestAction",
@@ -144,5 +141,17 @@ clientAction<Api.Action.RequestActions["CloudBillingCheckPromotionCode"]>({
     } else {
       draft.cloudBillingPromotionCode = undefined;
     }
+  },
+});
+
+clientAction<Api.Action.RequestActions["CloudBillingLoadProducts"]>({
+  type: "apiRequestAction",
+  actionType: Api.ActionType.CLOUD_BILLING_LOAD_PRODUCTS,
+  loggableType: "hostAction",
+  authenticated: undefined,
+  ...statusProducers("isLoadingCloudProducts", "loadCloudProductsError"),
+  successStateProducer: (draft, { payload: { products, prices } }) => {
+    draft.cloudProducts = products;
+    draft.cloudPrices = prices;
   },
 });

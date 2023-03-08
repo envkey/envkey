@@ -20,4 +20,5 @@ export * from "./user_blocks";
 export * from "./groups";
 export * from "./scoped";
 export * from "./firewall";
+export * from "../billing";
 export * as authz from "./authz";

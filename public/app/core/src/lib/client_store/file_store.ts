@@ -45,6 +45,7 @@ export const put = async (k: string, v: string | {}) => {
   get = async (k: string) => {
     if (loggingEnabled) log(`Fetching ${k} from file store...`);
     const deviceKey = await getDeviceKey();
+
     if (!deviceKey) {
       // no-op when missing device key
       if (loggingEnabled) {

@@ -40,6 +40,8 @@ export const AppUserAccessRow: OrgComponent<
       inviteStatus == "failed"
     ) {
       contents.push(<span className="role">Invite {inviteStatus + " "}</span>);
+    } else if (inviteStatus == "pending-v1-upgrade") {
+      contents.push(<span className="role">Pending v1 upgrade</span>);
     } else {
       contents.push(
         <span className="role">

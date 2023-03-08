@@ -5,6 +5,7 @@ import { default as _ActionType } from "./action_type";
 import { Graph as _Graph } from "./graph";
 import { Env as _Env } from "./env";
 import { HandlerContext as _HandlerContext } from "./handler_context";
+import { V1Upgrade as _V1Upgrade } from "./v1_upgrade";
 import Client from "../client";
 import { Auth } from "../auth";
 import { Blob } from "../blob";
@@ -13,6 +14,7 @@ import * as Rbac from "../rbac";
 import mysql from "mysql2/promise";
 import { Billing } from "..";
 import { Model } from "..";
+
 import * as Socket from "./socket";
 import WebSocket from "ws";
 
@@ -22,6 +24,7 @@ namespace Api {
   export import Action = _Action;
   export import ActionType = _ActionType;
   export import Graph = _Graph;
+  export import V1Upgrade = _V1Upgrade;
 
   export type Env = _Env;
   export type HandlerContext = _HandlerContext;

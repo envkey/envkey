@@ -548,6 +548,7 @@ describe("import/export archive", () => {
           importCliUsers: true,
           importServers: true,
           regenServerKeys: true,
+          importLocalKeys: true,
         },
       },
       owner2Id

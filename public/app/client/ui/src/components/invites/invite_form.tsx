@@ -122,12 +122,7 @@ export const InviteForm: OrgComponent<{
       numActiveDevicesOrPendingInvites,
       numActiveUsersOrPendingInvites,
     };
-  }, [
-    graphUpdatedAt,
-    props.core.pendingInvites.length,
-    currentUserId,
-    props.ui.now,
-  ]);
+  }, [graphUpdatedAt, props.core.pendingInvites.length, currentUserId]);
 
   const [orgRoleId, setOrgRoleId] = useState(
     editingPendingInvite?.user.orgRoleId ??

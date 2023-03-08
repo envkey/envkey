@@ -30,10 +30,13 @@ export const registerInitOrgStatsFn = (fn: typeof initOrgStatsFn) => {
 
 let initBillingFn:
   | ((
+      transactionConn: PoolConnection,
       org: Api.Db.Org,
       orgUser: Api.Db.OrgUser,
-      now: number
-    ) => Promise<Api.Db.ObjectTransactionItems>)
+      orgGraph: Api.Graph.OrgGraph,
+      now: number,
+      v1Upgrade?: Api.V1Upgrade.Upgrade
+    ) => Promise<[Api.Graph.OrgGraph, Api.Db.ObjectTransactionItems]>)
   | undefined;
 export const registerInitBillingFn = (fn: typeof initBillingFn) => {
   initBillingFn = fn;
@@ -83,18 +86,25 @@ apiAction<
       throw new Api.ApiError("client upgrade required", 426);
     }
 
-    if (payload.provider == "email" && payload.emailVerificationToken) {
-      verifyTokenRes = await verifyEmailToken(
-        email,
-        payload.emailVerificationToken,
-        "sign_up",
-        now,
-        transactionConn
-      );
-      if (!verifyTokenRes) {
-        throw new Api.ApiError("email verification code invalid", 401);
+    let isV1Upgrade = false;
+    if (payload.provider == "email") {
+      if (payload.hostType == "cloud" && payload.v1Upgrade) {
+        isV1Upgrade = true;
+      } else if (payload.emailVerificationToken) {
+        verifyTokenRes = await verifyEmailToken(
+          email,
+          payload.emailVerificationToken,
+          "sign_up",
+          now,
+          transactionConn
+        );
+        if (!verifyTokenRes) {
+          throw new Api.ApiError("email verification code invalid", 401);
+        }
+      } else {
+        throw new Api.ApiError("email verification code required", 400);
       }
-    } else if (payload.hostType == "cloud" && payload.provider != "email") {
+    } else if (payload.hostType == "cloud") {
       const verifyExternalAuthSessionRes = await verifyExternalAuthSession(
         payload.externalAuthSessionId,
         transactionConn
@@ -374,6 +384,8 @@ apiAction<
         envUpdateRequiresClientVersion: "2.2.0",
         "upgradedCrypto-2.1.0": true,
         optimizeEmptyEnvs: true,
+
+        importedFromV1: isV1Upgrade,
       },
       orgUserDevice: Api.Db.OrgUserDevice = {
         type: "orgUserDevice",
@@ -513,7 +525,7 @@ apiAction<
       ]);
     }
 
-    const orgGraph = R.indexBy(R.prop("id"), [
+    let orgGraph: Api.Graph.OrgGraph = R.indexBy(R.prop("id"), [
       org,
       user,
       orgUserDevice,
@@ -530,18 +542,31 @@ apiAction<
         : []),
     ]);
 
-    const userGraph = getApiUserGraph(orgGraph, orgId, userId, deviceId, now);
-
     if (initOrgStatsFn) {
       await initOrgStatsFn(orgId, now, transactionConn);
     }
 
     if (initBillingFn && !payload.test) {
+      const initBillingRes = await initBillingFn(
+        transactionConn,
+        org,
+        user,
+        orgGraph,
+        now,
+        "v1Upgrade" in payload && payload.v1Upgrade
+          ? payload.v1Upgrade
+          : undefined
+      );
+
+      orgGraph = initBillingRes[0];
+
       transactionItems = mergeObjectTransactionItems([
         transactionItems,
-        await initBillingFn(org, user, now),
+        initBillingRes[1],
       ]);
     }
+
+    const userGraph = getApiUserGraph(orgGraph, orgId, userId, deviceId, now);
 
     return {
       type: "handlerResult",

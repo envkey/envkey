@@ -18,11 +18,28 @@ const Wrapper: Component<{}, { component: Component }> = (props) => {
       return "/locked";
     } else if (!props.core.locked && props.location.pathname == "/locked") {
       return "/";
+    } else if (
+      props.core.v1UpgradeLoaded &&
+      props.location.pathname != "/v1-upgrade"
+    ) {
+      return "/v1-upgrade";
+    } else if (
+      props.core.v1UpgradeInviteToken &&
+      props.core.v1UpgradeEncryptionToken &&
+      props.location.pathname != "/v1-upgrade-accept-invite"
+    ) {
+      return "/v1-upgrade-accept-invite";
     }
-  }, [props.core.locked]);
+  }, [
+    props.core.locked,
+    props.core.v1UpgradeLoaded,
+    props.core.v1UpgradeInviteToken,
+    props.core.v1UpgradeEncryptionToken,
+  ]);
 
   useLayoutEffect(() => {
     if (willRedirect) {
+      console.log("willRedirect:", willRedirect);
       props.history.replace(willRedirect);
     }
   }, [willRedirect]);
@@ -43,16 +60,18 @@ const uiRoute = (
     <Route
       key={i}
       path={path}
-      render={(routeProps) => (
-        <div className={style({ width: "100%", height: "100%" })}>
-          {React.createElement(Wrapper, {
-            ...props,
-            ...routeProps,
-            routeParams: routeProps.match?.params ?? {},
-            component,
-          })}
-        </div>
-      )}
+      render={(routeProps) => {
+        return (
+          <div className={style({ width: "100%", height: "100%" })}>
+            {React.createElement(Wrapper, {
+              ...props,
+              ...routeProps,
+              routeParams: routeProps.match?.params ?? {},
+              component,
+            })}
+          </div>
+        );
+      }}
     />
   );
 };
@@ -79,6 +98,8 @@ export const uiRoutes = (props: ComponentBaseProps, ...rs: UiRoute[]) => {
             ["/lock-set-passphrase", ui.LockSetPassphrase],
             ["/device-settings", ui.DeviceSettings],
             ["/redeem-recovery-key", ui.RedeemRecoveryKey],
+            ["/v1-upgrade", ui.V1Upgrade],
+            ["/v1-upgrade-accept-invite", ui.V1UpgradeAcceptInvite],
             ["/org/:orgId", ui.SignedInAccountContainer],
             ["/locked", ui.Unlock],
             ["/", ui.IndexRedirect]

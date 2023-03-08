@@ -98,6 +98,7 @@ namespace Client {
     z.enum([
       "core", // for actions initiated by the core itself
       "none",
+      "v1",
     ]),
   ]);
   export type ClientName = z.infer<typeof ClientNameSchema>;
@@ -388,7 +389,7 @@ namespace Client {
   export type LocalSocketUpdateFn = (msg: LocalSocketMessage) => void;
 
   export type Context<DispatchContextType = any> = {
-    client: ClientParams<"cli" | "app" | "core">;
+    client: ClientParams<"cli" | "app" | "core" | "v1">;
     clientId: string;
     accountIdOrCliKey: string | undefined;
     hostUrl?: string;
@@ -550,6 +551,7 @@ namespace Client {
       | "uid"
       | "externalAuthProviderId"
       | "orgRoleId"
+      | "importId"
     >;
     appUserGrants?: Pick<Model.AppUserGrant, "appId" | "appRoleId">[];
   } & {
@@ -593,7 +595,7 @@ namespace Client {
 
   export type PendingInvite = Pick<
     Api.Net.ApiParamTypes["CreateInvite"],
-    "user" | "appUserGrants" | "userGroupIds" | "scim"
+    "user" | "appUserGrants" | "userGroupIds" | "scim" | "v1Token"
   >;
 
   export type EnvActionStatus = Pick<

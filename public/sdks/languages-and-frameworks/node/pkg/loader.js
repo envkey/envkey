@@ -5,7 +5,7 @@ var path = require('path'),
     execFile = childProcess.execFile,
     execFileSync = childProcess.execFileSync
 
-var ENVKEY_SOURCE_VERSION = "2.1.3"
+var ENVKEY_SOURCE_VERSION = "2.3.0"
 var ENVKEY_VERSION = "2.1.2"
 
 function keyError(){

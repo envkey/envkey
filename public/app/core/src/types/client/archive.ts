@@ -1,10 +1,23 @@
-import { Model, Rbac } from "../";
+import { Model, Rbac, Api } from "../";
 import { Env } from "./envs";
 
 export type OrgArchiveV1 = {
   schemaVersion: "1";
-  org: Pick<Model.Org, "id" | "name" | "settings">;
-  apps: Pick<Model.App, "id" | "name" | "settings">[];
+
+  isV1Upgrade?: boolean;
+
+  org: Pick<
+    Model.Org,
+    "id" | "name" | "settings" | "environmentRoleIpsAllowed"
+  >;
+  apps: Pick<
+    Model.App,
+    | "id"
+    | "name"
+    | "settings"
+    | "environmentRoleIpsAllowed"
+    | "environmentRoleIpsMergeStrategies"
+  >[];
   blocks: Pick<Model.Block, "id" | "name" | "settings">[];
   appBlocks: Pick<Model.AppBlock, "appId" | "blockId" | "orderIndex">[];
 
@@ -44,9 +57,21 @@ export type OrgArchiveV1 = {
     | "subName"
   >[];
 
-  servers: Pick<Model.Server, "appId" | "environmentId" | "name">[];
+  localKeys?: (Pick<
+    Model.LocalKey,
+    "appId" | "environmentId" | "userId" | "name"
+  > & {
+    v1Payload?: Api.Net.ApiParamTypes["GenerateKey"]["v1Payload"];
+    v1EnvkeyIdPart?: string;
+    v1EncryptionKey?: string;
+  })[];
+  servers: (Pick<Model.Server, "appId" | "environmentId" | "name"> & {
+    v1Payload?: Api.Net.ApiParamTypes["GenerateKey"]["v1Payload"];
+    v1EnvkeyIdPart?: string;
+    v1EncryptionKey?: string;
+  })[];
 
-  orgUsers: Pick<
+  orgUsers: (Pick<
     Model.OrgUser,
     | "id"
     | "firstName"
@@ -57,7 +82,9 @@ export type OrgArchiveV1 = {
     | "uid"
     | "externalAuthProviderId"
     | "scim"
-  >[];
+  > & {
+    v1Token?: string;
+  })[];
 
   cliUsers: Pick<Model.CliUser, "id" | "orgRoleId" | "name">[];
 

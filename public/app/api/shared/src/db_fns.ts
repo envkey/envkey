@@ -104,6 +104,8 @@ export const setMaxPacketSize = (n: number) => {
       qs += " AND deletedAt = 0";
     }
 
+    qs += " ORDER BY createdAt DESC";
+
     if (transactionConnOrPool && lockType) {
       qs += " " + lockType;
     }
@@ -131,7 +133,7 @@ export const setMaxPacketSize = (n: number) => {
       }[]
     ];
 
-    if (rows.length == 1) {
+    if (rows.length > 0) {
       const {
         pkey,
         skey,

@@ -168,10 +168,14 @@ const getComponent = (userType: "orgUser" | "cliUser") => {
       } else if (pendingInvite) {
         const expired = props.ui.now > pendingInvite.expiresAt;
         if (expired) {
-          status = "Invitation Expired";
+          status = pendingInvite.v1Invite
+            ? "V1 Upgrade Expired"
+            : "Invitation Expired";
           date = pendingInvite.expiresAt;
         } else {
-          status = "Invitation Pending";
+          status = pendingInvite.v1Invite
+            ? "V1 Upgrade Pending"
+            : "Invitation Pending";
           date = user.createdAt;
         }
       } else {

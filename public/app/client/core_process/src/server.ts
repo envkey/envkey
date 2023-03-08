@@ -1,3 +1,4 @@
+import { verifyV1Upgrade } from "./../../../core/src/lib/v1_upgrade";
 import express, { NextFunction, Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import WebSocket from "ws";
@@ -35,7 +36,6 @@ import { refreshSessions } from "./refresh_sessions";
 // import { clearCacheLoop, clearCacheLoopTimeout } from "./clear_cache";
 import { killIfIdleLoop, clearKillIfIdleTimeout } from "./idle_kill";
 import { getContext } from "./default_context";
-import open from "open";
 import * as R from "ramda";
 import { createPatch, Patch } from "rfc6902";
 import { version as cliVersion } from "../../cli/package.json";
@@ -72,6 +72,106 @@ export const start = async (port = 19047, wsport = 19048) => {
     process.kill(process.pid, "SIGTERM");
   });
 
+  app.get(
+    "/v1-upgrade-status",
+    asyncHandler(async (req, res) => {
+      if (isLocked()) {
+        log("Cannot return v1 upgrade status while locked");
+        res.status(401).send("Locked");
+        return;
+      }
+
+      if (!reduxStore) {
+        const msg = "Error: Redux store is not defined.";
+        log(msg);
+        res.status(500).json({ error: msg });
+        return;
+      }
+
+      const procState = reduxStore.getState();
+
+      if (procState.v1UpgradeStatus == "finished") {
+        let inviteTokensById:
+          | Record<
+              string,
+              { id: string; identityHash: string; encryptionKey: string }
+            >
+          | undefined;
+
+        if (!procState.v1UpgradeAcceptedInvite) {
+          // this is the only case where sensitive data is returned
+          // (when doing initial upgrade, not accepting an upgrade invite)
+          // so we'll only check auth here
+          if (!req.headers["authorization"]) {
+            res.status(401).send("Unauthorized");
+            return;
+          }
+          let auth: { ts: number; signature: string };
+          try {
+            auth = JSON.parse(req.headers["authorization"] as string);
+          } catch (err) {
+            res.status(401).send("Unauthorized");
+            return;
+          }
+          const verifyRes = verifyV1Upgrade(auth, Date.now());
+          if (verifyRes !== true) {
+            res.status(401).send(verifyRes);
+          }
+
+          const accountId = procState.v1UpgradeAccountId;
+          const clientId = procState.v1UpgradeClientId!;
+
+          const clientState = getState(reduxStore, {
+            accountIdOrCliKey: accountId,
+            clientId,
+          });
+
+          const inviteTokens = clientState.generatedInvites.map(
+            ({ user, identityHash, encryptionKey }) => ({
+              id: user.importId!,
+              identityHash,
+              encryptionKey,
+            })
+          );
+
+          inviteTokensById = R.indexBy(R.prop("id"), inviteTokens);
+        }
+
+        await dispatch(
+          {
+            type: Client.ActionType.RESET_V1_UPGRADE,
+            payload: {},
+          },
+          getContext(procState.v1UpgradeAccountId)
+        );
+
+        res.status(200).json({
+          upgradeStatus: "finished",
+          inviteTokensById,
+        });
+        return;
+      } else if (procState.v1UpgradeStatus == "canceled") {
+        await dispatch(
+          {
+            type: Client.ActionType.RESET_V1_UPGRADE,
+            payload: {},
+          },
+          getContext(procState.v1UpgradeAccountId)
+        );
+
+        res.status(200).json({
+          upgradeStatus: "canceled",
+        });
+        return;
+      } else {
+        res.status(200).json({
+          upgradeStatus: procState.v1UpgradeStatus,
+        });
+        return;
+      }
+    })
+  );
+
   app.use([authMiddleware, lockoutMiddleware]);
 
   app.get(
@@ -107,7 +207,13 @@ export const start = async (port = 19047, wsport = 19048) => {
         clientId,
       });
 
-      const keys = req.query.keys as (keyof Client.State)[] | undefined;
+      const keysParam = req.query.keys as
+        | string
+        | (keyof Client.State)[]
+        | undefined;
+      const keys = (typeof keysParam == "string" ? [keysParam] : keysParam) as
+        | (keyof Client.State)[]
+        | undefined;
 
       // to update lastActiveAt
       await dispatch(
@@ -201,8 +307,6 @@ export const start = async (port = 19047, wsport = 19048) => {
         return;
       }
 
-      // log(JSON.stringify(action, null, 2));
-
       if (!reduxStore) {
         const msg = "Error: Redux store is not defined.";
         log(msg);
@@ -287,10 +391,9 @@ export const start = async (port = 19047, wsport = 19048) => {
           );
 
       if (
-        shouldSendSocketUpdate &&
-        context.client.clientName == "cli" &&
-        (actionParams.type == "asyncClientAction" ||
-          actionParams.type == "apiRequestAction")
+        !skipSocketUpdate &&
+        (context.client.clientName == "cli" ||
+          context.client.clientName == "v1")
       ) {
         localSocketUpdate({ type: "diffs", diffs: finalDiffs });
       }
@@ -723,6 +826,23 @@ const initReduxStore = async (forceReset?: true) => {
     next();
   },
   authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+    if (
+      req.path == "/action" &&
+      (req.body.action.type == Client.ActionType.LOAD_V1_UPGRADE ||
+        req.body.action.type == Client.ActionType.LOAD_V1_UPGRADE_INVITE)
+    ) {
+      if (req.body.action.type == Client.ActionType.LOAD_V1_UPGRADE) {
+        const verifyRes = verifyV1Upgrade(req.body.action.payload, Date.now());
+        if (verifyRes !== true) {
+          res.status(401).send({ error: verifyRes });
+          return;
+        }
+      }
+
+      next();
+      return;
+    }
+
     let authenticated: boolean = false;
     try {
       authenticated = await authenticateUserAgent(req.get("user-agent"));

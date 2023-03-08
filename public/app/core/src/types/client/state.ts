@@ -4,7 +4,7 @@ import { Env } from "./envs";
 import { Action } from "./action";
 import Api from "../api";
 import Client from ".";
-import { Logs, Model, Trust, Crypto } from "..";
+import { Logs, Model, Trust, Crypto, Billing } from "..";
 
 type FlagById = Record<string, true>;
 type ErrorsById = Record<string, Client.ClientError>;
@@ -45,6 +45,29 @@ export type ProcState = {
   skippedSelfHostedUpgradeAt: number | undefined;
   uiLastSelectedAccountId: string | undefined;
   uiLastSelectedUrl: string | undefined;
+
+  v1UpgradeLoaded:
+    | Client.Action.ClientActions["LoadV1Upgrade"]["payload"]
+    | undefined;
+  v1IsUpgrading: boolean | undefined;
+  v1UpgradeError: Client.ClientError | undefined;
+  v1UpgradeAccountId: string | undefined;
+  v1UpgradeClientId: string | undefined;
+  v1UpgradeStatus:
+    | "loaded"
+    | "upgrading"
+    | "finished"
+    | "canceled"
+    | "error"
+    | undefined;
+  v1UpgradeAcceptedInvite: boolean | undefined;
+  v1UpgradeInviteToken: string | undefined;
+  v1UpgradeEncryptionToken: string | undefined;
+
+  cloudProducts: Billing.Product[] | undefined;
+  cloudPrices: Billing.Price[] | undefined;
+  isLoadingCloudProducts: boolean | undefined;
+  loadCloudProductsError: Client.ClientError | undefined;
 };
 
 export type PartialAccountState = {
@@ -775,6 +798,19 @@ export const defaultAccountState: PartialAccountState = {
     skippedSelfHostedUpgradeAt: undefined,
     uiLastSelectedAccountId: undefined,
     uiLastSelectedUrl: undefined,
+    cloudProducts: undefined,
+    cloudPrices: undefined,
+    isLoadingCloudProducts: undefined,
+    loadCloudProductsError: undefined,
+    v1UpgradeLoaded: undefined,
+    v1IsUpgrading: undefined,
+    v1UpgradeError: undefined,
+    v1UpgradeAccountId: undefined,
+    v1UpgradeClientId: undefined,
+    v1UpgradeStatus: undefined,
+    v1UpgradeInviteToken: undefined,
+    v1UpgradeEncryptionToken: undefined,
+    v1UpgradeAcceptedInvite: undefined,
   },
   lockedState = { ...defaultProcState, locked: true },
   ACCOUNT_STATE_KEYS = Object.keys(

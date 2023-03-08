@@ -96,6 +96,14 @@ export namespace Action {
         client?: undefined;
       };
     };
+
+    CloudBillingLoadProducts: RequestActionType<
+      ActionType.CLOUD_BILLING_LOAD_PRODUCTS,
+      {
+        loggableType: "hostAction";
+      },
+      Net.ApiParamTypes["CloudBillingLoadProducts"]
+    >;
   };
 
   export type AuthActions = {
@@ -1293,7 +1301,7 @@ export namespace Action {
       ActionType.STARTED_ORG_IMPORT,
       {
         loggableType: "orgAction";
-        auth: Auth.DefaultAuthParams;
+        auth: Auth.TokenAuthParams;
       },
       Net.ApiParamTypes["StartedOrgImport"]
     >;
@@ -1302,7 +1310,7 @@ export namespace Action {
       ActionType.FINISHED_ORG_IMPORT,
       {
         loggableType: "orgAction";
-        auth: Auth.DefaultAuthParams;
+        auth: Auth.TokenAuthParams;
       },
       Net.ApiParamTypes["FinishedOrgImport"]
     >;

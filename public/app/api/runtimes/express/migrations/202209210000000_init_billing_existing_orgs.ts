@@ -13,13 +13,17 @@ import {
   objectTransactionStatements,
 } from "../../../shared/src/db_fns";
 import { Api } from "@core/types";
+import { PoolConnection } from "mysql2/promise";
 
 let initBillingFn:
   | ((
+      transactionConn: PoolConnection,
       org: Api.Db.Org,
       orgUser: Api.Db.OrgUser,
-      now: number
-    ) => Promise<Api.Db.ObjectTransactionItems>)
+      orgGraph: Api.Graph.OrgGraph,
+      now: number,
+      v1Upgrade?: Api.V1Upgrade.Upgrade
+    ) => Promise<[Api.Graph.OrgGraph, Api.Db.ObjectTransactionItems]>)
   | undefined;
 export const registerInitBillingMigrationFn = (fn: typeof initBillingFn) => {
   initBillingFn = fn;
@@ -85,7 +89,13 @@ export const up = async (knex: Knex) => {
         const creatorOwner = owners.find((owner) => owner.id == org.creatorId);
         owner = creatorOwner ?? owners[0];
 
-        const transactionItems = await initBillingFn(org, owner, now);
+        const [_, transactionItems] = await initBillingFn(
+          transactionConn,
+          org,
+          owner,
+          {},
+          now
+        );
         await executeTransactionStatements(
           objectTransactionStatements(transactionItems, now),
           transactionConn

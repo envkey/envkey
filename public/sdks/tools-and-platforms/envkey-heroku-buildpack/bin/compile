@@ -23,7 +23,7 @@ if [ -f $ENV_DIR/ENVKEY ]; then
   tar -zxf minisign.tar.gz
 
   # now get envkey-source
-  ENVKEY_SOURCE_VERSION=2.1.1
+  ENVKEY_SOURCE_VERSION=2.3.0
   ENVKEY_URL="https://envkey-releases.s3.amazonaws.com/envkeysource/release_artifacts/${ENVKEY_SOURCE_VERSION}/envkey-source_${ENVKEY_SOURCE_VERSION}_linux_amd64.tar.gz"
   echo "Downloading envkey-source ${ENVKEY_SOURCE_VERSION} from ${ENVKEY_URL}..." | indent
   curl -s -o envkey-source.tar.gz $ENVKEY_URL
@@ -53,18 +53,18 @@ if [ -f $ENV_DIR/ENVKEY ]; then
   fi
 
   mkdir -p $BUILD_DIR/.profile.d
-  cat > $BUILD_DIR/.profile.d/envkey.sh << EOF
+  cat > $BUILD_DIR/.profile.d/00-envkey.sh << EOF
 export PATH=\$PATH:\$HOME/vendor/envkey/bin
 EOF
 
   if [ -f $ENV_DIR/ENVKEY_BUILD_PHASE_EXPORT ]; then
-    cat >> $BUILD_DIR/.profile.d/envkey.sh << EOF
+    cat >> $BUILD_DIR/.profile.d/00-envkey.sh << EOF
 export -p > ./envkey-runtime-env.sh
 $(cat $BP_DIR/export)
 . ./envkey-runtime-env.sh
 rm envkey-runtime-env.sh
 EOF
-    echo "EnvKey variables exported to running application via .profile.d/envkey.sh" | indent
+    echo "EnvKey variables exported to running application via .profile.d/00-envkey.sh" | indent
   fi
   
   echo "envkey-source executable is available for use" | indent

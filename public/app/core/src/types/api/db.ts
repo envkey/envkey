@@ -120,6 +120,7 @@ export namespace Db {
       startedOrgImportAt: z.number().optional(),
       finishedOrgImportAt: z.number().optional(),
       envUpdateRequiresClientVersion: z.string().optional(),
+      importedFromV1: z.boolean().optional(),
     })
     .merge(Model.OrgSchema)
     .merge(DbObjectSchema);
@@ -437,6 +438,7 @@ export namespace Db {
       deviceId: z.string(),
       externalAuthSessionId: z.string().optional(),
       externalAuthSessionVerifiedAt: z.number().optional(),
+      v1TokenHash: z.string().optional(),
     })
     .merge(Model.InviteSchema)
     .merge(
@@ -544,6 +546,18 @@ export namespace Db {
       userId: z.string().optional(),
       deviceId: z.string().optional(),
       allowedIps: z.array(z.string()).optional(),
+
+      v1Payload: z
+        .object({
+          encryptedV2Key: z.string(),
+          encryptedPrivkey: z.string(),
+          pubkey: z.string(),
+          signedTrustedPubkeys: z.string(),
+          signedById: z.string(),
+          signedByPubkey: z.string(),
+          signedByTrustedPubkeys: z.string(),
+        })
+        .optional(),
     })
     .merge(Model.GeneratedEnvkeySchema)
     .merge(DbObjectSchema);
@@ -626,7 +640,6 @@ export namespace Db {
   export const ProductSchema = Billing.ProductSchema.merge(
     z.object({
       stripeId: z.string(),
-      plan: Billing.PlanTypeSchema,
     })
   ).merge(DbObjectSchema);
 
@@ -644,6 +657,7 @@ export namespace Db {
       stripeId: z.string(),
       stripeProductId: z.string(),
       stripePriceId: z.string(),
+      promotionCode: z.string().optional(),
     })
   ).merge(DbObjectSchema);
 

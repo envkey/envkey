@@ -87,7 +87,12 @@ func FetchMap(envkey string, options FetchOptions) (parser.EnvMap, error) {
 	if options.VerboseOutput {
 		fmt.Fprintln(os.Stderr, "Parsing and decrypting response...")
 	}
-	res, privkey, newSignedTrustedRoot, replacementIds, err := response.Parse(pw)
+	res, privkey, newSignedTrustedRoot, replacementIds, isV1UpgradedEnvkey, err := response.Parse(pw, false)
+
+	if err == nil && isV1UpgradedEnvkey {
+		res, privkey, newSignedTrustedRoot, replacementIds, _, err = response.Parse(res["KEY"], true)
+	}
+
 	if err != nil {
 		if options.VerboseOutput {
 			fmt.Fprintln(os.Stderr, "Error parsing and decrypting:")

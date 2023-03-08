@@ -65,14 +65,11 @@ export const secondaryButton = (params: {
 }): types.NestedCSSProperties =>
   deepMergeStyles(button(params), {
     background:
-      params.bgMode == "dark" ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)",
-    color: "rgba(0,0,0,0.6)",
+      params.bgMode == "dark" ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.1)",
+    color: params.bgMode == "dark" ? colors.DARK_TEXT : "rgba(0,0,0,0.6)",
     $nest: {
       "&:not([disabled]):not(.disabled):hover": {
-        background:
-          params.bgMode == "dark"
-            ? "rgba(255,255,255,0.4)"
-            : "rgba(0,0,0,0.15)",
+        background: params.bgMode == "dark" ? "#fff" : "rgba(0,0,0,0.15)",
       },
     },
   });

@@ -23,6 +23,9 @@ export const getInviteStatus = (
     return "failed";
   } else if (now > mostRecentInvite.expiresAt) {
     return "expired";
+  } else if (mostRecentInvite.v1Invite) {
+    return "pending-v1-upgrade";
   }
+
   return "pending";
 };

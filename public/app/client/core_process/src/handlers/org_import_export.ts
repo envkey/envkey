@@ -13,13 +13,16 @@ import {
 import { secureRandomAlphanumeric } from "@core/lib/crypto/utils";
 import { fetchRequiredEnvs } from "@core_proc/lib/envs";
 import fs from "fs";
+import os from "os";
+import path from "path";
 import { wait } from "@core/lib/utils/wait";
 import { log } from "@core/lib/utils/logger";
 import { updateLocalSocketImportStatusIfNeeded } from "@core_proc/lib/envs/status";
 import { getAuth } from "@core/lib/client";
+import { getDefaultOrgSettings } from "@core/lib/client/defaults";
 
 const updateImportStatus = async (
-  status: string,
+  status: string | undefined,
   context: Client.Context,
   withDelay = true
 ) => {
@@ -98,17 +101,26 @@ clientAction<
     draft.unfilteredOrgArchive = payload.unfiltered;
     draft.filteredOrgArchive = payload.filtered;
   },
-  failureStateProducer: (draft, { payload }) => {
+  failureStateProducer: (draft, { payload, meta }) => {
     draft.decryptOrgArchiveError = payload;
+    if (meta.rootAction.payload.isV1Upgrade) {
+      draft.v1UpgradeError = payload;
+    }
   },
   endStateProducer: (draft) => {
     delete draft.isDecryptingOrgArchive;
   },
   handler: async (
     state,
-    { payload: { filePath, encryptionKey } },
+    { payload },
     { context, dispatchSuccess, dispatchFailure }
   ) => {
+    const encryptionKey = payload.encryptionKey;
+    const filePath =
+      "fileName" in payload
+        ? path.join(os.homedir(), ".envkey", "archives", payload.fileName)
+        : payload.filePath;
+
     let encrypted: Crypto.EncryptedData;
     let archiveJson: string;
     let archive: Client.OrgArchiveV1;
@@ -162,6 +174,7 @@ clientAction<
         ...pick(
           [
             "schemaVersion",
+            "isV1Upgrade",
             "org",
             "defaultOrgRoles",
             "defaultAppRoles",
@@ -200,6 +213,12 @@ clientAction<
         ),
         subEnvironments: archive.subEnvironments.filter(
           (environment) => !alreadyImportedIds.has(environment.id)
+        ),
+        localKeys: (archive.localKeys ?? []).filter(
+          (localKey) =>
+            !alreadyImportedIds.has(
+              [localKey.environmentId, localKey.name].join("|")
+            )
         ),
         servers: archive.servers.filter(
           (server) =>
@@ -245,12 +264,25 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
   stateProducer: (draft) => {
     draft.isImportingOrg = true;
   },
-  failureStateProducer: (draft, { payload }) => {
+  failureStateProducer: (draft, { payload, meta }) => {
     draft.importOrgError = payload;
+
+    if (meta.rootAction.payload.isV1Upgrade) {
+      draft.v1UpgradeStatus = "error";
+      draft.v1UpgradeError = payload;
+    }
+  },
+  successStateProducer: (draft, { payload, meta }) => {
+    if (meta.rootAction.payload.isV1Upgrade) {
+      draft.v1UpgradeStatus = "finished";
+    }
   },
   endStateProducer: (draft) => {
-    delete draft.importOrgStatus;
     delete draft.isImportingOrg;
+    delete draft.importOrgStatus;
+  },
+  failureHandler: async (state, action, payload, context) => {
+    await updateImportStatus(undefined, context);
   },
   handler: async (
     initialState,
@@ -258,11 +290,14 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       payload: {
         importOrgUsers,
         importServers,
+        importLocalKeys,
         importCliUsers,
         regenServerKeys,
         importEnvParentIds,
         importOrgUserIds,
         importCliUserIds,
+        isV1UpgradeIntoExistingOrg,
+        v1Upgrade,
       },
     },
     { context, dispatchSuccess, dispatchFailure }
@@ -319,6 +354,8 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       );
     }
 
+    await updateImportStatus("Starting import", context);
+
     const importEnvParentIdsSet = importEnvParentIds
       ? new Set(importEnvParentIds)
       : undefined;
@@ -353,10 +390,20 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       idMap[archiveOrgUser.id] = existingOrgUser.id;
     }
 
+    const archiveOrgUsersById = R.indexBy(
+      R.prop("id"),
+      unfilteredArchive.orgUsers
+    );
+    const archiveCliUsersById = R.indexBy(
+      R.prop("id"),
+      unfilteredArchive.cliUsers
+    );
+
     const filteredAgainArchive: Client.OrgArchiveV1 = {
       ...pick(
         [
           "schemaVersion",
+          "isV1Upgrade",
           "org",
           "defaultOrgRoles",
           "defaultAppRoles",
@@ -418,6 +465,19 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
               )
           )
         : [],
+      localKeys:
+        importLocalKeys && archive.localKeys
+          ? archive.localKeys.filter(
+              (localKey) =>
+                !(
+                  importEnvParentIdsSet &&
+                  !(
+                    importEnvParentIdsSet.has(localKey.appId) ||
+                    idMap[localKey.appId]
+                  )
+                )
+            )
+          : [],
       orgUsers: importOrgUsers
         ? archive.orgUsers.filter(
             (orgUser) =>
@@ -430,27 +490,58 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
               !(importCliUserIdsSet && !importCliUserIdsSet.has(cliUser.id))
           )
         : [],
-      appUserGrants: archive.appUserGrants.filter(
-        (appUserGrant) =>
-          (idMap[appUserGrant.appId] && idMap[appUserGrant.userId]) ||
-          (!(
-            importEnvParentIdsSet &&
-            !importEnvParentIdsSet.has(appUserGrant.appId)
-          ) &&
-            !(
-              importOrgUserIdsSet &&
-              !importOrgUserIdsSet.has(appUserGrant.userId)
-            ) &&
-            !(
-              importCliUserIdsSet &&
-              !importCliUserIdsSet.has(appUserGrant.userId)
-            ))
-      ),
+      appUserGrants: archive.appUserGrants.filter((appUserGrant) => {
+        // if both the app and the user have already been imported, import the grant
+        if (idMap[appUserGrant.appId] && idMap[appUserGrant.userId]) {
+          return true;
+        }
+
+        const isOrgUser = idMap[appUserGrant.userId]
+          ? state.graph[idMap[appUserGrant.userId]].type == "orgUser"
+          : Boolean(archiveOrgUsersById[appUserGrant.userId]);
+
+        const isCliUser =
+          !isOrgUser &&
+          (idMap[appUserGrant.userId]
+            ? state.graph[idMap[appUserGrant.userId]].type == "cliUser"
+            : Boolean(archiveCliUsersById[appUserGrant.userId]));
+
+        // if we're selecting a subset of apps and this one isn't included, don't include the grant
+        if (
+          importEnvParentIdsSet &&
+          !importEnvParentIdsSet.has(appUserGrant.appId)
+        ) {
+          return false;
+        }
+
+        // if we're selecting a subset of org users and this one isn't included, don't include the grant
+        if (
+          isOrgUser &&
+          (!importOrgUsers ||
+            (importOrgUserIdsSet &&
+              !importOrgUserIdsSet.has(appUserGrant.userId)))
+        ) {
+          return false;
+        }
+
+        // if we're selecting a subset of cli users and this one isn't included, don't include the grant
+        if (
+          isCliUser &&
+          (!importCliUsers ||
+            (importCliUserIdsSet &&
+              !importCliUserIdsSet.has(appUserGrant.userId)))
+        ) {
+          return false;
+        }
+
+        return true;
+      }),
     };
 
     const numActiveUserOrInvites = byType.org.activeUserOrInviteCount;
 
     if (
+      !isV1UpgradeIntoExistingOrg &&
       license.maxUsers &&
       license.maxUsers != -1 &&
       (numActiveUserOrInvites ?? 0) +
@@ -475,7 +566,15 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
     let res = await dispatch(
       {
         type: Api.ActionType.STARTED_ORG_IMPORT,
-        payload: {},
+        payload:
+          isV1UpgradeIntoExistingOrg && v1Upgrade
+            ? {
+                isV1UpgradeIntoExistingOrg,
+                v1Upgrade,
+              }
+            : {
+                isV1UpgradeIntoExistingOrg: false,
+              },
       },
       context
     );
@@ -555,9 +654,42 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       }
     }
 
+    if (
+      orgSettingsNeedUpdate &&
+      Object.values(
+        filteredAgainArchive.org.environmentRoleIpsAllowed ?? {}
+      ).some((ips) => ips && ips.length > 0)
+    ) {
+      await updateImportStatus("Importing org firewall settings", context);
+
+      const res = await dispatch(
+        {
+          type: Api.ActionType.SET_ORG_ALLOWED_IPS,
+          payload: {
+            environmentRoleIpsAllowed: R.toPairs(
+              filteredAgainArchive.org.environmentRoleIpsAllowed ?? {}
+            ).reduce((agg, [roleId, ips]) => {
+              if (ips) {
+                agg[idMap[roleId]] = ips;
+              }
+              return agg;
+            }, {} as Required<Model.Org>["environmentRoleIpsAllowed"]),
+          },
+        },
+        context
+      );
+      if (res.success) {
+        state = res.state;
+      } else {
+        return dispatchFailure((res.resultAction as any)?.payload, context);
+      }
+    }
+
     if (filteredAgainArchive.apps.length > 0) {
       await updateImportStatus(
-        `Importing ${filteredAgainArchive.apps.length} apps`,
+        `Importing ${filteredAgainArchive.apps.length} app${
+          filteredAgainArchive.apps.length == 1 ? "" : "s"
+        }`,
         context
       );
       for (let [i, archiveApp] of filteredAgainArchive.apps.entries()) {
@@ -583,7 +715,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           idMap[archiveApp.id] = createdApp.id;
 
           await updateImportStatus(
-            `Imported ${i + 1}/${filteredAgainArchive.apps.length} apps`,
+            `Imported ${i + 1}/${filteredAgainArchive.apps.length} app${
+              filteredAgainArchive.apps.length == 1 ? "" : "s"
+            }`,
             context,
             i == filteredAgainArchive.apps.length - 1
           );
@@ -591,11 +725,60 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           return dispatchFailure((res.resultAction as any)?.payload, context);
         }
       }
+
+      const appsWithFirewallSettings = filteredAgainArchive.apps.filter(
+        (archiveApp) =>
+          Object.values(archiveApp.environmentRoleIpsAllowed ?? {}).some(
+            (ips) => ips && ips.length > 0
+          ) ||
+          Object.values(
+            archiveApp.environmentRoleIpsMergeStrategies ?? {}
+          ).some(R.identity)
+      );
+
+      if (appsWithFirewallSettings.length > 0) {
+        await updateImportStatus("Importing app firewall settings", context);
+
+        for (let archiveApp of appsWithFirewallSettings) {
+          const res = await dispatch(
+            {
+              type: Api.ActionType.SET_APP_ALLOWED_IPS,
+              payload: {
+                id: idMap[archiveApp.id],
+                environmentRoleIpsAllowed: R.toPairs(
+                  archiveApp.environmentRoleIpsAllowed ?? {}
+                ).reduce((agg, [roleId, ips]) => {
+                  if (ips) {
+                    agg[idMap[roleId]] = ips;
+                  }
+                  return agg;
+                }, {} as Required<Model.App>["environmentRoleIpsAllowed"]),
+                environmentRoleIpsMergeStrategies: R.toPairs(
+                  archiveApp.environmentRoleIpsMergeStrategies ?? {}
+                ).reduce((agg, [roleId, strategy]) => {
+                  if (strategy) {
+                    agg[idMap[roleId]] = strategy;
+                  }
+                  return agg;
+                }, {} as Required<Model.App>["environmentRoleIpsMergeStrategies"]),
+              },
+            },
+            context
+          );
+          if (res.success) {
+            state = res.state;
+          } else {
+            return dispatchFailure((res.resultAction as any)?.payload, context);
+          }
+        }
+      }
     }
 
     if (filteredAgainArchive.blocks.length > 0) {
       await updateImportStatus(
-        `Importing ${filteredAgainArchive.blocks.length} blocks`,
+        `Importing ${filteredAgainArchive.blocks.length} block${
+          filteredAgainArchive.blocks.length == 1 ? "" : "s"
+        }`,
         context
       );
       for (let [i, archiveBlock] of filteredAgainArchive.blocks.entries()) {
@@ -621,7 +804,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           idMap[archiveBlock.id] = createdBlock.id;
 
           await updateImportStatus(
-            `Imported ${i + 1}/${filteredAgainArchive.blocks.length} blocks`,
+            `Imported ${i + 1}/${filteredAgainArchive.blocks.length} block${
+              filteredAgainArchive.blocks.length == 1 ? "" : "s"
+            }`,
             context,
             i == filteredAgainArchive.blocks.length - 1
           );
@@ -633,7 +818,11 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
     if (filteredAgainArchive.appBlocks.length > 0) {
       await updateImportStatus(
-        `Importing ${filteredAgainArchive.appBlocks.length} app-block connections`,
+        `Importing ${
+          filteredAgainArchive.appBlocks.length
+        } app-block connection${
+          filteredAgainArchive.appBlocks.length == 1 ? "" : "s"
+        }`,
         context
       );
 
@@ -663,7 +852,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           await updateImportStatus(
             `Imported ${Math.min(i * 25 + batch.length)}/${
               filteredAgainArchive.appBlocks.length
-            } app-block connections`,
+            } app-block connection${
+              filteredAgainArchive.appBlocks.length == 1 ? "" : "s"
+            }`,
             context,
             i == batches.length - 1
           );
@@ -782,7 +973,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
       if (toCreateBaseEnvironments.length > 0) {
         await updateImportStatus(
-          `Creating ${toCreateBaseEnvironments.length} base environments`,
+          `Importing ${toCreateBaseEnvironments.length} base environment${
+            toCreateBaseEnvironments.length == 1 ? "" : "s"
+          }`,
           context
         );
 
@@ -833,9 +1026,11 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
               if (res.success) {
                 state = res.state;
                 await updateImportStatus(
-                  `Created ${i + 1}/${
+                  `Imported ${i + 1}/${
                     toCreateBaseEnvironments.length
-                  } base environments`,
+                  } base environment${
+                    toCreateBaseEnvironments.length == 1 ? "" : "s"
+                  }`,
                   context,
                   i == toCreateBaseEnvironments.length - 1
                 );
@@ -854,7 +1049,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
       if (filteredAgainArchive.subEnvironments.length > 0) {
         await updateImportStatus(
-          `Creating ${filteredAgainArchive.subEnvironments.length} branches`,
+          `Importing ${filteredAgainArchive.subEnvironments.length} branch${
+            filteredAgainArchive.subEnvironments.length == 1 ? "" : "es"
+          }`,
           context
         );
         for (let [
@@ -892,9 +1089,11 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
             idMap[archiveEnvironment.id] = createdEnvironment.id;
 
             await updateImportStatus(
-              `Created ${i + 1}/${
+              `Imported ${i + 1}/${
                 filteredAgainArchive.subEnvironments.length
-              } branches`,
+              } branch${
+                filteredAgainArchive.subEnvironments.length == 1 ? "" : "es"
+              }`,
               context,
               i == filteredAgainArchive.subEnvironments.length - 1
             );
@@ -907,7 +1106,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
     if (importOrgUsers && filteredAgainArchive.orgUsers.length > 0) {
       await updateImportStatus(
-        `Re-inviting ${filteredAgainArchive.orgUsers.length} users`,
+        `${filteredAgainArchive.isV1Upgrade ? "Importing" : "Re-inviting"} ${
+          filteredAgainArchive.orgUsers.length
+        } user${filteredAgainArchive.orgUsers.length == 1 ? "" : "s"}`,
         context
       );
 
@@ -922,8 +1123,10 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
                   ["email", "firstName", "lastName", "provider", "uid"],
                   archiveOrgUser
                 ),
+                importId: archiveOrgUser.id,
                 orgRoleId: idMap[archiveOrgUser.orgRoleId],
               },
+              v1Token: archiveOrgUser.v1Token,
             })),
           },
           context
@@ -941,9 +1144,11 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           }
 
           await updateImportStatus(
-            `Re-invited ${i * 25 + batch.length}/${
-              filteredAgainArchive.orgUsers.length
-            } users`,
+            `${filteredAgainArchive.isV1Upgrade ? "Imported" : "Re-invited"} ${
+              i * 25 + batch.length
+            }/${filteredAgainArchive.orgUsers.length} user${
+              filteredAgainArchive.orgUsers.length == 1 ? "" : "s"
+            }`,
             context,
             i == batches.length - 1
           );
@@ -955,7 +1160,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
     if (filteredAgainArchive.cliUsers.length > 0) {
       await updateImportStatus(
-        `Regenerating ${filteredAgainArchive.cliUsers.length} CLI keys`,
+        `Regenerating ${filteredAgainArchive.cliUsers.length} CLI key${
+          filteredAgainArchive.cliUsers.length == 1 ? "" : "s"
+        }`,
         context
       );
 
@@ -987,7 +1194,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           await updateImportStatus(
             `Regenerated ${i + 1}/${
               filteredAgainArchive.cliUsers.length
-            } CLI keys`,
+            } CLI key${filteredAgainArchive.cliUsers.length == 1 ? "" : "s"}`,
             context,
             i == filteredAgainArchive.cliUsers.length - 1
           );
@@ -999,7 +1206,11 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
     if (filteredAgainArchive.appUserGrants.length > 0) {
       await updateImportStatus(
-        `Importing ${filteredAgainArchive.appUserGrants.length} app access grants`,
+        `Importing ${
+          filteredAgainArchive.appUserGrants.length
+        } app access grant${
+          filteredAgainArchive.appUserGrants.length == 1 ? "" : "s"
+        }`,
         context
       );
 
@@ -1037,7 +1248,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           await updateImportStatus(
             `Imported ${i * 25 + batch.length}/${
               filteredAgainArchive.appUserGrants.length
-            } app access grants`,
+            } app access grant${
+              filteredAgainArchive.appUserGrants.length == 1 ? "" : "s"
+            }`,
             context,
             i == batches.length - 1
           );
@@ -1049,25 +1262,38 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
     if (importServers && filteredAgainArchive.servers.length > 0) {
       await updateImportStatus(
-        `${regenServerKeys ? "Regenerating" : "Recreating"} ${
-          filteredAgainArchive.servers.length
-        } servers`,
+        `${
+          regenServerKeys && !filteredAgainArchive.isV1Upgrade
+            ? "Regenerating"
+            : "Importing"
+        } ${filteredAgainArchive.servers.length} server${
+          filteredAgainArchive.servers.length == 1 ? "" : "s"
+        }`,
         context
       );
 
       for (let [i, archiveServer] of filteredAgainArchive.servers.entries()) {
+        const payload = {
+          appId: idMap[archiveServer.appId],
+          environmentId: idMap[archiveServer.environmentId],
+          name: archiveServer.name,
+          skipGenerateKey: !regenServerKeys,
+          importId: [archiveServer.environmentId, archiveServer.name].join("|"),
+          v1Payload: filteredAgainArchive.isV1Upgrade
+            ? archiveServer.v1Payload
+            : undefined,
+          v1EnvkeyIdPart: filteredAgainArchive.isV1Upgrade
+            ? archiveServer.v1EnvkeyIdPart
+            : undefined,
+          v1EncryptionKey: filteredAgainArchive.isV1Upgrade
+            ? archiveServer.v1EncryptionKey
+            : undefined,
+        };
+
         const res = await dispatch(
           {
             type: Client.ActionType.CREATE_SERVER,
-            payload: {
-              appId: idMap[archiveServer.appId],
-              environmentId: idMap[archiveServer.environmentId],
-              name: archiveServer.name,
-              skipGenerateKey: !regenServerKeys,
-              importId: [archiveServer.environmentId, archiveServer.name].join(
-                "|"
-              ),
-            },
+            payload,
           },
           context
         );
@@ -1076,11 +1302,77 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           state = res.state;
 
           await updateImportStatus(
-            `${regenServerKeys ? "Regenerated" : "Re-created"} ${i + 1}/${
-              filteredAgainArchive.servers.length
-            } servers`,
+            `${
+              regenServerKeys && !filteredAgainArchive.isV1Upgrade
+                ? "Regenerated"
+                : "Imported"
+            } ${i + 1}/${filteredAgainArchive.servers.length} server${
+              filteredAgainArchive.servers.length > 1 ? "s" : ""
+            }`,
             context,
             i == filteredAgainArchive.servers.length - 1
+          );
+        } else {
+          return dispatchFailure((res.resultAction as any)?.payload, context);
+        }
+      }
+    }
+
+    if (
+      importLocalKeys &&
+      filteredAgainArchive.localKeys &&
+      filteredAgainArchive.localKeys.length > 0
+    ) {
+      await updateImportStatus(
+        `Importing ${filteredAgainArchive.localKeys.length} local key${
+          filteredAgainArchive.localKeys.length > 1 ? "s" : ""
+        }`,
+        context
+      );
+
+      for (let [
+        i,
+        archiveLocalKey,
+      ] of filteredAgainArchive.localKeys.entries()) {
+        const payload = {
+          appId: idMap[archiveLocalKey.appId],
+          environmentId: idMap[archiveLocalKey.environmentId],
+          name: archiveLocalKey.name,
+          importId: [
+            archiveLocalKey.environmentId,
+            archiveLocalKey.userId,
+            archiveLocalKey.name,
+          ].join("|"),
+          isV1UpgradeKey: filteredAgainArchive.isV1Upgrade || undefined,
+          userId: idMap[archiveLocalKey.userId],
+          v1Payload: filteredAgainArchive.isV1Upgrade
+            ? archiveLocalKey.v1Payload
+            : undefined,
+          v1EnvkeyIdPart: filteredAgainArchive.isV1Upgrade
+            ? archiveLocalKey.v1EnvkeyIdPart
+            : undefined,
+          v1EncryptionKey: filteredAgainArchive.isV1Upgrade
+            ? archiveLocalKey.v1EncryptionKey
+            : undefined,
+        };
+
+        const res = await dispatch(
+          {
+            type: Client.ActionType.CREATE_LOCAL_KEY,
+            payload,
+          },
+          context
+        );
+
+        if (res.success) {
+          state = res.state;
+
+          await updateImportStatus(
+            `Imported ${i + 1}/${
+              filteredAgainArchive.localKeys.length
+            } local key${filteredAgainArchive.localKeys.length > 1 ? "s" : ""}`,
+            context,
+            i == filteredAgainArchive.localKeys.length - 1
           );
         } else {
           return dispatchFailure((res.resultAction as any)?.payload, context);
@@ -1319,6 +1611,8 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       }
     }
 
+    await updateImportStatus("Finishing import", context);
+
     res = await dispatch(
       {
         type: Api.ActionType.FINISHED_ORG_IMPORT,
@@ -1331,6 +1625,15 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
     }
 
     await wait(1000);
+
+    if (filteredAgainArchive.isV1Upgrade) {
+      await dispatch(
+        {
+          type: Client.ActionType.CLEAR_ALL_GENERATED_ENVKEYS,
+        },
+        context
+      );
+    }
 
     return dispatchSuccess(null, context);
   },
@@ -1517,5 +1820,209 @@ clientAction<
     } catch (err) {
       return dispatchFailure(err, context);
     }
+  },
+});
+
+clientAction<Client.Action.ClientActions["LoadV1Upgrade"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.LOAD_V1_UPGRADE,
+  stateProducer: (draft, { payload }) => {
+    draft.v1UpgradeLoaded = payload;
+    draft.v1UpgradeStatus = "loaded";
+  },
+});
+
+clientAction<
+  Client.Action.ClientActions["StartV1Upgrade"],
+  { accountId: string }
+>({
+  type: "asyncClientAction",
+  actionType: Client.ActionType.START_V1_UPGRADE,
+  stateProducer: (draft, { payload }) => {
+    draft.v1IsUpgrading = true;
+    delete draft.v1UpgradeError;
+
+    if (!payload.accountId) {
+      draft.isRegistering = true;
+    }
+
+    draft.v1UpgradeStatus = "upgrading";
+  },
+  failureStateProducer: (draft, action) => {
+    draft.v1UpgradeError = action.payload;
+  },
+  successStateProducer: (draft, action) => {
+    draft.v1UpgradeAccountId = action.payload.accountId;
+    draft.v1UpgradeClientId = action.meta.clientId;
+  },
+  endStateProducer: (draft) => {
+    delete draft.isRegistering;
+  },
+  handler: async (
+    initialState,
+    { payload },
+    { context, dispatchSuccess, dispatchFailure }
+  ) => {
+    let state = initialState;
+    if (!state.v1UpgradeLoaded) {
+      throw new Error("v1 upgrade not loaded");
+    }
+
+    const v1Upgrade = {
+      ...pick(
+        [
+          "ts",
+          "signature",
+          "stripeCustomerId",
+          "stripeSubscriptionId",
+          "numUsers",
+          "signedPresetBilling",
+        ],
+        state.v1UpgradeLoaded
+      ),
+      ...pick(
+        ["billingInterval", "ssoEnabled", "freeTier", "newProductId"],
+        payload
+      ),
+    };
+
+    let accountId: string;
+    if (payload.accountId) {
+      const auth = getAuth(state, payload.accountId);
+      if (!auth || ("token" in auth && !auth.token)) {
+        throw new Error("Action requires authentication");
+      }
+      accountId = payload.accountId;
+
+      if (!state.filteredOrgArchive) {
+        return dispatchFailure(
+          {
+            type: "clientError",
+            error: {
+              name: "Upgrade error",
+              message: "Archive not preloaded for existing org",
+            },
+          },
+          context
+        );
+      }
+    } else {
+      const registerAction: Client.Action.ClientActions["Register"] = {
+        type: Client.ActionType.REGISTER,
+        payload: {
+          hostType: "cloud",
+          provider: "email",
+          user: state.v1UpgradeLoaded.creator,
+          org: {
+            name: state.v1UpgradeLoaded.orgName,
+            settings: getDefaultOrgSettings(),
+          },
+          device: {
+            name:
+              payload.deviceName ??
+              state.defaultDeviceName ??
+              "v1-upgraded-device",
+          },
+          emailVerificationToken: "v1-upgrade",
+          v1Upgrade,
+        },
+      };
+
+      const registerRes = await dispatch(registerAction, context);
+
+      if (registerRes.success) {
+        const successPayload = (registerRes.resultAction as any)
+          .payload as Api.Net.RegisterResult;
+
+        accountId = successPayload.userId;
+      } else {
+        return dispatchFailure(
+          (registerRes.resultAction as any).payload,
+          context
+        );
+      }
+    }
+
+    const registeredContext = {
+      ...context,
+      accountIdOrCliKey: accountId,
+    };
+
+    if (!payload.accountId) {
+      const decryptRes = await dispatch(
+        {
+          type: Client.ActionType.DECRYPT_ORG_ARCHIVE,
+          payload: { ...state.v1UpgradeLoaded, isV1Upgrade: true },
+        },
+        registeredContext
+      );
+
+      if (!decryptRes.success) {
+        updateImportStatus(undefined, registeredContext, false);
+        return dispatchFailure(
+          (decryptRes.resultAction as any).payload,
+          registeredContext
+        );
+      }
+    }
+
+    //import in background
+    dispatch(
+      {
+        type: Client.ActionType.IMPORT_ORG,
+        payload: {
+          importOrgUsers: payload.importOrgUsers,
+          importLocalKeys: payload.importLocalKeys,
+          importCliUsers: false,
+          importServers: true,
+          regenServerKeys: true,
+          isV1Upgrade: true,
+          isV1UpgradeIntoExistingOrg: Boolean(payload.accountId),
+          v1Upgrade,
+        },
+      },
+      registeredContext
+    );
+
+    return dispatchSuccess({ accountId }, registeredContext);
+  },
+});
+
+clientAction<Client.Action.ClientActions["ResetV1Upgrade"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.RESET_V1_UPGRADE,
+  stateProducer: (draft, { payload }) => {
+    delete draft.v1UpgradeLoaded;
+    delete draft.v1IsUpgrading;
+    delete draft.v1UpgradeError;
+    delete draft.v1UpgradeInviteToken;
+    delete draft.v1UpgradeEncryptionToken;
+    delete draft.v1UpgradeAccountId;
+    delete draft.v1UpgradeClientId;
+    delete draft.v1UpgradeStatus;
+    delete draft.v1UpgradeAcceptedInvite;
+    delete draft.v1UpgradeInviteToken;
+    delete draft.v1UpgradeEncryptionToken;
+
+    delete draft.unfilteredOrgArchive;
+    delete draft.filteredOrgArchive;
+    delete draft.decryptOrgArchiveError;
+    delete draft.isDecryptingOrgArchive;
+    delete draft.isImportingOrg;
+    delete draft.importOrgStatus;
+    delete draft.importOrgError;
+
+    if (payload.cancelUpgrade) {
+      draft.v1UpgradeStatus = "canceled";
+    }
+  },
+});
+
+clientAction<Client.Action.ClientActions["LoadV1UpgradeInvite"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.LOAD_V1_UPGRADE_INVITE,
+  stateProducer: (draft, { payload }) => {
+    draft.v1UpgradeInviteToken = payload.upgradeToken;
+    draft.v1UpgradeEncryptionToken = payload.encryptionToken;
   },
 });

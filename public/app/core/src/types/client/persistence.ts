@@ -3,7 +3,14 @@ import * as R from "ramda";
 
 // account states are filtered in persistence logic
 const defaultPersistable = R.omit(
-  ["clientStates", "networkUnreachable"],
+  [
+    "clientStates",
+    "networkUnreachable",
+    "cloudProducts",
+    "isLoadingCloudProducts",
+    "loadCloudProductsError",
+    "v1UpgradeAcceptedInvite",
+  ],
   defaultProcState
 );
 

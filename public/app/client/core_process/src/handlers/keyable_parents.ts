@@ -27,13 +27,18 @@ const getCreateKeyableParentHandler =
       throw new Error("Authentication required.");
     }
 
+    const apiPayload = R.omit(
+      ["skipGenerateKey", "v1EnvkeyIdPart", "v1EncryptionKey", "v1Payload"],
+      payload
+    );
+
     const apiRes = await dispatch(
       {
         type:
           keyableParentType == "server"
             ? Api.ActionType.CREATE_SERVER
             : Api.ActionType.CREATE_LOCAL_KEY,
-        payload: R.omit(["skipGenerateKey"], payload),
+        payload: apiPayload,
       } as any,
       context
     );
@@ -65,6 +70,9 @@ const getCreateKeyableParentHandler =
             appId: payload.appId,
             keyableParentType: created!.type,
             keyableParentId: created!.id,
+            v1Payload: payload.v1Payload,
+            v1EnvkeyIdPart: payload.v1EnvkeyIdPart,
+            v1EncryptionKey: payload.v1EncryptionKey,
           },
         },
         { ...context, skipWaitForSerialAction: true }
@@ -172,9 +180,17 @@ clientAction<
         envkeyIdPart,
         signedTrustedRoot,
         encryptionKey,
-      } = await generateKeyParams(state, context),
+      } = await generateKeyParams(
+        state,
+        context,
+        payload.v1EnvkeyIdPart,
+        payload.v1EncryptionKey
+      ),
       apiParams = {
-        ...pick(["appId", "keyableParentId", "keyableParentType"], payload),
+        ...pick(
+          ["appId", "keyableParentId", "keyableParentType", "v1Payload"],
+          payload
+        ),
         pubkey,
         encryptedPrivkey,
         envkeyIdPart,
@@ -342,7 +358,9 @@ clientAction<
 
 const generateKeyParams = async (
   state: Client.State,
-  context: Client.Context
+  context: Client.Context,
+  v1EnvkeyIdPart?: string,
+  v1EncryptionKey?: string
 ): Promise<
   Pick<
     Api.Net.ApiParamTypes["GenerateKey"],
@@ -361,8 +379,8 @@ const generateKeyParams = async (
 
   const currentUserPrivkey = currentAuth.privkey;
 
-  const envkeyIdPart = "ek" + secureRandomAlphanumeric(22),
-    encryptionKey = secureRandomAlphanumeric(22),
+  const envkeyIdPart = v1EnvkeyIdPart ?? "ek" + secureRandomAlphanumeric(22),
+    encryptionKey = v1EncryptionKey ?? secureRandomAlphanumeric(22),
     {
       pubkey: generatedPubkey,
       privkey: generatedPrivkey,

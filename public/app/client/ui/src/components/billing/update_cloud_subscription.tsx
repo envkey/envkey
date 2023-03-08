@@ -405,7 +405,7 @@ export const UpdateCloudSubscription: OrgComponent = (props) => {
         <span>{priceString}</span>
       </div>
 
-      {!subscription?.promotionCode &&
+      {!subscription?.hasPromotionCode &&
       hasSubscriptionChange &&
       selectedProductId ? (
         <div className="field">

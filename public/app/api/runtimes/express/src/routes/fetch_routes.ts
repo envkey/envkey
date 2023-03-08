@@ -25,11 +25,7 @@ const fetchRoute: express.RequestHandler<
     method = req.method.toLowerCase() as "head" | "get";
 
   // quick 404 for plainly invalid envkeyIdPart
-  if (
-    !query.envkeyIdPart ||
-    !query.envkeyIdPart.startsWith("ek") ||
-    query.envkeyIdPart.includes("-")
-  ) {
+  if (!query.envkeyIdPart || query.envkeyIdPart.includes("-")) {
     if (method == "head") {
       res.status(404).end();
     } else {

@@ -29,3 +29,4 @@ export * from "./onboard";
 export * from "./archive";
 export * from "./upgrades";
 export * from "./integrations";
+export * from "./v1_upgrade";

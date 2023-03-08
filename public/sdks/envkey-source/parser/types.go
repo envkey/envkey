@@ -50,6 +50,7 @@ type FetchResponse struct {
 	SignedTrustedRoot      *crypto.SignedData       `json:"signedTrustedRoot"`
 	Blocks                 []*KeyableBlob           `json:"blocks,omitempty"`
 	RootPubkeyReplacements []*RootPubkeyReplacement `json:"rootPubkeyReplacements,omitempty"`
+	V1Payload              *V1EnvServiceResponse    `json:"v1Payload,omitempty"`
 }
 
 type RootKeys struct {

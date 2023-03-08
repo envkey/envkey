@@ -107,7 +107,12 @@ const blockGroupsNode: MaybeNodeFn = (state, currentUserId, now) => {
     : undefined;
 };
 
-type UserStatus = "active" | "pending" | "expired" | "failed";
+type UserStatus =
+  | "active"
+  | "pending"
+  | "pending-v1-upgrade"
+  | "expired"
+  | "failed";
 const usersNode: MaybeNodeFn = (state, currentUserId, now) => {
   const users = g.authz.getListableOrgUsers(state.graph, currentUserId);
 
@@ -228,8 +233,8 @@ const orgUsersByStatusTree = (
     }
   }, orgUsers) as Record<UserStatus, Model.OrgUser[] | undefined>;
 
-  const [active, pending, expired, failed] = R.props(
-    ["active", "pending", "expired", "failed"],
+  const [active, pending, pendingV1Upgrade, expired, failed] = R.props(
+    ["active", "pending", "pending-v1-upgrade", "expired", "failed"],
     byStatus
   ).map((a) => a ?? []);
 
@@ -242,6 +247,15 @@ const orgUsersByStatusTree = (
           label: "Invite Pending",
           showInTree: true,
           tree: pending.map(nodeMapFn(state, currentUserId, now)),
+        }
+      : undefined,
+
+    pendingV1Upgrade.length > 0
+      ? {
+          id: [idPrefix, "pendin-v1-upgrade"].join("|"),
+          label: "V1 Upgrade Pending",
+          showInTree: true,
+          tree: pendingV1Upgrade.map(nodeMapFn(state, currentUserId, now)),
         }
       : undefined,
 

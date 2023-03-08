@@ -69,6 +69,7 @@ let cancelSubscriptionFn:
   | ((params: {
       stripeCustomerId: string;
       stripeSubscriptionId: string;
+      removePaymentMethods: boolean;
     }) => Promise<any>)
   | undefined;
 export const registerCancelSubscriptionFn = (

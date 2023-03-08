@@ -14,6 +14,7 @@ export namespace Fetch {
     signedTrustedRoot: Crypto.SignedData;
     blocks?: KeyableBlob[];
     rootPubkeyReplacements?: RootPubkeyReplacement[];
+    v1Payload?: Api.Db.GeneratedEnvkey["v1Payload"];
   };
 
   export type CheckResult = {

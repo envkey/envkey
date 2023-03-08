@@ -133,6 +133,7 @@ export const OrgArchiveImporter: OrgComponent<
           importOrgUsers,
           importCliUsers,
           importServers,
+          importLocalKeys: false,
           regenServerKeys,
           importOrgUserIds: orgUserIds,
           importCliUserIds: cliUserIds,

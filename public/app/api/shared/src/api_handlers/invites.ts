@@ -14,6 +14,7 @@ import {
   graphTypes,
   authz,
   getActiveOrInvitedOrgUsers,
+  getLocalKeysByUserId,
 } from "@core/lib/graph";
 import { getPubkeyHash } from "@core/lib/client";
 import { pick } from "@core/lib/utils/pick";
@@ -205,17 +206,27 @@ apiAction<
 
     transactionItems.puts!.push(user, userIdByEmail, userIdByProviderUid);
 
-    const emailToken = [
-      "i",
-      secureRandomAlphanumeric(22),
-      encodeBase58(decodeUTF8(requestParams.host)),
-    ].join("_");
+    const isV1UpgradeInvite = Boolean(
+      auth.org.importedFromV1 &&
+        auth.org.startedOrgImportAt &&
+        !auth.org.finishedOrgImportAt &&
+        payload.v1Token
+    );
 
-    if (process.env.NODE_ENV == "development") {
-      const clipboardy = require("clipboardy");
-      const notifier = require("node-notifier");
-      clipboardy.writeSync(emailToken);
-      notifier.notify("Created invite. Token copied to clipboard.");
+    let emailToken = "";
+    if (!isV1UpgradeInvite) {
+      emailToken = [
+        "i",
+        secureRandomAlphanumeric(22),
+        encodeBase58(decodeUTF8(requestParams.host)),
+      ].join("_");
+
+      if (process.env.NODE_ENV == "development") {
+        const clipboardy = require("clipboardy");
+        const notifier = require("node-notifier");
+        clipboardy.writeSync(emailToken);
+        notifier.notify("Created invite. Token copied to clipboard.");
+      }
     }
 
     const inviteId = uuid(),
@@ -225,6 +236,7 @@ apiAction<
         ...graphKey.invite(auth.org.id, auth.user.id, inviteId),
         ...pick(["provider", "uid", "externalAuthProviderId"], userParams),
         ...pick(["identityHash", "pubkey", "encryptedPrivkey"], payload),
+        v1Invite: Boolean(payload.v1Token),
         invitedByUserId: auth.user.id,
         invitedByDeviceId:
           auth.type == "tokenAuthContext" ? auth.orgUserDevice.id : undefined,
@@ -237,14 +249,16 @@ apiAction<
         inviteeId: user.id,
         deviceId: uuid(),
         signedTrustedRoot: payload.signedTrustedRoot,
-        expiresAt: now + auth.org.settings.auth.inviteExpirationMs,
+        expiresAt: isV1UpgradeInvite
+          ? now + 1000 * 60 * 60 * 24 * 90 // for v1 upgrade invites only, use long expiration (90 days)
+          : now + auth.org.settings.auth.inviteExpirationMs,
         createdAt: now,
         updatedAt: now,
       },
       invitePointer: Api.Db.InvitePointer = {
         type: "invitePointer",
         pkey: ["invite", payload.identityHash].join("|"),
-        skey: emailToken,
+        skey: isV1UpgradeInvite ? payload.v1Token! : emailToken,
         inviteId,
         orgId: auth.org.id,
         createdAt: now,
@@ -332,23 +346,27 @@ apiAction<
       deleteActiveTransactionItems,
     ]);
 
-    const firstName =
-        auth.type == "cliUserAuthContext"
-          ? auth.user.name
-          : auth.user.firstName,
-      fullName =
-        auth.type == "cliUserAuthContext"
-          ? auth.user.name
-          : [auth.user.firstName, auth.user.lastName].join(" "),
-      emailAction = () =>
-        sendBulkEmail({
-          to: user.email,
-          subject: `${user.firstName}, you've been invited to access ${auth.org.name}'s EnvKey config`,
-          bodyMarkdown: `Hi ${user.firstName},
+    const postUpdateActions = isV1UpgradeInvite
+      ? []
+      : [
+          () => {
+            const firstName =
+                auth.type == "cliUserAuthContext"
+                  ? auth.user.name
+                  : auth.user.firstName,
+              fullName =
+                auth.type == "cliUserAuthContext"
+                  ? auth.user.name
+                  : [auth.user.firstName, auth.user.lastName].join(" ");
+
+            return sendBulkEmail({
+              to: user.email,
+              subject: `${user.firstName}, you've been invited to access ${auth.org.name}'s EnvKey config`,
+              bodyMarkdown: `Hi ${user.firstName},
 
 ${fullName} has invited you to access ${
-            auth.org.name + (auth.org.name.endsWith("s") ? "'" : "'s")
-          } EnvKey config.
+                auth.org.name + (auth.org.name.endsWith("s") ? "'" : "'s")
+              } EnvKey config.
 
 EnvKey makes sharing api keys, environment variables, and application secrets easy and secure.
 
@@ -362,13 +380,15 @@ You'll also need an **Encryption Token** that ${firstName} will send to you dire
 
 This invitation will remain valid for 24 hours.
 `,
-        });
+            });
+          },
+        ];
 
     return {
       type: "graphHandlerResult",
       transactionItems,
       graph: updatedGraph,
-      postUpdateActions: [emailAction],
+      postUpdateActions,
       handlerContext: {
         type: Api.ActionType.CREATE_INVITE,
         inviteId: invite.id,
@@ -391,6 +411,7 @@ apiAction<
   graphResponse: "loadedInvite",
   graphAuthorizer: async (
     {
+      payload,
       meta: {
         auth: { identityHash, emailToken: token },
       },
@@ -633,6 +654,15 @@ apiAction<
             }
           : {}),
       };
+
+      if (invite.v1Invite) {
+        for (let localKey of getLocalKeysByUserId(orgGraph)[auth.user.id] ??
+          []) {
+          if (localKey.isV1UpgradeKey) {
+            (draft[localKey.id] as Api.Db.LocalKey).deviceId = deviceId;
+          }
+        }
+      }
 
       const replacementDrafts = graphTypes(draft)
         .rootPubkeyReplacements as Api.Db.RootPubkeyReplacement[];

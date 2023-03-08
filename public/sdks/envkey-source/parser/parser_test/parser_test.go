@@ -24,55 +24,55 @@ func TestParse(t *testing.T) {
 	var err error
 
 	// basic response
-	envMap, _, _, _, err = response.Parse(encryptionKeyString)
+	envMap, _, _, _, _, err = response.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.Equal(t, `{"GO_TEST":"it","GO_TEST_2":"works!"}`, envJson)
 
 	// with inheritance overrides
-	envMap, _, _, _, err = responseWithInheritance.Parse(encryptionKeyString)
+	envMap, _, _, _, _, err = responseWithInheritance.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.Equal(t, `{"GO_TEST":"it-inherits","GO_TEST_2":"works!-inherits"}`, envJson)
 
 	// with local overrides
-	envMap, _, _, _, err = responseWithLocals.Parse(encryptionKeyString)
+	envMap, _, _, _, _, err = responseWithLocals.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.Equal(t, `{"GO_TEST":"it-locals","GO_TEST_2":"works!","GO_TEST_4":"works!-locals"}`, envJson)
 
 	// with sub env
-	envMap, _, _, _, err = responseWithSub.Parse(encryptionKeyString)
+	envMap, _, _, _, _, err = responseWithSub.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.Equal(t, `{"GO_TEST":"it-sub","GO_TEST_2":"works!","GO_TEST_4":"works!-sub"}`, envJson)
 
 	// with blocks
-	envMap, _, _, _, err = responseWithBlocks.Parse(encryptionKeyString)
+	envMap, _, _, _, _, err = responseWithBlocks.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.Equal(t, `{"GO_TEST":"it","GO_TEST_2":"works!","GO_TEST_3":"it-block1","GO_TEST_4":"works!-block2"}`, envJson)
 
 	// with blocks and inheritance
-	envMap, _, _, _, err = responseWithInheritanceAndBlocks.Parse(encryptionKeyString)
+	envMap, _, _, _, _, err = responseWithInheritanceAndBlocks.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.Equal(t, `{"GO_TEST":"it-inherits","GO_TEST_2":"works!-inherits","GO_TEST_3":"it-block1","GO_TEST_4":"works!-block2-inherits"}`, envJson)
 
 	// with blocks / locals / inheritance
-	envMap, _, _, _, err = responseWithLocalsBlocksInheritance.Parse(encryptionKeyString)
+	envMap, _, _, _, _, err = responseWithLocalsBlocksInheritance.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.Equal(t, `{"GO_TEST":"it-locals","GO_TEST_2":"works!-block1-locals","GO_TEST_3":"it-block1","GO_TEST_4":"works!-locals","GO_TEST_5":"works!-block1-locals"}`, envJson)
 
 	// with blocks / sub envs / inheritance
-	envMap, _, _, _, err = responseWithSubEnvsBlocksInheritance.Parse(encryptionKeyString)
+	envMap, _, _, _, _, err = responseWithSubEnvsBlocksInheritance.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.Equal(t, `{"GO_TEST":"it-sub","GO_TEST_2":"works!-block2-inherits","GO_TEST_3":"it-block1","GO_TEST_4":"works!-sub","GO_TEST_5":"works!-block2-subenv"}`, envJson)
 
 	// with single root pubkey replacement
-	envMap, _, newSignedTrustedRoot, replacementIds, err := responseWithSingleRootPubkeyReplacement.Parse(encryptionKeyString)
+	envMap, _, newSignedTrustedRoot, replacementIds, _, err := responseWithSingleRootPubkeyReplacement.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.NotNil(t, newSignedTrustedRoot, "Should return a new signed trusted root to send back to server")
@@ -80,7 +80,7 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, `{"GO_TEST":"it","GO_TEST_2":"works!"}`, envJson)
 
 	// with multiple root pubkey replacements
-	envMap, _, newSignedTrustedRoot, replacementIds, err = responseWithMultiRootPubkeyReplacements.Parse(encryptionKeyString)
+	envMap, _, newSignedTrustedRoot, replacementIds, _, err = responseWithMultiRootPubkeyReplacements.Parse(encryptionKeyString, false)
 	envJson, _ = envMap.ToJson()
 	assert.Nil(t, err, "Should not return an error.")
 	assert.NotNil(t, newSignedTrustedRoot, "Should return a new signed trusted root to send back to server")
