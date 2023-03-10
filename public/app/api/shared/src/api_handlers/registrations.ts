@@ -547,6 +547,8 @@ apiAction<
     }
 
     if (initBillingFn && !payload.test) {
+      log("REGISTER - is v1 upgrade", { org, user, now, payload });
+
       const initBillingRes = await initBillingFn(
         transactionConn,
         org,

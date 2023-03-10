@@ -493,7 +493,9 @@ export const V1Upgrade: Component = (props) => {
               lastLoadedAccountId: userId,
             });
 
-            props.history.push(`/org/${orgId}`);
+            props.history.push(
+              accountId ? `/org/${orgId}` : `/org/${orgId}/welcome`
+            );
           }}
         >
           Go To Your V2 Org →

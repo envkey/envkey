@@ -24,7 +24,7 @@ import { scimCandidateDbKey } from "../models/provisioning";
 import { getOrg } from "../models/orgs";
 import produce, { Draft } from "immer";
 import { isValidIPOrCIDR, ipMatchesAny } from "@core/lib/utils/ip";
-import { log } from "@core/lib/utils/logger";
+import { log, logStderr } from "@core/lib/utils/logger";
 import { env } from "../env";
 import {
   getResolveProductAndQuantityFn,
@@ -133,6 +133,23 @@ apiAction<
     let transactionItems: Api.Db.ObjectTransactionItems = {};
 
     if (env.IS_CLOUD) {
+      // if org is already importing, don't allow another import
+      // this is to prevent a user from accidentally starting an import twice
+      // timeout after 10 minutes
+      if (
+        auth.org.startedOrgImportAt &&
+        !auth.org.finishedOrgImportAt &&
+        now - auth.org.startedOrgImportAt < 1000 * 60 * 10
+      ) {
+        logStderr("STARTED_ORG_IMPORT - org is already importing", {
+          org: auth.org,
+          user: auth.user,
+          now,
+          payload,
+        });
+        throw new Api.ApiError("Org is already importing", 400);
+      }
+
       // on cloud, don't send lifecycle emails if it's an imported org
       const { orgUsers } = graphTypes(orgGraph);
 
@@ -145,6 +162,13 @@ apiAction<
 
       // if upgrading into an existing org, init v2 billing
       if (payload.isV1UpgradeIntoExistingOrg) {
+        log("STARTED_ORG_IMPORT - v1 upgrade - into existing org", {
+          org: auth.org,
+          user: auth.user,
+          now,
+          payload,
+        });
+
         if (!initV1UpgradeBillingFn) {
           throw new Error("initV1UpgradeBillingFn not registered");
         }
@@ -528,7 +552,11 @@ apiAction<
       }),
       keySet = getCurrentEncryptedKeys(orgGraph, "all", now, true),
       { hardDeleteKeys, hardDeleteEncryptedKeyParams } =
-        await getDeleteEncryptedKeysTransactionItems(auth, orgGraph, keySet);
+        await getDeleteEncryptedKeysTransactionItems(
+          auth.org.id,
+          orgGraph,
+          keySet
+        );
 
     const cancelSubscriptionFn = getCancelSubscriptionFn();
     const customer = graphTypes(orgGraph).customer as
@@ -557,7 +585,6 @@ apiAction<
           .map(pick(["pkey", "skey"])),
         hardDeleteEncryptedKeyParams,
         hardDeleteEncryptedBlobParams: [{ orgId: auth.org.id }],
-        puts: [{ ...auth.org, deletedAt: now }],
       },
       logTargetIds: [],
       clearUserSockets: [{ orgId: auth.org.id }],

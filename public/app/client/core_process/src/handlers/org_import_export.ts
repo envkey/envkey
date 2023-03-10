@@ -1868,25 +1868,9 @@ clientAction<
       throw new Error("v1 upgrade not loaded");
     }
 
-    const v1Upgrade = {
-      ...pick(
-        [
-          "ts",
-          "signature",
-          "stripeCustomerId",
-          "stripeSubscriptionId",
-          "numUsers",
-          "signedPresetBilling",
-        ],
-        state.v1UpgradeLoaded
-      ),
-      ...pick(
-        ["billingInterval", "ssoEnabled", "freeTier", "newProductId"],
-        payload
-      ),
-    };
+    let accountId: string | undefined;
+    let numUsers: number;
 
-    let accountId: string;
     if (payload.accountId) {
       const auth = getAuth(state, payload.accountId);
       if (!auth || ("token" in auth && !auth.token)) {
@@ -1906,7 +1890,31 @@ clientAction<
           context
         );
       }
+
+      numUsers = state.filteredOrgArchive.orgUsers.length;
     } else {
+      numUsers = state.v1UpgradeLoaded.numUsers;
+    }
+
+    const v1Upgrade = {
+      ...pick(
+        [
+          "ts",
+          "signature",
+          "stripeCustomerId",
+          "stripeSubscriptionId",
+          "signedPresetBilling",
+        ],
+        state.v1UpgradeLoaded
+      ),
+      ...pick(
+        ["billingInterval", "ssoEnabled", "freeTier", "newProductId"],
+        payload
+      ),
+      numUsers,
+    };
+
+    if (!payload.accountId) {
       const registerAction: Client.Action.ClientActions["Register"] = {
         type: Client.ActionType.REGISTER,
         payload: {
@@ -1941,6 +1949,19 @@ clientAction<
           context
         );
       }
+    }
+
+    if (!accountId) {
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: {
+            name: "Upgrade error",
+            message: "No account id",
+          },
+        },
+        context
+      );
     }
 
     const registeredContext = {

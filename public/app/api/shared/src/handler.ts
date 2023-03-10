@@ -1421,7 +1421,7 @@ const apiActions: {
 
         const deleteEncryptedKeysTransactionItems =
           await getDeleteEncryptedKeysTransactionItems(
-            auth,
+            auth.org.id,
             orgGraph,
             toDeleteEncryptedKeys
           );
