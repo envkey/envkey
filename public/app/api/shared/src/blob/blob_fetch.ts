@@ -6,46 +6,14 @@ import {
   getUserEncryptedKeyOrBlobComposite,
 } from "@core/lib/blob";
 import * as R from "ramda";
-import { query } from "../db";
+import { query } from "../db_fns";
 import { indexBy, groupBy } from "@core/lib/utils/array";
 
-export const getUserEncryptedKeys = async (
-  params:
-    | Blob.UserEncryptedKeyPkeyWithScopeParams
-    | Blob.UserEncryptedKeyPkeyWithScopeParams[],
-  queryParams: Omit<
-    Api.Db.QueryParams,
-    "pkey" | "scope" | "pkeyScope" | "pkeysWithScopes"
-  >
-) => {
-  let toQuery: Api.Db.QueryParams;
-
-  if (Array.isArray(params)) {
-    const pkeysWithScopes = params.map((p) => ({
-      pkey: userEncryptedKeyPkey(p),
-      scope: getScope(p),
-    }));
-    toQuery = {
-      pkeysWithScopes,
-      ...queryParams,
-    };
-  } else {
-    const pkey = userEncryptedKeyPkey(params);
-    const scope = getScope(params);
-    toQuery = {
-      pkey,
-      scope,
-      ...queryParams,
-    };
-  }
-
-  return query<Api.Db.UserEncryptedKey>(toQuery);
-};
 export const getEnvEncryptedKeys = (
   params:
     | Blob.UserEncryptedKeyPkeyWithScopeParams
     | Blob.UserEncryptedKeyPkeyWithScopeParams[],
-  queryParams: Pick<Api.Db.QueryParams, "transactionConn">
+  queryParams: Pick<Api.Db.TxnQueryParams, "transactionConnOrPool">
 ) =>
   getUserEncryptedKeys(
     Array.isArray(params)
@@ -71,7 +39,7 @@ export const getChangesetEncryptedKeys = (
   params:
     | ChangesetEncryptedKeysScopeParams
     | ChangesetEncryptedKeysScopeParams[],
-  queryParams: Pick<Api.Db.QueryParams, "transactionConn">
+  queryParams: Pick<Api.Db.TxnQueryParams, "transactionConnOrPool">
 ) => {
   const paramsWithBlobType = Array.isArray(params)
     ? params.map(
@@ -98,16 +66,111 @@ export const getChangesetEncryptedKeys = (
   ) as Promise<Blob.UserEncryptedChangesetKeysByEnvironmentId>;
 };
 
+export const getEnvEncryptedBlobs = (
+  params:
+    | Blob.EncryptedBlobPkeyWithScopeParams
+    | Blob.EncryptedBlobPkeyWithScopeParams[],
+  queryParams: Pick<Api.Db.TxnQueryParams, "transactionConnOrPool">
+) =>
+  getEncryptedBlobs(
+    Array.isArray(params)
+      ? params.map(
+          (p) =>
+            ({ ...p, blobType: "env" } as Blob.EncryptedBlobPkeyParams &
+              Blob.ScopeParams)
+        )
+      : ({
+          ...params,
+          blobType: "env",
+        } as Blob.EncryptedBlobPkeyParams & Blob.ScopeParams),
+    queryParams
+  ).then((blobs) => {
+    return indexBy(
+      getUserEncryptedKeyOrBlobComposite,
+      blobs.map(R.omit(["pkey", "skey"]))
+    );
+  }) as Promise<Blob.UserEncryptedBlobsByComposite>;
+
+type ChangesetBlobsScopeParams = Omit<
+  Blob.EncryptedBlobPkeyWithScopeParams,
+  "blobType"
+> &
+  Api.Net.FetchChangesetOptions;
+export const getChangesetEncryptedBlobs = (
+  params: ChangesetBlobsScopeParams | ChangesetBlobsScopeParams[],
+  queryParams: Pick<Api.Db.TxnQueryParams, "transactionConnOrPool">
+) => {
+  const paramsWithBlobType = Array.isArray(params)
+    ? params.map(
+        (p) =>
+          ({
+            ...p,
+            blobType: "changeset",
+          } as Blob.EncryptedBlobPkeyWithScopeParams)
+      )
+    : ({
+        ...params,
+        blobType: "changeset",
+      } as Blob.EncryptedBlobPkeyWithScopeParams);
+
+  return getEncryptedBlobs(paramsWithBlobType, {
+    ...queryParams,
+    createdAfter:
+      ("createdAfter" in paramsWithBlobType &&
+        paramsWithBlobType.createdAfter) ||
+      undefined,
+    sortBy: "createdAt",
+  }).then((blobs) => {
+    return groupBy(
+      ({ environmentId }) => environmentId!,
+      blobs.map(R.omit(["pkey", "skey"]))
+    );
+  }) as Promise<Blob.UserEncryptedBlobsByEnvironmentId>;
+};
+
+export const getUserEncryptedKeys = async (
+  params:
+    | Blob.UserEncryptedKeyPkeyWithScopeParams
+    | Blob.UserEncryptedKeyPkeyWithScopeParams[],
+  queryParams: Omit<
+    Api.Db.TxnQueryParams,
+    "pkey" | "scope" | "pkeyScope" | "pkeysWithScopes"
+  >
+) => {
+  let toQuery: Api.Db.TxnQueryParams;
+
+  if (Array.isArray(params)) {
+    const pkeysWithScopes = params.map((p) => ({
+      pkey: userEncryptedKeyPkey(p),
+      scope: getScope(p),
+    }));
+    toQuery = {
+      pkeysWithScopes,
+      ...queryParams,
+    };
+  } else {
+    const pkey = userEncryptedKeyPkey(params);
+    const scope = getScope(params);
+    toQuery = {
+      pkey,
+      scope,
+      ...queryParams,
+    };
+  }
+
+  return query<Api.Db.UserEncryptedKey>(toQuery);
+};
+
 export const getEncryptedBlobs = async (
   params:
     | Blob.EncryptedBlobPkeyWithScopeParams
     | Blob.EncryptedBlobPkeyWithScopeParams[],
   queryParams: Omit<
-    Api.Db.QueryParams,
+    Api.Db.TxnQueryParams,
     "pkey" | "scope" | "pkeyScope" | "pkeysWithScopes"
   >
 ) => {
-  let toQuery: Api.Db.QueryParams;
+  let toQuery: Api.Db.TxnQueryParams;
 
   if (Array.isArray(params)) {
     const pkeysWithScopes = params.map((p) => ({
@@ -141,65 +204,4 @@ export const getEncryptedBlobs = async (
   }
 
   return query<Api.Db.EncryptedBlob>(toQuery);
-};
-export const getEnvEncryptedBlobs = (
-  params:
-    | Blob.EncryptedBlobPkeyWithScopeParams
-    | Blob.EncryptedBlobPkeyWithScopeParams[],
-  queryParams: Pick<Api.Db.QueryParams, "transactionConn">
-) =>
-  getEncryptedBlobs(
-    Array.isArray(params)
-      ? params.map(
-          (p) =>
-            ({ ...p, blobType: "env" } as Blob.EncryptedBlobPkeyParams &
-              Blob.ScopeParams)
-        )
-      : ({
-          ...params,
-          blobType: "env",
-        } as Blob.EncryptedBlobPkeyParams & Blob.ScopeParams),
-    queryParams
-  ).then((blobs) => {
-    return indexBy(
-      getUserEncryptedKeyOrBlobComposite,
-      blobs.map(R.omit(["pkey", "skey"]))
-    );
-  }) as Promise<Blob.UserEncryptedBlobsByComposite>;
-
-type ChangesetBlobsScopeParams = Omit<
-  Blob.EncryptedBlobPkeyWithScopeParams,
-  "blobType"
-> &
-  Api.Net.FetchChangesetOptions;
-export const getChangesetEncryptedBlobs = (
-  params: ChangesetBlobsScopeParams | ChangesetBlobsScopeParams[],
-  queryParams: Pick<Api.Db.QueryParams, "transactionConn">
-) => {
-  const paramsWithBlobType = Array.isArray(params)
-    ? params.map(
-        (p) =>
-          ({
-            ...p,
-            blobType: "changeset",
-          } as Blob.EncryptedBlobPkeyWithScopeParams)
-      )
-    : ({
-        ...params,
-        blobType: "changeset",
-      } as Blob.EncryptedBlobPkeyWithScopeParams);
-
-  return getEncryptedBlobs(paramsWithBlobType, {
-    ...queryParams,
-    createdAfter:
-      ("createdAfter" in paramsWithBlobType &&
-        paramsWithBlobType.createdAfter) ||
-      undefined,
-    sortBy: "createdAt",
-  }).then((blobs) => {
-    return groupBy(
-      ({ environmentId }) => environmentId!,
-      blobs.map(R.omit(["pkey", "skey"]))
-    );
-  }) as Promise<Blob.UserEncryptedBlobsByEnvironmentId>;
 };

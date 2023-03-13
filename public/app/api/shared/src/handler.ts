@@ -1623,7 +1623,7 @@ const apiActions: {
                       deviceId: deviceId!,
                       blobType: "env",
                     },
-                    { transactionConn }
+                    { transactionConnOrPool: transactionConn }
                   ).then((res) => {
                     logWithElapsed(
                       transactionId +
@@ -1638,7 +1638,7 @@ const apiActions: {
                       userId: auth.user.id,
                       deviceId: deviceId!,
                     },
-                    { transactionConn }
+                    { transactionConnOrPool: transactionConn }
                   ).then((res) => {
                     logWithElapsed(
                       transactionId +
@@ -1655,7 +1655,7 @@ const apiActions: {
                           blobType: "env",
                           envParentId: id,
                         })),
-                        { transactionConn }
+                        { transactionConnOrPool: transactionConn }
                       ).then((res) => {
                         logWithElapsed(
                           transactionId +
@@ -1675,7 +1675,7 @@ const apiActions: {
                       deviceId: deviceId!,
                       ...scope,
                     })),
-                    { transactionConn }
+                    { transactionConnOrPool: transactionConn }
                   ).then((res) => {
                     logWithElapsed(
                       transactionId +
@@ -1692,7 +1692,7 @@ const apiActions: {
                       deviceId: deviceId!,
                       ...scope,
                     })),
-                    { transactionConn }
+                    { transactionConnOrPool: transactionConn }
                   ).then((res) => {
                     logWithElapsed(
                       transactionId +
@@ -1709,7 +1709,7 @@ const apiActions: {
                           orgId: auth.org.id,
                           ...scope,
                         })),
-                        { transactionConn }
+                        { transactionConnOrPool: transactionConn }
                       ).then((res) => {
                         logWithElapsed(
                           transactionId +
@@ -1775,7 +1775,7 @@ const apiActions: {
                         userId: auth.user.id,
                         deviceId: deviceId!,
                       },
-                      { transactionConn }
+                      { transactionConnOrPool: transactionConn }
                     ).then((res) => {
                       logWithElapsed(
                         transactionId +
@@ -1792,7 +1792,7 @@ const apiActions: {
                         orgId: auth.org.id,
                         createdAfter: handlerChangesets.createdAfter,
                       },
-                      { transactionConn }
+                      { transactionConnOrPool: transactionConn }
                     ).then((res) => {
                       logWithElapsed(
                         transactionId +
@@ -1811,7 +1811,7 @@ const apiActions: {
                     deviceId: deviceId!,
                     ...scope,
                   })),
-                  { transactionConn }
+                  { transactionConnOrPool: transactionConn }
                 ).then((res) => {
                   logWithElapsed(
                     transactionId +
@@ -1828,7 +1828,7 @@ const apiActions: {
                         ...scope,
                       })),
 
-                      { transactionConn }
+                      { transactionConnOrPool: transactionConn }
                     ).then((res) => {
                       logWithElapsed(
                         transactionId +

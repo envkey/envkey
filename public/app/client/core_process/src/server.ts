@@ -51,7 +51,7 @@ export const start = async (port = 19047, wsport = 19048) => {
 
   startSocketServer(port, wsport);
 
-  app.use(express.json());
+  app.use(express.json({ limit: "50mb" }));
 
   /*
    * put /alive route *before* loggerMiddleware so we
@@ -88,9 +88,13 @@ export const start = async (port = 19047, wsport = 19048) => {
         return;
       }
 
+      await dispatch({ type: Client.ActionType.V1_CLIENT_ALIVE }, getContext());
+
       const procState = reduxStore.getState();
 
       if (procState.v1UpgradeStatus == "finished") {
+        log("V1 upgrade finished, returning invite tokens if needed.");
+
         let inviteTokensById:
           | Record<
               string,
@@ -142,7 +146,7 @@ export const start = async (port = 19047, wsport = 19048) => {
             type: Client.ActionType.RESET_V1_UPGRADE,
             payload: {},
           },
-          getContext(procState.v1UpgradeAccountId)
+          { ...getContext(procState.v1UpgradeAccountId), localSocketUpdate }
         );
 
         res.status(200).json({
@@ -600,12 +604,13 @@ const initReduxStore = async (forceReset?: true) => {
     await procHeartbeatLoop();
     await initSocketsAndTimers();
     if (reduxStore) {
-      refreshSessions(
+      await refreshSessions(
         reduxStore.getState(),
         localSocketUpdate,
         undefined,
         true
-      ).then(() => checkUpgradesAvailableLoop(reduxStore!, localSocketUpdate));
+      );
+      checkUpgradesAvailableLoop(reduxStore!, localSocketUpdate);
     }
   },
   clearTimers = () => {

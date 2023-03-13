@@ -45,6 +45,11 @@ export namespace Env {
         isEmpty?: undefined;
         isUndefined: true;
       }
+    | {
+        inheritsEnvironmentId?: undefined;
+        isEmpty?: undefined;
+        isUndefined?: undefined;
+      }
   );
 
   export type UserEnvCell = EnvWithMetaCell | EnvMetaCell;

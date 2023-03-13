@@ -3,12 +3,14 @@ import * as R from "ramda";
 import * as g from "@core/lib/graph";
 import { Client, Api, Model, Blob, Crypto } from "@core/types";
 import { decrypt, decryptSymmetricWithKey } from "@core/lib/crypto/proxy";
-import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
+import {
+  parseUserEncryptedKeyOrBlobComposite,
+  isValidEmptyVal,
+} from "@core/lib/blob";
 import { verifyOrgKeyable } from "../trust";
 import { clearVoidedPendingEnvUpdatesProducer } from ".";
 import { log } from "@core/lib/utils/logger";
 import { getObjectName } from "@core/lib/graph";
-import { isValidEmptyVal } from "./params";
 import { dispatch } from "../../handler";
 import { wait } from "@core/lib/utils/wait";
 import {

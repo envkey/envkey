@@ -8,6 +8,8 @@ enum ActionType {
   SIGN_OUT = "envkey/client/SIGN_OUT",
   FORGET_DEVICE = "envkey/client/FORGET_DEVICE",
 
+  SET_AUTH = "envkey/client/SET_AUTH",
+
   RESET_CLIENT_STATE = "envkey/client/RESET_CLIENT_STATE",
 
   SET_TRUSTED_ROOT_PUBKEY = "envkey/client/SET_TRUSTED_ROOT_PUBKEY",
@@ -155,6 +157,7 @@ enum ActionType {
   LOAD_V1_UPGRADE = "envkey/client/LOAD_V1_UPGRADE",
   RESET_V1_UPGRADE = "envkey/client/RESET_V1_UPGRADE",
   START_V1_UPGRADE = "envkey/client/START_V1_UPGRADE",
+  V1_CLIENT_ALIVE = "envkey/client/V1_CLIENT_ALIVE",
 
   LOAD_V1_UPGRADE_INVITE = "envkey/client/LOAD_V1_UPGRADE_INVITE",
 

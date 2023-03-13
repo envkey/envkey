@@ -5,7 +5,7 @@ import { Blob } from "../blob";
 import { Logs } from "../logs";
 import * as Rbac from "../rbac";
 import * as Billing from "../billing";
-import { PoolConnection } from "mysql2/promise";
+import { PoolConnection, Pool } from "mysql2/promise";
 import { TimestampsSchema } from "../timestamps";
 import * as z from "zod";
 import * as utils from "../utils";
@@ -22,6 +22,8 @@ export namespace Db {
     skey: z.string(),
     secondaryIndex: z.string().optional(),
     tertiaryIndex: z.string().optional(),
+
+    devIndex: z.string().optional(), // used in development only
   });
 
   export type QueryParams = (
@@ -72,6 +74,10 @@ export namespace Db {
     secondaryIndex?: string | string[] | null;
     tertiaryIndex?: string | string[] | null;
   } & DbReadOpts;
+
+  export type TxnQueryParams = Omit<QueryParams, "transactionConn"> & {
+    transactionConnOrPool: PoolConnection | Pool;
+  };
 
   export type DbObject = z.infer<typeof DbObjectSchema>;
   export const DbObjectSchema = z

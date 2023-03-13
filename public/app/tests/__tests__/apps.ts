@@ -19,7 +19,7 @@ import {
   getOrgUserDevicesByUserId,
   getAppUserGrantsByComposite,
 } from "@core/lib/graph";
-import { query } from "@api_shared/db";
+import { query, pool } from "@api_shared/db";
 import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import { log } from "@core/lib/utils/logger";
 
@@ -310,7 +310,7 @@ describe("apps", () => {
           blobType: "env",
           envParentId: appId,
         },
-        { transactionConn: undefined }
+        { transactionConnOrPool: pool }
       );
 
       expect(encryptedKeys).toEqual([]);
@@ -323,7 +323,7 @@ describe("apps", () => {
           blobType: "changeset",
           envParentId: appId,
         },
-        { transactionConn: undefined }
+        { transactionConnOrPool: pool }
       );
       expect(encryptedKeys).toEqual([]);
     }
@@ -344,7 +344,7 @@ describe("apps", () => {
         blobType: "env",
         envParentId: appId,
       },
-      { transactionConn: undefined }
+      { transactionConnOrPool: pool }
     );
     expect(blobs).toEqual([]);
 
@@ -354,7 +354,7 @@ describe("apps", () => {
         blobType: "changeset",
         envParentId: appId,
       },
-      { transactionConn: undefined }
+      { transactionConnOrPool: pool }
     );
     expect(blobs).toEqual([]);
   });

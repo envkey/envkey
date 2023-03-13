@@ -51,6 +51,7 @@ export const verifyCurrentUser = async (
       if (!currentOrgUserDevice) {
         throw new Error("currentOrgUserDevice not found in graph");
       }
+
       pubkey = currentOrgUserDevice.pubkey;
       keyableId = currentOrgUserDevice.id;
     }

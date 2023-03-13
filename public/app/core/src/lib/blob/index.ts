@@ -265,3 +265,12 @@ export const userEncryptedKeyPkey = (params: Blob.UserEncryptedKeyPkeyParams) =>
 
     return Array.from(environmentIds);
   };
+
+const emptyVals = [
+  JSON.stringify({}),
+  JSON.stringify({ variables: {}, inherits: {} }),
+  JSON.stringify({ inherits: {}, variables: {} }),
+  JSON.stringify({ variables: {} }),
+  JSON.stringify({ inherits: {} }),
+];
+export const isValidEmptyVal = (json: string) => emptyVals.includes(json);

@@ -167,6 +167,10 @@ export namespace Action {
         externalAuthSessionId?: string;
       };
     };
+    SetAuth: {
+      type: ActionType.SET_AUTH;
+      payload: Client.ClientUserAuth;
+    };
     GetSession: {
       type: ActionType.GET_SESSION;
       payload?: {
@@ -830,6 +834,10 @@ export namespace Action {
         upgradeToken: string;
         encryptionToken: string;
       };
+    };
+
+    V1ClientAlive: {
+      type: ActionType.V1_CLIENT_ALIVE;
     };
 
     StartV1Upgrade: {

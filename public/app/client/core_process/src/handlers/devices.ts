@@ -621,6 +621,14 @@ clientAction<Client.Action.ClientActions["ForgetDevice"]>({
   },
 });
 
+clientAction<Client.Action.ClientActions["SetAuth"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.SET_AUTH,
+  stateProducer: (draft, { payload }) => {
+    draft.orgUserAccounts[payload.userId] = payload;
+  },
+});
+
 clientAction<
   Api.Action.RequestActions["AcceptDeviceGrant"],
   Api.Net.ApiResultTypes["AcceptDeviceGrant"],

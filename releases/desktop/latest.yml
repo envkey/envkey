@@ -1,8 +1,8 @@
-version: 2.3.1
+version: 2.3.2
 files:
-  - url: EnvKey_Windows_Installer-2.3.1.exe
-    sha512: zjkXrA/TuERZYeG7Uhhv2KBShcgyj8jPHeDH/nKZpEpgOA5rh6XCxB4MFeai49kIeEgjHswwWzZp3Nwcsc55Uw==
-    size: 73667528
-path: EnvKey_Windows_Installer-2.3.1.exe
-sha512: zjkXrA/TuERZYeG7Uhhv2KBShcgyj8jPHeDH/nKZpEpgOA5rh6XCxB4MFeai49kIeEgjHswwWzZp3Nwcsc55Uw==
-releaseDate: '2023-03-10T07:18:02.219Z'
+  - url: EnvKey_Windows_Installer-2.3.2.exe
+    sha512: YI+KLyz2Zk9q1cs4IVzR1GKypd6RD522AJGOV9+aaZzgR52LXpyyccbMdXwxOJ+s5G0LCMW0d10N3lZfR3TmPw==
+    size: 73667752
+path: EnvKey_Windows_Installer-2.3.2.exe
+sha512: YI+KLyz2Zk9q1cs4IVzR1GKypd6RD522AJGOV9+aaZzgR52LXpyyccbMdXwxOJ+s5G0LCMW0d10N3lZfR3TmPw==
+releaseDate: '2023-03-13T20:02:49.387Z'

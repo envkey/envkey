@@ -1,4 +1,3 @@
-import { getAuth } from ".";
 import { Client, Model, Trust, Crypto } from "../../types";
 import { sha256 } from "../crypto/utils";
 
@@ -6,20 +5,19 @@ export const getPubkeyHash = (pubkey: Crypto.Pubkey) =>
   sha256(JSON.stringify(pubkey));
 
 export const getTrustChain = (
-  state: Client.State,
-  accountIdOrCliKey: string | undefined
+  state: Pick<Client.State, "graph" | "trustedSessionPubkeys" | "trustedRoot">,
+  userOrDeviceId: string
 ): Trust.UserTrustChain => {
-  const auth = getAuth(state, accountIdOrCliKey),
-    trustedSessionPubkeys = state.trustedSessionPubkeys,
+  const trustedSessionPubkeys = state.trustedSessionPubkeys,
     trustedRoot = state.trustedRoot;
 
-  if (!auth || !trustedRoot) {
-    throw new Error("Authentication and verified trustedUserPubkeys required.");
+  if (!trustedRoot) {
+    throw new Error("Verified trustedUserPubkeys required.");
   }
 
   const trustChain: Trust.UserTrustChain = {},
     checked: { [id: string]: true } = {},
-    authId = auth.type == "clientUserAuth" ? auth.deviceId : auth.userId,
+    authId = userOrDeviceId,
     { pubkey: currentUserPubkey } = state.graph[authId] as
       | Model.OrgUserDevice
       | Model.CliUser;

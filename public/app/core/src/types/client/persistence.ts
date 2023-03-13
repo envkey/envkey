@@ -10,6 +10,7 @@ const defaultPersistable = R.omit(
     "isLoadingCloudProducts",
     "loadCloudProductsError",
     "v1UpgradeAcceptedInvite",
+    "v1ClientAliveAt",
   ],
   defaultProcState
 );

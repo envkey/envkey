@@ -533,7 +533,12 @@ clientAction<
         Object.keys(keys.blockKeyableParents ?? {}).length >
       0;
     if (hasKeyables) {
-      const trustChain = getTrustChain(state, context.accountIdOrCliKey);
+      const trustChain = getTrustChain(
+        state,
+        currentAuth.type == "clientUserAuth"
+          ? currentAuth.deviceId
+          : currentAuth.userId
+      );
 
       encryptedByTrustChain = await signJson({
         data: trustChain,

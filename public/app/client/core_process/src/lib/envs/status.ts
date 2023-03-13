@@ -27,8 +27,21 @@ export const updateLocalSocketImportStatusIfNeeded = (
   state: Client.State,
   context: Client.Context
 ) => {
-  context.localSocketUpdate?.({
+  const msg: Client.LocalSocketMessage = {
     type: "importStatus",
-    status: state.importOrgStatus,
-  });
+    status: pick(
+      [
+        "importOrgStatus",
+        "isImportingOrg",
+        "importOrgError",
+        "v1UpgradeStatus",
+        "v1UpgradeError",
+        "v1UpgradeLoaded",
+        "v1ClientAliveAt",
+      ],
+      state
+    ),
+  };
+
+  context.localSocketUpdate?.(msg);
 };

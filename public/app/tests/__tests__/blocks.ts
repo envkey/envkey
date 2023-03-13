@@ -17,7 +17,7 @@ import { Client, Api, Model } from "@core/types";
 import { graphTypes } from "@core/lib/graph";
 import { acceptInvite } from "./helpers/invites_helper";
 import { getUserEncryptedKeys } from "@api_shared/blob";
-import { query } from "@api_shared/db";
+import { query, pool } from "@api_shared/db";
 import { log } from "@core/lib/utils/logger";
 
 describe("blocks", () => {
@@ -228,7 +228,7 @@ describe("blocks", () => {
           deviceId,
           blobType: "env",
         },
-        { transactionConn: undefined }
+        { transactionConnOrPool: pool }
       );
 
       encryptedKeys = encryptedKeys.filter(

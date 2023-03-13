@@ -45,7 +45,7 @@ export type LocalUiState = {
   closedOnboardCLIKeys?: true;
 
   envActionStatus?: Client.EnvActionStatus;
-  importStatus?: string;
+  importStatus?: Client.ImportStatus;
 };
 
 export type CoreDispatchFn = (

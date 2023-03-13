@@ -410,7 +410,7 @@ export const testRemoveUser = async (
             deviceId: targetDeviceId ?? "cli",
             blobType: "env",
           },
-          { transactionConn: undefined }
+          { transactionConnOrPool: pool }
         ),
         query({
           pkey: ["envkey", localGeneratedEnvkeyId].join("|"),

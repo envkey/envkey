@@ -53,6 +53,9 @@ export type ProcState = {
   v1UpgradeError: Client.ClientError | undefined;
   v1UpgradeAccountId: string | undefined;
   v1UpgradeClientId: string | undefined;
+  v1ActiveUpgrade:
+    | Client.Action.ClientActions["StartV1Upgrade"]["payload"]
+    | undefined;
   v1UpgradeStatus:
     | "loaded"
     | "upgrading"
@@ -63,6 +66,7 @@ export type ProcState = {
   v1UpgradeAcceptedInvite: boolean | undefined;
   v1UpgradeInviteToken: string | undefined;
   v1UpgradeEncryptionToken: string | undefined;
+  v1ClientAliveAt: number | undefined;
 
   cloudProducts: Billing.Product[] | undefined;
   cloudPrices: Billing.Price[] | undefined;
@@ -805,12 +809,14 @@ export const defaultAccountState: PartialAccountState = {
     v1UpgradeLoaded: undefined,
     v1IsUpgrading: undefined,
     v1UpgradeError: undefined,
+    v1ActiveUpgrade: undefined,
     v1UpgradeAccountId: undefined,
     v1UpgradeClientId: undefined,
     v1UpgradeStatus: undefined,
     v1UpgradeInviteToken: undefined,
     v1UpgradeEncryptionToken: undefined,
     v1UpgradeAcceptedInvite: undefined,
+    v1ClientAliveAt: undefined,
   },
   lockedState = { ...defaultProcState, locked: true },
   ACCOUNT_STATE_KEYS = Object.keys(

@@ -12,11 +12,11 @@ import { fetchState } from "@core/lib/core_proc";
 import * as ui from "@ui";
 import { capitalize } from "@core/lib/utils/string";
 
-let fetchStateInterval: ReturnType<typeof setInterval> | undefined;
-
 export const V1Upgrade: Component = (props) => {
-  const [accountId, setAccountId] = useState<string>();
+  const [existingAccountId, setExistingAccountId] = useState<string>();
   const [validAccountIds, setValidAccountIds] = useState<string[]>();
+
+  const [v1UpgradeAccountId, setV1UpgradeAccountId] = useState<string>();
 
   const [ssoEnabled, setSSOEnabled] = useState(false);
   const [importLocalKeys, setImportLocalKeys] = useState(true);
@@ -31,6 +31,7 @@ export const V1Upgrade: Component = (props) => {
   const [importing, setImporting] = useState(false);
   const [upgradeComplete, setUpgradeComplete] = useState(false);
   const [awaitingV1Complete, setAwaitingV1Complete] = useState(false);
+  const [canceledUpgrade, setCanceledUpgrade] = useState(false);
 
   const [chosenProductId, setChosenProductId] = useState<string | undefined>();
 
@@ -42,30 +43,20 @@ export const V1Upgrade: Component = (props) => {
   );
 
   useLayoutEffect(() => {
-    if (!props.core.v1UpgradeLoaded && !startedUpgrade) {
+    if (!props.core.v1UpgradeLoaded && (!startedUpgrade || canceledUpgrade)) {
       props.history.push("/home");
     }
   }, [props.core.v1UpgradeLoaded]);
 
   useLayoutEffect(() => {
     props.setUiState({ accountId: undefined, loadedAccountId: undefined });
-    props.dispatch({
-      type: Client.ActionType.RESET_ORG_IMPORT,
-    });
   }, []);
 
-  useEffect(
-    () => () => {
-      if (fetchStateInterval) {
-        clearInterval(fetchStateInterval);
-      }
-      props.dispatch({
-        type: Client.ActionType.RESET_V1_UPGRADE,
-        payload: { cancelUpgrade: !upgradeComplete },
-      });
-    },
-    []
-  );
+  useEffect(() => {
+    if (props.core.v1UpgradeAccountId && !v1UpgradeAccountId) {
+      setV1UpgradeAccountId(props.core.v1UpgradeAccountId);
+    }
+  }, [props.core.v1UpgradeAccountId]);
 
   useEffect(() => {
     (async () => {
@@ -73,64 +64,60 @@ export const V1Upgrade: Component = (props) => {
         startedUpgrade &&
         upgrading &&
         importing &&
-        !(props.core.v1UpgradeError || props.core.importOrgError) &&
-        props.core.v1UpgradeStatus == "finished"
+        !(
+          props.core.v1UpgradeError ||
+          (props.ui.importStatus?.importOrgError ?? props.core.importOrgError)
+        ) &&
+        props.ui.importStatus?.v1UpgradeStatus == "finished"
       ) {
+        console.log("Import finished. Waiting for v1 to finish upgrade");
+
         setUpgrading(false);
         setImporting(false);
         setAwaitingV1Complete(true);
-
-        props.setUiState({ importStatus: "Waiting for v1 to finish upgrade" });
-      } else if (props.core.isImportingOrg && !importing) {
+      } else if (
+        (props.ui.importStatus?.isImportingOrg ?? props.core.isImportingOrg) &&
+        !importing &&
+        !awaitingV1Complete &&
+        !upgradeComplete
+      ) {
         setImporting(true);
         setStartedImport(true);
-
-        if (fetchStateInterval) {
-          clearInterval(fetchStateInterval);
-        }
-        fetchStateInterval = setInterval(() => {
-          console.log("refreshing core state fetch import error");
-          props.refreshCoreState();
-        }, 1000);
       }
     })();
-  }, [props.core.isImportingOrg, props.core.v1UpgradeStatus]);
+  }, [
+    props.ui.importStatus?.isImportingOrg ?? props.core.isImportingOrg,
+    props.ui.importStatus?.v1UpgradeStatus,
+  ]);
 
   useEffect(() => {
     (async () => {
-      if (
-        awaitingV1Complete &&
-        !props.core.v1UpgradeLoaded &&
-        fetchStateInterval
-      ) {
-        clearInterval(fetchStateInterval);
-        fetchStateInterval = undefined;
+      if (awaitingV1Complete && !props.ui.importStatus?.v1UpgradeLoaded) {
+        console.log("v1 upgrade complete.");
+
+        await props.refreshCoreState();
+
         setAwaitingV1Complete(false);
         setUpgradeComplete(true);
-        props.setUiState({ importStatus: undefined });
       }
     })();
-  }, [props.core.v1UpgradeLoaded, awaitingV1Complete]);
+  }, [props.ui.importStatus?.v1UpgradeLoaded, awaitingV1Complete]);
 
   useEffect(() => {
     if (
-      props.core.v1UpgradeError ||
-      props.core.importOrgError ||
+      props.core.v1UpgradeError ??
+      props.ui.importStatus?.importOrgError ??
+      props.core.importOrgError ??
       props.core.loadCloudProductsError
     ) {
       setUpgrading(false);
       setImporting(false);
       setCreatingOrg(false);
       setUpgradeComplete(true);
-
-      if (fetchStateInterval) {
-        clearInterval(fetchStateInterval);
-        fetchStateInterval = undefined;
-      }
     }
   }, [
     props.core.v1UpgradeError,
-    props.core.importOrgError,
+    props.ui.importStatus?.importOrgError ?? props.core.importOrgError,
     props.core.loadCloudProductsError,
   ]);
 
@@ -198,32 +185,35 @@ export const V1Upgrade: Component = (props) => {
   }, []);
 
   useLayoutEffect(() => {
-    if (accountId) {
+    if (existingAccountId) {
       props.dispatch(
         {
           type: Client.ActionType.RESET_ORG_IMPORT,
         },
         undefined,
         undefined,
-        accountId
+        existingAccountId
       );
-      props.setUiState({ accountId, loadedAccountId: undefined });
+      props.setUiState({
+        accountId: existingAccountId,
+        loadedAccountId: undefined,
+      });
     } else {
       props.dispatch({
         type: Client.ActionType.RESET_ORG_IMPORT,
       });
       props.setUiState({ accountId: undefined, loadedAccountId: undefined });
     }
-  }, [accountId]);
+  }, [existingAccountId]);
 
   useEffect(() => {
     (async () => {
       if (
-        accountId &&
+        existingAccountId &&
         props.ui.loadedAccountId &&
-        props.ui.loadedAccountId == accountId &&
+        props.ui.loadedAccountId == existingAccountId &&
         props.core.graph &&
-        props.core.graph[accountId]
+        props.core.graph[existingAccountId]
       ) {
         await props.dispatch({
           type: Client.ActionType.RESET_ORG_IMPORT,
@@ -232,7 +222,7 @@ export const V1Upgrade: Component = (props) => {
           type: Client.ActionType.DECRYPT_ORG_ARCHIVE,
           payload: { ...props.core.v1UpgradeLoaded!, isV1Upgrade: true },
         });
-      } else if (!accountId && props.core.filteredOrgArchive) {
+      } else if (!existingAccountId && props.core.filteredOrgArchive) {
         await props.dispatch({
           type: Client.ActionType.RESET_ORG_IMPORT,
         });
@@ -240,11 +230,11 @@ export const V1Upgrade: Component = (props) => {
     })();
   }, [
     Boolean(
-      accountId &&
+      existingAccountId &&
         props.ui.loadedAccountId &&
-        props.ui.loadedAccountId == accountId &&
+        props.ui.loadedAccountId == existingAccountId &&
         props.core.graph &&
-        props.core.graph[accountId]
+        props.core.graph[existingAccountId]
     ),
   ]);
 
@@ -255,7 +245,7 @@ export const V1Upgrade: Component = (props) => {
     subscription: selectedAccountSubscription,
     org: selectedOrg,
   } = useMemo(() => {
-    if (!accountId || !props.core.graphUpdatedAt) {
+    if (!existingAccountId || !props.core.graphUpdatedAt) {
       return {};
     }
 
@@ -272,31 +262,50 @@ export const V1Upgrade: Component = (props) => {
       subscription,
       org,
     };
-  }, [props.core.graphUpdatedAt, accountId]);
+  }, [props.core.graphUpdatedAt, existingAccountId]);
 
-  const dispatchUpgrade = () => {
-    props.dispatch({
-      type: Client.ActionType.START_V1_UPGRADE,
-      payload: {
-        accountId,
-        deviceName: accountId ? undefined : deviceName,
-        importOrgUsers: !ssoEnabled,
-        importLocalKeys,
-        importServers: true,
-        importEnvParentIds: appIds,
-        ssoEnabled,
-        billingInterval: accountId ? undefined : billingInterval,
-        newProductId: accountId ? undefined : selectedProduct?.id,
-        freeTier:
-          chosenProductId == "free" || Boolean(accountId && freeTierEnabled),
+  const dispatchUpgrade = (resume = false) => {
+    props.dispatch(
+      {
+        type: Client.ActionType.START_V1_UPGRADE,
+        payload:
+          resume && props.core.v1ActiveUpgrade && props.core.v1UpgradeAccountId
+            ? {
+                ...props.core.v1ActiveUpgrade,
+                accountId: props.core.v1UpgradeAccountId,
+                newProductId: undefined,
+                billingInterval: undefined,
+                freeTier: undefined,
+              }
+            : {
+                accountId: existingAccountId,
+                deviceName: existingAccountId ? undefined : deviceName,
+                importOrgUsers: !ssoEnabled,
+                importLocalKeys,
+                importServers: true,
+                importEnvParentIds: appIds,
+                ssoEnabled,
+                billingInterval: existingAccountId
+                  ? undefined
+                  : billingInterval,
+                newProductId: existingAccountId
+                  ? undefined
+                  : selectedProduct?.id,
+                freeTier: existingAccountId
+                  ? undefined
+                  : chosenProductId == "free",
+              },
       },
-    });
+      undefined,
+      undefined,
+      resume ? props.core.v1UpgradeAccountId : undefined
+    );
     setUpgrading(true);
     setStartedUpgrade(true);
   };
 
   const numUsers =
-    accountId && selectedOrg && props.core.filteredOrgArchive
+    existingAccountId && selectedOrg && props.core.filteredOrgArchive
       ? props.core.filteredOrgArchive.orgUsers.length +
         (selectedOrg.activeUserOrInviteCount ?? 0)
       : props.core.v1UpgradeLoaded?.numUsers ?? 0;
@@ -315,7 +324,7 @@ export const V1Upgrade: Component = (props) => {
   }
 
   const selectedProduct =
-    chosenProductId == "free" && !accountId
+    chosenProductId == "free" && !existingAccountId
       ? undefined
       : props.core.cloudProducts?.find((p) =>
           chosenProductId
@@ -330,7 +339,7 @@ export const V1Upgrade: Component = (props) => {
     : undefined;
 
   const selectedAccountLicenseExceeded =
-    accountId &&
+    existingAccountId &&
     selectedAccountLicense &&
     ((selectedAccountLicense.maxUsers &&
       selectedAccountLicense.maxUsers != -1 &&
@@ -339,17 +348,18 @@ export const V1Upgrade: Component = (props) => {
 
   const resetUpgradeButton = (label = "Cancel Upgrade") => (
     <button
+      disabled={canceledUpgrade}
       className="secondary"
       onClick={async (e) => {
         e.preventDefault();
-        await props.dispatch({
+        setCanceledUpgrade(true);
+        props.dispatch({
           type: Client.ActionType.RESET_V1_UPGRADE,
           payload: { cancelUpgrade: true },
         });
-        props.history.push("/home");
       }}
     >
-      {label}
+      {canceledUpgrade ? <SmallLoader /> : label}
     </button>
   );
 
@@ -422,10 +432,12 @@ export const V1Upgrade: Component = (props) => {
     status = "Creating organization";
   } else if (props.core.isDecryptingOrgArchive) {
     status = "Loading v1 upgrade";
-  } else if (props.ui.importStatus ?? props.core.importOrgStatus) {
-    status = (props.ui.importStatus ?? props.core.importOrgStatus)!;
-  } else if (importing) {
-    status = "Starting import";
+  } else if (
+    props.ui.importStatus?.importOrgStatus ||
+    (importing && props.core.importOrgStatus)
+  ) {
+    status = (props.ui.importStatus?.importOrgStatus ??
+      props.core.importOrgStatus)!;
   } else if (startedUpgrade) {
     status = "Finishing upgrade";
   } else {
@@ -440,14 +452,42 @@ export const V1Upgrade: Component = (props) => {
     </form>
   );
 
+  const finishButtons = (cancelLabel?: string, finishLabel?: string) => (
+    <div className="buttons">
+      {resetUpgradeButton(cancelLabel)}
+      <button
+        className="primary"
+        onClick={(e) => {
+          e.preventDefault();
+          dispatchUpgrade(
+            Boolean(props.core.v1ActiveUpgrade && props.core.v1UpgradeAccountId)
+          );
+        }}
+      >
+        {finishLabel ?? "Finish"} Upgrade →
+      </button>
+    </div>
+  );
+
   const err =
     props.core.loadCloudProductsError ??
     props.core.v1UpgradeError ??
+    props.ui.importStatus?.importOrgError ??
     props.core.importOrgError;
-  const errorMessage =
-    !err || err.error === true || !err.error?.message
-      ? undefined
-      : capitalize(err.error.message.replace("v1 upgrade - ", "")) + ".";
+
+  let errorMessage: string | undefined;
+  if (err) {
+    if (err.error !== true && err.error.message) {
+      errorMessage = err.error.message;
+    } else if ("errorReason" in err && err.errorReason) {
+      errorMessage = err.errorReason;
+    }
+  }
+
+  if (errorMessage) {
+    errorMessage = capitalize(errorMessage.replace("v1 upgrade - ", "")) + ".";
+  }
+
   const upgradeError = (
     <form>
       <p>
@@ -455,7 +495,7 @@ export const V1Upgrade: Component = (props) => {
         <strong>support@envkey.com</strong> for help.
       </p>
       {errorMessage ? <p className="error">{errorMessage}</p> : ""}
-      <div className="buttons">{resetUpgradeButton("Back To Home")}</div>
+      {finishButtons("Back To Home", "Retry")}
     </form>
   );
 
@@ -470,22 +510,8 @@ export const V1Upgrade: Component = (props) => {
           onClick={(e) => {
             e.preventDefault();
 
-            let orgId: string;
-            let userId: string;
-
-            if (accountId) {
-              userId = accountId;
-              orgId = props.core.orgUserAccounts[accountId]!.orgId;
-            } else {
-              ({ userId, orgId } = R.last(
-                R.sortBy(
-                  R.prop("lastAuthAt"),
-                  Object.values(
-                    props.core.orgUserAccounts
-                  ) as Client.ClientUserAuth[]
-                )
-              )!);
-            }
+            const userId = v1UpgradeAccountId!;
+            const orgId = props.core.orgUserAccounts[userId]!.orgId;
 
             props.setUiState({
               accountId: userId,
@@ -493,9 +519,11 @@ export const V1Upgrade: Component = (props) => {
               lastLoadedAccountId: userId,
             });
 
-            props.history.push(
-              accountId ? `/org/${orgId}` : `/org/${orgId}/welcome`
-            );
+            const url = existingAccountId
+              ? `/org/${orgId}`
+              : `/org/${orgId}/welcome`;
+
+            props.history.push(url);
           }}
         >
           Go To Your V2 Org →
@@ -539,11 +567,11 @@ export const V1Upgrade: Component = (props) => {
         <div className="field">
           <div className="select">
             <select
-              value={accountId ?? "new"}
+              value={existingAccountId ?? "new"}
               onChange={(e) => {
                 const accountId =
                   e.target.value == "new" ? undefined : e.target.value;
-                setAccountId(accountId);
+                setExistingAccountId(accountId);
               }}
             >
               <option value="new">Upgrade into a new org</option>
@@ -601,13 +629,13 @@ export const V1Upgrade: Component = (props) => {
     if (props.core.v1UpgradeLoaded!.signedPresetBilling) {
       return "";
     }
-    if (accountId && selectedOrg && selectedOrg.customLicense) {
+    if (existingAccountId && selectedOrg && selectedOrg.customLicense) {
       return "";
     }
-    if (accountId && !selectedAccountLicenseExceeded) {
+    if (existingAccountId && !selectedAccountLicenseExceeded) {
       return "";
     }
-    if (accountId && (!selectedAccountLicense || !selectedOrg)) {
+    if (existingAccountId && (!selectedAccountLicense || !selectedOrg)) {
       return "";
     }
 
@@ -626,7 +654,7 @@ export const V1Upgrade: Component = (props) => {
       </div>
     );
 
-    if (accountId && selectedAccountLicenseExceeded) {
+    if (existingAccountId && selectedAccountLicenseExceeded) {
       return (
         <div>
           {header}
@@ -765,18 +793,20 @@ export const V1Upgrade: Component = (props) => {
         <strong>support@envkey.com</strong> if you have any problems, questions,
         or feedback relating to the upgrade or any aspect of EnvKey v2.
       </p>
-      <div className="buttons">
-        {resetUpgradeButton()}
-        <button
-          className="primary"
-          onClick={(e) => {
-            e.preventDefault();
-            dispatchUpgrade();
-          }}
-        >
-          Finish Upgrade →
-        </button>
+      {finishButtons()}
+    </div>
+  );
+
+  const resumeSection = (
+    <div>
+      <div className="field no-margin">
+        <label>Upgrade Interrupted</label>
       </div>
+      <p>
+        It looks like you started upgrading, but the upgrade didn't finish.
+        Would you like to resume it?
+      </p>
+      {finishButtons(undefined, "Resume")}
     </div>
   );
 
@@ -841,7 +871,7 @@ export const V1Upgrade: Component = (props) => {
   }
 
   if (
-    accountId &&
+    existingAccountId &&
     selectedAccountLicenseExceeded &&
     selectedOrg &&
     selectedOrg.customLicense
@@ -876,7 +906,8 @@ export const V1Upgrade: Component = (props) => {
         ) : upgradeComplete ||
           (startedUpgrade && !props.core.v1UpgradeLoaded) ? (
           props.core.v1UpgradeError ||
-          props.core.importOrgError ||
+          (props.ui.importStatus?.importOrgError ??
+            props.core.importOrgError) ||
           props.core.loadCloudProductsError ? (
             upgradeError
           ) : (
@@ -884,14 +915,18 @@ export const V1Upgrade: Component = (props) => {
           )
         ) : (
           <form>
-            {newOrExistingOrgSection}
-            {ssoSection}
-            {accountId ? appSelectSection : ""}
-            {localKeysSection}
-            {billingSection()}
-            {accountId ? "" : deviceNameSection}
-            {clientLibrariesSection}
-            {finishActionSection}
+            {props.core.v1ActiveUpgrade && props.core.v1UpgradeAccountId
+              ? [resumeSection]
+              : [
+                  newOrExistingOrgSection,
+                  ssoSection,
+                  existingAccountId ? appSelectSection : "",
+                  localKeysSection,
+                  billingSection(),
+                  existingAccountId ? "" : deviceNameSection,
+                  clientLibrariesSection,
+                  finishActionSection,
+                ]}
           </form>
         )}
       </div>

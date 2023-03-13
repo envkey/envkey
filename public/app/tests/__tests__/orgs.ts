@@ -244,7 +244,7 @@ describe("orgs", () => {
           deviceId,
           blobType: "env",
         },
-        { transactionConn: undefined }
+        { transactionConnOrPool: pool }
       ),
       getUserEncryptedKeys(
         {
@@ -253,7 +253,7 @@ describe("orgs", () => {
           deviceId: invitee1DeviceId,
           blobType: "env",
         },
-        { transactionConn: undefined }
+        { transactionConnOrPool: pool }
       ),
       query({
         pkey: ["envkey", localGeneratedEnvkeyId].join("|"),

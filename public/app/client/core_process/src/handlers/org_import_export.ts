@@ -20,6 +20,10 @@ import { log } from "@core/lib/utils/logger";
 import { updateLocalSocketImportStatusIfNeeded } from "@core_proc/lib/envs/status";
 import { getAuth } from "@core/lib/client";
 import { getDefaultOrgSettings } from "@core/lib/client/defaults";
+import { getState } from "@core_proc/lib/state";
+import { getDefaultStore } from "@core_proc/redux_store";
+
+const IMPORT_ENVS_BATCH_SIZE = 5;
 
 const updateImportStatus = async (
   status: string | undefined,
@@ -37,8 +41,9 @@ const updateImportStatus = async (
     },
     context
   );
+  const state = res.state;
   if (res.success) {
-    await updateLocalSocketImportStatusIfNeeded(res.state, context);
+    await updateLocalSocketImportStatusIfNeeded(state, context);
     if (withDelay) {
       await wait(1500);
     }
@@ -69,6 +74,14 @@ clientAction<
   authenticated: true,
   graphAction: true,
   serialAction: true,
+});
+
+clientAction<Client.Action.ClientActions["V1ClientAlive"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.V1_CLIENT_ALIVE,
+  stateProducer: (draft) => {
+    draft.v1ClientAliveAt = Date.now();
+  },
 });
 
 clientAction<Client.Action.ClientActions["ResetOrgImport"]>({
@@ -217,7 +230,7 @@ clientAction<
         localKeys: (archive.localKeys ?? []).filter(
           (localKey) =>
             !alreadyImportedIds.has(
-              [localKey.environmentId, localKey.name].join("|")
+              [localKey.environmentId, localKey.userId, localKey.name].join("|")
             )
         ),
         servers: archive.servers.filter(
@@ -280,6 +293,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
   endStateProducer: (draft) => {
     delete draft.isImportingOrg;
     delete draft.importOrgStatus;
+  },
+  successHandler: async (state, action, payload, context) => {
+    await updateImportStatus(state.importOrgStatus, context);
   },
   failureHandler: async (state, action, payload, context) => {
     await updateImportStatus(undefined, context);
@@ -1513,7 +1529,10 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
           context
         );
 
-        const batches = R.splitEvery(10, filteredEnvironmentIds);
+        const batches = R.splitEvery(
+          IMPORT_ENVS_BATCH_SIZE,
+          filteredEnvironmentIds
+        );
 
         for (let [i, batch] of batches.entries()) {
           for (let environmentId of batch) {
@@ -1583,6 +1602,8 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
             context
           );
 
+          await wait(100);
+
           if (res.success) {
             const clearCachedRes = await dispatch(
               {
@@ -1592,7 +1613,7 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
             );
 
             await updateImportStatus(
-              `Imported ${i * 10 + batch.length}/${
+              `Imported ${i * IMPORT_ENVS_BATCH_SIZE + batch.length}/${
                 filteredEnvironmentIds.length
               } environments`,
               context,
@@ -1608,6 +1629,26 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
             return dispatchFailure((res.resultAction as any)?.payload, context);
           }
         }
+      }
+    }
+
+    if (v1Upgrade) {
+      let elapsed = Date.now() - (state.v1ClientAliveAt ?? 0);
+      log("elapsed since v1 active", {
+        elapsed,
+        v1ClientAliveAt: state.v1ClientAliveAt,
+        now: Date.now(),
+      });
+      if (elapsed > 40000) {
+        return dispatchFailure(
+          {
+            type: "error",
+            error: true,
+            errorReason: "EnvKey v1 is not running",
+            errorStatus: 404,
+          },
+          context
+        );
       }
     }
 
@@ -1847,6 +1888,7 @@ clientAction<
     }
 
     draft.v1UpgradeStatus = "upgrading";
+    draft.v1ActiveUpgrade = payload;
   },
   failureStateProducer: (draft, action) => {
     draft.v1UpgradeError = action.payload;
@@ -1864,6 +1906,25 @@ clientAction<
     { context, dispatchSuccess, dispatchFailure }
   ) => {
     let state = initialState;
+
+    let elapsed = Date.now() - (state.v1ClientAliveAt ?? 0);
+    log("elapsed since v1 active", {
+      elapsed,
+      v1ClientAliveAt: state.v1ClientAliveAt,
+      now: Date.now(),
+    });
+    if (elapsed > 40000) {
+      return dispatchFailure(
+        {
+          type: "error",
+          error: true,
+          errorReason: "EnvKey v1 is not running",
+          errorStatus: 404,
+        },
+        context
+      );
+    }
+
     if (!state.v1UpgradeLoaded) {
       throw new Error("v1 upgrade not loaded");
     }
@@ -1879,12 +1940,33 @@ clientAction<
       accountId = payload.accountId;
 
       if (!state.filteredOrgArchive) {
+        const accountContext = { ...context, accountIdOrCliKey: accountId };
+        const decryptRes = await dispatch(
+          {
+            type: Client.ActionType.DECRYPT_ORG_ARCHIVE,
+            payload: { ...state.v1UpgradeLoaded, isV1Upgrade: true },
+          },
+          accountContext
+        );
+
+        if (decryptRes.success) {
+          state = decryptRes.state;
+        } else {
+          updateImportStatus(undefined, accountContext, false);
+          return dispatchFailure(
+            (decryptRes.resultAction as any).payload,
+            accountContext
+          );
+        }
+      }
+
+      if (!state.filteredOrgArchive) {
         return dispatchFailure(
           {
             type: "clientError",
             error: {
               name: "Upgrade error",
-              message: "Archive not preloaded for existing org",
+              message: "Archive not loaded",
             },
           },
           context
@@ -1894,6 +1976,10 @@ clientAction<
       numUsers = state.filteredOrgArchive.orgUsers.length;
     } else {
       numUsers = state.v1UpgradeLoaded.numUsers;
+    }
+
+    if (!state.v1UpgradeLoaded) {
+      throw new Error("v1 upgrade not loaded");
     }
 
     const v1Upgrade = {
@@ -1907,10 +1993,12 @@ clientAction<
         ],
         state.v1UpgradeLoaded
       ),
-      ...pick(
-        ["billingInterval", "ssoEnabled", "freeTier", "newProductId"],
-        payload
-      ),
+      ...(state.v1UpgradeLoaded.signedPresetBilling
+        ? {}
+        : pick(
+            ["billingInterval", "ssoEnabled", "freeTier", "newProductId"],
+            payload
+          )),
       numUsers,
     };
 
@@ -2032,10 +2120,15 @@ clientAction<Client.Action.ClientActions["ResetV1Upgrade"]>({
     delete draft.isImportingOrg;
     delete draft.importOrgStatus;
     delete draft.importOrgError;
+    delete draft.v1ActiveUpgrade;
+    delete draft.v1ClientAliveAt;
 
     if (payload.cancelUpgrade) {
       draft.v1UpgradeStatus = "canceled";
     }
+  },
+  handler: async (state, action, context) => {
+    return updateImportStatus(undefined, context);
   },
 });
 

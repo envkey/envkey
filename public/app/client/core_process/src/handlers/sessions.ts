@@ -120,6 +120,7 @@ clientAction<
       const verifyRes = await verifyCurrentUser(state, context);
 
       if (!verifyRes.success) {
+        log("Couldn't verify current user");
         throw new Error("Couldn't verify current user");
       }
 
@@ -128,6 +129,7 @@ clientAction<
       const fetchLoadedRes = await fetchLoadedEnvs(state, context);
 
       if (fetchLoadedRes && !fetchLoadedRes.success) {
+        log("Error fetching latest loaded environments");
         throw new Error("Error fetching latest loaded environments");
       }
 
@@ -141,6 +143,7 @@ clientAction<
       );
 
       if (fetchPendingRes && !fetchPendingRes.success) {
+        log("Error fetching latest pending environments");
         throw new Error("Error fetching latest pending environments");
       }
 
@@ -157,6 +160,7 @@ clientAction<
         throw new Error("Error upgrading to latest crypto version");
       }
     } catch (error) {
+      log("CREATE_SESSION_ERROR", { error });
       return dispatchFailure({ type: "clientError", error }, context);
     }
 

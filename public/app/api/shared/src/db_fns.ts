@@ -7,6 +7,7 @@ import { Api } from "@core/types";
 import * as R from "ramda";
 import { PoolConnection, Pool } from "mysql2/promise";
 import { log } from "@core/lib/utils/logger";
+import { env } from "./env";
 
 type SecondaryIndex = string;
 
@@ -448,6 +449,10 @@ export const setMaxPacketSize = (n: number) => {
       "bytes",
     ];
 
+    if (env.NODE_ENV == "development") {
+      fields.push("devIndex");
+    }
+
     const qs = `INSERT INTO objects (${fields.join(", ")}) VALUES ${objects
       .map(() => `(${R.repeat("?", fields.length)})`)
       .join(",")} AS put ON DUPLICATE KEY UPDATE ${R.without(
@@ -472,6 +477,7 @@ export const setMaxPacketSize = (n: number) => {
               "secondaryIndex",
               "tertiaryIndex",
               "excludeFromDeletedGraph",
+              "devIndex",
             ],
             obj
           )
@@ -484,7 +490,7 @@ export const setMaxPacketSize = (n: number) => {
           "utf8"
         );
 
-        return [
+        const args = [
           obj.pkey,
           obj.skey,
           `${obj.pkey}|${obj.skey}`,
@@ -498,6 +504,12 @@ export const setMaxPacketSize = (n: number) => {
           obj.excludeFromDeletedGraph ? 1 : 0,
           bytes,
         ];
+
+        if (env.NODE_ENV == "development") {
+          args.push(obj.devIndex ?? null);
+        }
+
+        return args;
       })
     );
 

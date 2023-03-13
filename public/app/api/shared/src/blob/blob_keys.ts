@@ -915,6 +915,10 @@ export const getEnvParamsTransactionItems = (
             ? handlerContext.createdId
             : generatedEnvkeyIdOrPlaceholder;
 
+      if (!updatedGraph[generatedEnvkeyId]) {
+        continue;
+      }
+
       transactionItems = mergeObjectTransactionItems([
         transactionItems,
         getGeneratedEnvkeyEncryptedKeyTransactionItems(
@@ -949,6 +953,10 @@ export const getEnvParamsTransactionItems = (
             handlerContext.type == Api.ActionType.GENERATE_KEY
               ? handlerContext.createdId
               : generatedEnvkeyIdOrPlaceholder;
+
+        if (!updatedGraph[generatedEnvkeyId]) {
+          continue;
+        }
 
         transactionItems = mergeObjectTransactionItems([
           transactionItems,

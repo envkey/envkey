@@ -18,7 +18,10 @@ import {
   getOrg,
 } from "@core/lib/graph";
 import { encryptedKeyParamsForEnvironments } from ".";
-import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
+import {
+  getUserEncryptedKeyOrBlobComposite,
+  isValidEmptyVal,
+} from "@core/lib/blob";
 import set from "lodash.set";
 import { log } from "@core/lib/utils/logger";
 import { createPatch } from "rfc6902";
@@ -455,7 +458,6 @@ export const envParamsForEnvironments = async (params: {
             path: path.map((p) =>
               state.graph[p] ? getObjectName(state.graph, p) : p
             ),
-            emptyVals,
             params,
             pending,
             message,
@@ -514,12 +516,3 @@ export const envParamsForEnvironments = async (params: {
     changesetKeysByEnvironmentId,
   };
 };
-
-const emptyVals = [
-  JSON.stringify({}),
-  JSON.stringify({ variables: {}, inherits: {} }),
-  JSON.stringify({ inherits: {}, variables: {} }),
-  JSON.stringify({ variables: {} }),
-  JSON.stringify({ inherits: {} }),
-];
-export const isValidEmptyVal = (json: string) => emptyVals.includes(json);

@@ -609,6 +609,19 @@ namespace Client {
     | "isProcessingApi"
   >;
 
+  export type ImportStatus = Partial<
+    Pick<
+      Client.State,
+      | "importOrgStatus"
+      | "isImportingOrg"
+      | "importOrgError"
+      | "v1UpgradeStatus"
+      | "v1UpgradeError"
+      | "v1UpgradeLoaded"
+      | "v1ClientAliveAt"
+    >
+  >;
+
   export type LocalSocketMessage =
     | {
         type: "closing";
@@ -623,7 +636,7 @@ namespace Client {
       }
     | {
         type: "importStatus";
-        status: string | undefined;
+        status: ImportStatus;
       }
     | {
         type: "envActionStatus";

@@ -133,23 +133,6 @@ apiAction<
     let transactionItems: Api.Db.ObjectTransactionItems = {};
 
     if (env.IS_CLOUD) {
-      // if org is already importing, don't allow another import
-      // this is to prevent a user from accidentally starting an import twice
-      // timeout after 10 minutes
-      if (
-        auth.org.startedOrgImportAt &&
-        !auth.org.finishedOrgImportAt &&
-        now - auth.org.startedOrgImportAt < 1000 * 60 * 10
-      ) {
-        logStderr("STARTED_ORG_IMPORT - org is already importing", {
-          org: auth.org,
-          user: auth.user,
-          now,
-          payload,
-        });
-        throw new Api.ApiError("Org is already importing", 400);
-      }
-
       // on cloud, don't send lifecycle emails if it's an imported org
       const { orgUsers } = graphTypes(orgGraph);
 
