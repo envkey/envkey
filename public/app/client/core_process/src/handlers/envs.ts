@@ -93,9 +93,11 @@ envUpdateAction<Client.Action.ClientActions["UpdateEntryVal"]>({
       }
     }
 
-    return produce(envWithMeta, (draft) => {
+    const res = produce(envWithMeta, (draft) => {
       draft.variables[payload.entryKey] = payload.update;
     });
+
+    return res;
   },
 });
 
@@ -110,8 +112,47 @@ envUpdateAction<Client.Action.ClientActions["ImportEnvironment"]>({
   updateFn: (state, envWithMeta, { payload }) =>
     produce(envWithMeta, (draft) => {
       for (let k in payload.parsed) {
-        const val = payload.parsed[k];
-        draft.variables[k] = { val };
+        let val = payload.parsed[k] as string | undefined;
+        let inheritsEnvironmentId: string | undefined;
+
+        if (val) {
+          const inheritsMatch = val.match(
+            /^inherits:([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i
+          );
+          if (inheritsMatch) {
+            inheritsEnvironmentId = inheritsMatch[1];
+
+            const inheriting = getPendingInheritingEnvironmentIds(
+              state,
+              payload
+            );
+            if (inheriting.has(inheritsEnvironmentId)) {
+              continue;
+            }
+
+            val = undefined;
+
+            const environment = state.graph[inheritsEnvironmentId] as
+              | Model.Environment
+              | undefined;
+
+            if (
+              !environment ||
+              environment.type !== "environment" ||
+              environment.envParentId !== payload.envParentId
+            ) {
+              continue;
+            }
+          }
+        }
+
+        if (inheritsEnvironmentId) {
+          draft.variables[k] = { inheritsEnvironmentId };
+        } else if (typeof val == "undefined") {
+          draft.variables[k] = { isUndefined: true };
+        } else {
+          draft.variables[k] = val === "" ? { val, isEmpty: true } : { val };
+        }
       }
     }),
 });
@@ -464,6 +505,15 @@ clientAction<
       pendingEnvironmentIds = getPendingEnvironmentIds(state);
     }
 
+    const pendingEnvironmentIdsSet = new Set(pendingEnvironmentIds);
+
+    const pendingEnvUpdates =
+      payload.initEnvs || payload.upgradeCrypto
+        ? []
+        : R.clone(state.pendingEnvUpdates).filter(({ meta }) =>
+            pendingEnvironmentIdsSet.has(meta.environmentId)
+          );
+
     const needsFetchEnvParentIds = new Set<string>();
     for (let pendingEnvironmentId of pendingEnvironmentIds) {
       let envParentId: string;
@@ -493,23 +543,19 @@ clientAction<
         return dispatchFailure(
           (fetchRes.resultAction as Client.Action.FailureAction)
             .payload as Api.Net.ErrorResult,
-          context
+          {
+            ...context,
+            dispatchContext: {
+              pendingEnvironmentIds,
+              pendingEnvUpdates,
+              envs: {},
+              changesets: {},
+            },
+          }
         );
       }
       state = fetchRes.state;
     }
-
-    const pendingEnvironmentIdsSet = new Set(pendingEnvironmentIds);
-
-    const pendingEnvUpdates =
-      payload.initEnvs || payload.upgradeCrypto
-        ? []
-        : R.clone(state.pendingEnvUpdates).filter(({ meta }) =>
-            pendingEnvironmentIdsSet.has(meta.environmentId)
-          );
-
-    const start = Date.now();
-    // log("getting envParamsForEnvironments");
 
     const {
       keys,
@@ -524,8 +570,6 @@ clientAction<
       initEnvs: payload.initEnvs,
       message,
     });
-
-    // log("got envParamsForEnvironments: " + (Date.now() - start).toString());
 
     let encryptedByTrustChain: string | undefined;
     const hasKeyables =
@@ -545,8 +589,6 @@ clientAction<
         privkey,
       });
     }
-
-    // log("got encryptedByTrustChain: " + (Date.now() - start).toString());
 
     const apiRes = await dispatch<Api.Action.RequestActions["UpdateEnvs"]>(
       {
@@ -753,8 +795,6 @@ clientAction<
             {} as Client.State["changesets"]
           ),
     };
-
-    // log("got dispatchContext: " + (Date.now() - start).toString());
 
     if (apiRes.success) {
       return dispatchSuccess(null, {

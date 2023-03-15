@@ -20,10 +20,8 @@ import { log } from "@core/lib/utils/logger";
 import { updateLocalSocketImportStatusIfNeeded } from "@core_proc/lib/envs/status";
 import { getAuth } from "@core/lib/client";
 import { getDefaultOrgSettings } from "@core/lib/client/defaults";
-import { getState } from "@core_proc/lib/state";
-import { getDefaultStore } from "@core_proc/redux_store";
 
-const IMPORT_ENVS_BATCH_SIZE = 5;
+const IMPORT_ENVS_BATCH_SIZE = 10;
 
 const updateImportStatus = async (
   status: string | undefined,
@@ -1553,29 +1551,28 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
               ? environment.id
               : [envParentId, localsUserId].join("|");
 
-            for (let entryKey in filteredAgainArchive.envs[environmentId]
-              .variables) {
-              const update = stripNullsRecursive(
-                filteredAgainArchive.envs[environmentId].variables[entryKey]
-              );
+            const parsed: Client.Env.RawEnv = R.mapObjIndexed((v) => {
+              const update = stripNullsRecursive(v);
               if (update.inheritsEnvironmentId) {
                 const mappedInheritsId = idMap[update.inheritsEnvironmentId];
                 update.inheritsEnvironmentId = mappedInheritsId;
               }
+              return update.inheritsEnvironmentId
+                ? `inherits:${update.inheritsEnvironmentId}`
+                : (update.val as string);
+            }, filteredAgainArchive.envs[environmentId].variables);
 
-              await dispatch(
-                {
-                  type: Client.ActionType.UPDATE_ENTRY_VAL,
-                  payload: {
-                    envParentId,
-                    environmentId: mappedEnvironmentId,
-                    entryKey,
-                    update,
-                  },
+            await dispatch(
+              {
+                type: Client.ActionType.IMPORT_ENVIRONMENT,
+                payload: {
+                  envParentId,
+                  environmentId: mappedEnvironmentId,
+                  parsed,
                 },
-                context
-              );
-            }
+              },
+              context
+            );
           }
 
           const pendingEnvironmentIds = batch.map((environmentId) => {
@@ -1601,8 +1598,6 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
             },
             context
           );
-
-          await wait(100);
 
           if (res.success) {
             const clearCachedRes = await dispatch(

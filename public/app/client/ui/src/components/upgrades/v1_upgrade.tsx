@@ -5,7 +5,6 @@ import * as styles from "@styles";
 import { ExternalLink } from "../shared";
 import { Client, Api, Billing } from "@core/types";
 import { SmallLoader, SvgImage } from "@images";
-import * as R from "ramda";
 import * as g from "@core/lib/graph";
 import { formatUsd } from "@core/lib/utils/currency";
 import { fetchState } from "@core/lib/core_proc";
@@ -178,9 +177,9 @@ export const V1Upgrade: Component = (props) => {
           )
         ) {
           valid.push(account.userId);
+          setValidAccountIds(valid);
         }
       }
-      setValidAccountIds(valid);
     })();
   }, []);
 
