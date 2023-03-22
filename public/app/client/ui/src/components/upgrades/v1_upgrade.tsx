@@ -138,49 +138,58 @@ export const V1Upgrade: Component = (props) => {
       payload: {},
     });
 
-    (async () => {
-      const valid: string[] = [];
-      for (const account of Object.values(props.core.orgUserAccounts)) {
-        if (!account || !account.token) {
-          continue;
-        }
+    const accounts = Object.values(props.core.orgUserAccounts).filter(
+      (account) => account && account.token
+    );
 
-        let accountState = await fetchState(account.userId);
-
-        if (!(accountState.graph && accountState.graph[account.userId])) {
-          const res = await props.dispatch(
-            {
-              type: Client.ActionType.GET_SESSION,
-              payload: {},
-            },
-            undefined,
-            true,
-            account.userId
-          );
-          if (res.success) {
-            accountState = res.state;
-          } else {
-            console.error("failed to get session", {
-              userId: account.userId,
-              orgId: account.orgId,
-              res,
-            });
+    if (accounts.length > 0) {
+      (async () => {
+        const valid: string[] = [];
+        for (const account of accounts) {
+          if (!account || !account.token) {
             continue;
           }
-        }
 
-        if (
-          g.authz.hasOrgPermission(
-            accountState.graph,
-            account.userId,
-            "org_archive_import_export"
-          )
-        ) {
-          valid.push(account.userId);
-          setValidAccountIds(valid);
+          let accountState = await fetchState(account.userId);
+
+          if (!(accountState.graph && accountState.graph[account.userId])) {
+            const res = await props.dispatch(
+              {
+                type: Client.ActionType.GET_SESSION,
+                payload: {},
+              },
+              undefined,
+              true,
+              account.userId
+            );
+            if (res.success) {
+              accountState = res.state;
+            } else {
+              console.error("failed to get session", {
+                userId: account.userId,
+                orgId: account.orgId,
+                res,
+              });
+              continue;
+            }
+          }
+
+          if (
+            g.authz.hasOrgPermission(
+              accountState.graph,
+              account.userId,
+              "org_archive_import_export"
+            )
+          ) {
+            valid.push(account.userId);
+            setValidAccountIds(valid);
+          }
         }
-      }
-    })();
+        setValidAccountIds(valid);
+      })();
+    } else {
+      setValidAccountIds([]);
+    }
   }, []);
 
   useLayoutEffect(() => {
