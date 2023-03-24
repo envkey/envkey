@@ -3,8 +3,9 @@
 // `load` and `fetch` are defined in case more control is required
 
 export type Options = {
-  permitted: string[];
-  shouldCache: boolean;
+  permitted?: string[];
+  shouldCache?: boolean;
+  dotEnvFile?: string;
 };
 
 export type Callback = (error: string, env: Record<string, string>) => void;

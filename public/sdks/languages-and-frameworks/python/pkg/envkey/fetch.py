@@ -46,7 +46,7 @@ def __lib_path():
   root = os.path.abspath(os.path.dirname(__file__))
   return os.path.join(root, 'ext',__lib_dir(), __lib_file_name())
 
-def fetch_env(envkey_arg=None, cache_enabled=False):
+def fetch_env(envkey_arg=None, cache_enabled=False, dot_env_path=None):
   try: 
     env = {"ENVKEY": envkey_arg if envkey_arg else os.environ["ENVKEY"]}
   except KeyError:
@@ -60,6 +60,10 @@ def fetch_env(envkey_arg=None, cache_enabled=False):
   args = [path, "--json", "--client-name", "envkey-python", "--client-version", pkg_resources.get_distribution("envkey").version]
   if cache_enabled:
     args.append("--cache")
+
+  if dot_env_path:
+    args.append("--env-file")
+    args.append(dot_env_path)
 
   try:
     res = subprocess.check_output(args, env=env).decode(encoding="utf-8").rstrip()

@@ -145,7 +145,7 @@ clientAction<Client.Action.ClientActions["WaitForExternalAuth"]>({
     let loadResSuccessContext: Client.Context | undefined;
 
     let awaitingLogin = true;
-    let iterationsLeft = 120;
+    let iterationsLeft = 1200;
     let orgId: string | undefined;
     let userId: string | undefined;
 
@@ -290,7 +290,7 @@ clientAction<Client.Action.ClientActions["WaitForInviteExternalAuth"]>({
     let sentById: string | undefined;
 
     let awaitingLogin = true;
-    let iterationsLeft = 60;
+    let iterationsLeft = 1200;
 
     while (awaitingLogin) {
       iterationsLeft--;

@@ -69,3 +69,22 @@ def test_autoload_disabled():
   envkey.load()
   assert(os.environ["TEST"] == "it")
   assert(os.environ["TEST_2"] == "works!")
+
+def test_dot_env_valid():
+  clear_env()
+  dot_env_path = os.path.join(os.path.dirname(__file__), '.env.test.valid')
+  envkey.load(dot_env_path=dot_env_path)
+  assert(os.environ["TEST"] == "it")
+  assert(os.environ["TEST_2"] == "works!")
+
+def test_dot_env_invalid():
+  clear_env()
+  dot_env_path = os.path.join(os.path.dirname(__file__), '.env.test.invalid')
+  with pytest.raises(ValueError):
+      envkey.load(dot_env_path=dot_env_path)
+
+def test_dot_env_no_file():
+  clear_env()
+  dot_env_path = os.path.join(os.path.dirname(__file__), '.env.test.nonexistent')
+  with pytest.raises(ValueError):
+      envkey.load(dot_env_path=dot_env_path)

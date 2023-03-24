@@ -1048,6 +1048,7 @@ const authorizeEnvUpdate = (
 
     if (
       action.type != Api.ActionType.UPDATE_ENVS &&
+      action.type != Api.ActionType.REDEEM_RECOVERY_KEY &&
       !environment["upgradedCrypto-2.1.0"]
     ) {
       throw new Api.ApiError("2.1.0 crypto upgrade required", 426);
