@@ -9,6 +9,7 @@ import { app } from "electron";
 import { showErrorReportDialogSync } from "./report_error";
 import * as path from "path";
 import * as os from "os";
+import fkill from "fkill";
 
 const platform = os.platform();
 const isWindows = platform === "win32";
@@ -17,7 +18,7 @@ const BUNDLED_CLI_PATH = path.resolve(
   ELECTRON_BIN_DIR,
   "envkey" + (isWindows ? ".exe" : "")
 );
-const CORE_START_TIMEOUT = 30000;
+const CORE_START_TIMEOUT = 60000;
 const CHECK_ALIVE_INTERVAL = 2000;
 
 export const startCore = async (): Promise<boolean> => {
@@ -29,8 +30,29 @@ export const startCore = async (): Promise<boolean> => {
       log(
         "Core process is running an outdated version. Stopping and retrying..."
       );
-      const res = await stop();
-      if (res) {
+
+      let stopRes = await stop();
+
+      if (!stopRes || (await isAlive())) {
+        await Promise.all([
+          fkill(`:${19047}`, { force: true }).catch(() => {}),
+          fkill(`:${19048}`, { force: true }).catch(() => {}),
+        ]);
+      }
+
+      stopRes = await stop();
+
+      let i = 0;
+      while (!stopRes || (await isAlive())) {
+        await wait(500 * (i + 2));
+        stopRes = await stop();
+        i++;
+        if (i > 3) {
+          break;
+        }
+      }
+
+      if (stopRes) {
         return startCore();
       } else {
         throw new Error(

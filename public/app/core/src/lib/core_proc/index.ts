@@ -93,7 +93,14 @@ export const clientId = uuid(), // unique per client (ephemeral)
       return false;
     }
 
+    let elapsed = 0;
+    const maxWait = 7000;
+    const start = Date.now();
     while (await isAlive(200)) {
+      elapsed = Date.now() - start;
+      if (elapsed > maxWait) {
+        return false;
+      }
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
 
