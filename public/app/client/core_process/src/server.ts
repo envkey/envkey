@@ -263,31 +263,31 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
       asyncHandler(async (req, res) => {
         procStatusWorker.sendWorkerToMainMessage({ type: "v1Alive" });
 
-        if (v1UpgradeStatus == "finished" && v1UpgradeInviteTokensById) {
-          // this is the only case where sensitive data is returned
-          // (when doing initial upgrade, not accepting an upgrade invite)
-          // so we'll only check auth here
-          if (!req.headers["authorization"]) {
-            res.status(401).send("Unauthorized");
-            return;
-          }
-          let auth: { ts: number; signature: string };
-          try {
-            auth = JSON.parse(req.headers["authorization"] as string);
-          } catch (err) {
-            res.status(401).send("Unauthorized");
-            return;
-          }
-          const verifyRes = verifyV1Upgrade(auth, Date.now());
-          if (verifyRes !== true) {
-            res.status(401).send(verifyRes);
+        if (v1UpgradeStatus == "finished") {
+          if (v1UpgradeInviteTokensById) {
+            // this is the only case where sensitive data is returned
+            // (when doing initial upgrade, not accepting an upgrade invite)
+            // so we'll only check auth here
+            if (!req.headers["authorization"]) {
+              res.status(401).send("Unauthorized");
+              return;
+            }
+            let auth: { ts: number; signature: string };
+            try {
+              auth = JSON.parse(req.headers["authorization"] as string);
+            } catch (err) {
+              res.status(401).send("Unauthorized");
+              return;
+            }
+            const verifyRes = verifyV1Upgrade(auth, Date.now());
+            if (verifyRes !== true) {
+              res.status(401).send(verifyRes);
+            }
           }
 
           procStatusWorker.sendWorkerToMainMessage({
             type: "v1FinishedUpgrade",
           });
-
-          log("V1 upgrade finished, returning invite tokens.");
 
           res.status(200).json({
             upgradeStatus: "finished",

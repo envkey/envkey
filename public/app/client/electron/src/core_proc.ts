@@ -104,7 +104,7 @@ const checkAliveLoop = async () => {
   const alive = await isAlive();
   if (alive) {
     setTimeout(checkAliveLoop, CHECK_ALIVE_INTERVAL);
-  } else {
+  } else if (process.env.NODE_ENV === "production") {
     log("Core process died while UI is running. Closing EnvKey UI...");
     await showErrorReportDialogSync(
       "The EnvKey core process exited unexpectedly.",

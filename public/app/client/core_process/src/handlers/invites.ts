@@ -33,6 +33,7 @@ import { decode as decodeBase58 } from "bs58";
 import { initEnvironmentsIfNeeded } from "../lib/envs";
 import { log } from "@core/lib/utils/logger";
 import { updateLocalSocketEnvActionStatusIfNeeded } from "@core_proc/lib/envs/status";
+import { sendMainToWorkerMessage } from "@core_proc/proc_status_worker";
 
 clientAction<
   Client.Action.ClientActions["InviteUsers"],
@@ -510,6 +511,15 @@ clientAction<Client.Action.ClientActions["AcceptInvite"]>({
       draft.v1UpgradeStatus = "error";
     }
   },
+  successHandler: async (state, action, payload, context) => {
+    if (state.v1UpgradeStatus && state.v1UpgradeAcceptedInvite) {
+      sendMainToWorkerMessage({
+        type: "v1UpgradeStatus",
+        v1UpgradeStatus: state.v1UpgradeStatus,
+      });
+    }
+  },
+
   handler: async (
     state,
     action,
