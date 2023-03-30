@@ -1,5 +1,9 @@
+import { multi } from "./../../helpers";
 import { style } from "typestyle";
 import * as colors from "../../colors";
+import * as layout from "../../layout";
+import * as fonts from "../../fonts";
+import { color } from "csx";
 
 export const SidebarContainer = style({
   background: colors.DARK_BG_LEFT_TO_RIGHT_GRADIENT,

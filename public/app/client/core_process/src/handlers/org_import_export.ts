@@ -20,6 +20,7 @@ import { log } from "@core/lib/utils/logger";
 import { updateLocalSocketImportStatusIfNeeded } from "@core_proc/lib/envs/status";
 import { getAuth } from "@core/lib/client";
 import { getDefaultOrgSettings } from "@core/lib/client/defaults";
+import { sendMainToWorkerMessage } from "../proc_status_worker";
 
 const IMPORT_ENVS_BATCH_SIZE = 10;
 
@@ -28,8 +29,8 @@ const updateImportStatus = async (
   context: Client.Context,
   withDelay = true
 ) => {
-  if (!process.env.IS_TEST) {
-    log("import status: " + status);
+  if (process.env.NODE_ENV != "test") {
+    log("import status: " + (status ?? "undefined"));
   }
 
   const res = await dispatch(
@@ -293,9 +294,18 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
     delete draft.importOrgStatus;
   },
   successHandler: async (state, action, payload, context) => {
+    sendMainToWorkerMessage({
+      type: "v1UpgradeStatus",
+      v1UpgradeStatus: state.v1UpgradeStatus,
+      generatedInvites: state.generatedInvites,
+    });
     await updateImportStatus(state.importOrgStatus, context);
   },
   failureHandler: async (state, action, payload, context) => {
+    sendMainToWorkerMessage({
+      type: "v1UpgradeStatus",
+      v1UpgradeStatus: state.v1UpgradeStatus,
+    });
     await updateImportStatus(undefined, context);
   },
   handler: async (
@@ -1866,6 +1876,12 @@ clientAction<Client.Action.ClientActions["LoadV1Upgrade"]>({
     draft.v1UpgradeLoaded = payload;
     draft.v1UpgradeStatus = "loaded";
   },
+  handler: async (state) => {
+    sendMainToWorkerMessage({
+      type: "v1UpgradeStatus",
+      v1UpgradeStatus: state.v1UpgradeStatus,
+    });
+  },
 });
 
 clientAction<
@@ -1901,6 +1917,11 @@ clientAction<
     { context, dispatchSuccess, dispatchFailure }
   ) => {
     let state = initialState;
+
+    sendMainToWorkerMessage({
+      type: "v1UpgradeStatus",
+      v1UpgradeStatus: state.v1UpgradeStatus,
+    });
 
     let elapsed = Date.now() - (state.v1ClientAliveAt ?? 0);
     log("elapsed since v1 active", {
@@ -2123,6 +2144,10 @@ clientAction<Client.Action.ClientActions["ResetV1Upgrade"]>({
     }
   },
   handler: async (state, action, context) => {
+    sendMainToWorkerMessage({
+      type: "v1UpgradeStatus",
+      v1UpgradeStatus: state.v1UpgradeStatus,
+    });
     return updateImportStatus(undefined, context);
   },
 });

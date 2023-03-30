@@ -46,6 +46,8 @@ export type LocalUiState = {
 
   envActionStatus?: Client.EnvActionStatus;
   importStatus?: Client.ImportStatus;
+
+  reportErrorOpen?: boolean;
 };
 
 export type CoreDispatchFn = (
@@ -66,6 +68,7 @@ export type ComponentBaseProps = {
   }) => Promise<void>;
   winWidth: number;
   winHeight: number;
+  startedUpgrade: boolean;
 };
 
 export type ComponentProps<

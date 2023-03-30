@@ -1,4 +1,8 @@
 import moment from "moment";
+
+const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+export const isIso8601 = (str: string) => iso8601Regex.test(str);
+
 /**
  * Convert a friendly human relative time to a date. Assumes past dates.
  *

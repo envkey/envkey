@@ -250,6 +250,10 @@ export const PendingFooter: OrgComponent<{}, Props> = React.memo(
             " " +
             style({
               height: props.ui.pendingFooterHeight,
+              bottom: props.startedUpgrade
+                ? styles.layout.DEFAULT_PENDING_FOOTER_HEIGHT
+                : 0,
+              borderTop: "1px solid rgba(255,255,255, 0.2)",
             })
           }
         >

@@ -376,7 +376,7 @@ export const KeyableParent: OrgComponent<
             <br />
             <ExternalLink
               {...props}
-              to="https://docs-v2.envkey.com/integration-quickstart"
+              to="https://docs-v2.envkey.com/docs/integration-quickstart"
             >
               Integration Quickstart →
             </ExternalLink>

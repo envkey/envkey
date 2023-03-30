@@ -270,7 +270,6 @@ export const getOrgGraph = async (
   deleteUser = (
     orgGraph: Api.Graph.OrgGraph,
     userId: string,
-    auth: Auth.DefaultAuthContext | Auth.ProvisioningBearerAuthContext,
     now: number
   ): Api.Graph.OrgGraph => {
     const target = orgGraph[userId] as Api.Db.OrgUser | Api.Db.CliUser,

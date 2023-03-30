@@ -21,18 +21,12 @@ import {
 import { style } from "typestyle";
 import * as styles from "@styles";
 import * as semver from "semver";
-import { wait } from "@core/lib/utils/wait";
 import { EnvkeyLogo, SmallLoader } from "@images";
 
-// controls rate off firing off ACCOUNT_ACTIVE events to prevent core proc from clearing cache when ui is active
-// refer to core proc IDLE_ACCOUNT_CACHE_EXPIRATION
-const ACCOUNT_ACTIVE_BUFFER = 1000 * 60 * 10; // 10 minutes
 const SESSION_ERROR_RETRY_DELAY = 7000;
 
 let initialOrgRoleId: string | undefined;
 let initialOrgPermissionsJson: string | undefined;
-
-let lastUserInteraction = Date.now();
 
 let sessionRetryTimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -73,8 +67,8 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
   //   }
   // }, []);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    return () => {
       // clear selected account on unmount
       props.setUiState({
         accountId: undefined,
@@ -86,9 +80,8 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         clearTimeout(sessionRetryTimeout);
         sessionRetryTimeout = undefined;
       }
-    },
-    []
-  );
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (auth && auth.orgId == orgId) {
@@ -325,33 +318,6 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
     props.core.requiresPassphrase,
     props.core.lockoutMs,
   ]);
-
-  const onUserInteraction = () => {
-    const now = Date.now();
-    const elapsed = now - lastUserInteraction;
-
-    if (elapsed > ACCOUNT_ACTIVE_BUFFER) {
-      props.dispatch(
-        { type: Client.ActionType.ACCOUNT_ACTIVE },
-        undefined,
-        true
-      );
-    }
-
-    lastUserInteraction = now;
-  };
-
-  useEffect(() => {
-    document.body.addEventListener("mouseover", onUserInteraction);
-    document.body.addEventListener("scroll", onUserInteraction);
-    document.body.addEventListener("keydown", onUserInteraction);
-
-    return () => {
-      document.body.removeEventListener("mouseover", onUserInteraction);
-      document.body.removeEventListener("scroll", onUserInteraction);
-      document.body.removeEventListener("keydown", onUserInteraction);
-    };
-  }, []);
 
   useLayoutEffect(() => {
     if (shouldRequireRecoveryKey && !showRequireRecoveryKey) {
@@ -593,7 +559,6 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
       "auth.orgId": auth?.orgId ?? false,
       orgId,
       shouldRedirectPath,
-      core: props.core,
       uiTree: Boolean(uiTree),
     });
   }
@@ -660,27 +625,24 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
 
   const hasPendingEnvUpdates = pendingUpdateDetails.filteredUpdates.length > 0;
 
+  const orgComponentProps = {
+    ...props,
+    uiTree,
+    orgRoute,
+    hasPendingEnvUpdates,
+  };
+
   if (showRequireRecoveryKey) {
     return (
       <ui.RequireRecoveryKey
-        {...props}
-        uiTree={uiTree}
-        orgRoute={orgRoute}
-        hasPendingEnvUpdates={hasPendingEnvUpdates}
+        {...orgComponentProps}
         onClear={() => {
           setShowRequireRecoveryKey(false);
         }}
       />
     );
   } else if (shouldRequireDeviceSecurity) {
-    return (
-      <ui.RequireDeviceSecurity
-        {...props}
-        uiTree={uiTree}
-        orgRoute={orgRoute}
-        hasPendingEnvUpdates={hasPendingEnvUpdates}
-      />
-    );
+    return <ui.RequireDeviceSecurity {...orgComponentProps} />;
   }
 
   const currentApiVersion = org.selfHostedVersions?.api;
@@ -715,12 +677,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
           height: `calc(100% - ${props.ui.pendingFooterHeight}px)`,
         })}
       >
-        <ui.Sidebar
-          {...props}
-          uiTree={uiTree}
-          orgRoute={orgRoute}
-          hasPendingEnvUpdates={hasPendingEnvUpdates}
-        />
+        <ui.Sidebar {...orgComponentProps} />
       </section>
 
       <section
@@ -730,46 +687,41 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
           left: styles.layout.SIDEBAR_WIDTH,
           width: `calc(100% - ${styles.layout.SIDEBAR_WIDTH}px)`,
           background: "#fff",
-          paddingBottom: hasPendingEnvUpdates
-            ? props.ui.pendingFooterHeight
-            : 0,
+          paddingBottom:
+            (hasPendingEnvUpdates ? props.ui.pendingFooterHeight : 0) +
+            (props.startedUpgrade
+              ? styles.layout.DEFAULT_PENDING_FOOTER_HEIGHT
+              : 0),
         })}
       >
-        <ui.OrgRoutes
-          {...props}
-          uiTree={uiTree}
-          orgRoute={orgRoute}
-          hasPendingEnvUpdates={hasPendingEnvUpdates}
-        />
+        <ui.OrgRoutes {...orgComponentProps} />
       </section>
 
       <ui.PendingFooter
-        {...props}
-        uiTree={uiTree}
-        orgRoute={orgRoute}
-        hasPendingEnvUpdates={hasPendingEnvUpdates}
+        {...orgComponentProps}
         pendingUpdateDetails={pendingUpdateDetails}
         pendingConflicts={pendingConflicts}
         numPendingConflicts={numPendingConflicts}
       />
 
       {showRoleInfoId && !(apiUpgradeAvailable || infraUpgradeAvailable) ? (
-        <ui.RbacInfo
-          {...props}
-          uiTree={uiTree}
-          orgRoute={orgRoute}
-          hasPendingEnvUpdates={hasPendingEnvUpdates}
-        />
+        <ui.RbacInfo {...orgComponentProps} />
       ) : (
         ""
       )}
 
       {apiUpgradeAvailable || infraUpgradeAvailable ? (
-        <ui.SelfHostedUpgrade
-          {...props}
-          uiTree={uiTree}
-          orgRoute={orgRoute}
-          hasPendingEnvUpdates={hasPendingEnvUpdates}
+        <ui.SelfHostedUpgrade {...orgComponentProps} />
+      ) : (
+        ""
+      )}
+
+      {props.ui.reportErrorOpen ? (
+        <ui.ReportError
+          {...orgComponentProps}
+          onClose={() => {
+            props.setUiState({ reportErrorOpen: false });
+          }}
         />
       ) : (
         ""

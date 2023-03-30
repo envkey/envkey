@@ -384,7 +384,6 @@ apiAction<
         envUpdateRequiresClientVersion: "2.2.0",
         "upgradedCrypto-2.1.0": true,
         optimizeEmptyEnvs: true,
-
         importedFromV1: isV1Upgrade,
       },
       orgUserDevice: Api.Db.OrgUserDevice = {

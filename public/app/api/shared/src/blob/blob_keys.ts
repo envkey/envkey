@@ -1396,7 +1396,7 @@ export const queueForReencryption = (
   });
 };
 export const getDeleteUsersWithTransactionItems = (
-  auth: Auth.DefaultAuthContext | Auth.ProvisioningBearerAuthContext,
+  orgId: string,
   orgGraph: Api.Graph.OrgGraph,
   updatedGraphParam: Api.Graph.OrgGraph,
   userIds: string[],
@@ -1427,7 +1427,7 @@ export const getDeleteUsersWithTransactionItems = (
   );
 
   for (let blobUserId of blobUserIds) {
-    updatedGraph = deleteUser(updatedGraphParam, blobUserId, auth, now);
+    updatedGraph = deleteUser(updatedGraphParam, blobUserId, now);
   }
 
   const { environments, apps, blocks } = graphTypes(orgGraph);
@@ -1443,12 +1443,12 @@ export const getDeleteUsersWithTransactionItems = (
 
   const transactionItems: Api.Db.ObjectTransactionItems = {
     softDeleteScopes: userIds.map((userId) => ({
-      pkey: [auth.org.id, "tokens"].join("|"),
+      pkey: [orgId, "tokens"].join("|"),
       scope: userId,
     })),
 
     hardDeleteScopes: blobUserIds.map((id) => ({
-      pkey: ["encryptedKeys", auth.org.id, id].join("|"),
+      pkey: ["encryptedKeys", orgId, id].join("|"),
       pkeyPrefix: true,
     })),
 

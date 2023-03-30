@@ -1,6 +1,7 @@
 import workerpool from "workerpool";
 import path from "path";
 import os from "os";
+import cluster from "cluster";
 import { log } from "../lib/utils/logger";
 
 declare var process: {
@@ -9,7 +10,6 @@ declare var process: {
     IS_TEST?: string;
     WORKER_PATH_FROM_ELECTRON_RESOURCES?: string;
     WORKER_PATH?: string;
-    IS_ELECTRON?: string;
   };
 };
 
@@ -25,27 +25,26 @@ if (
     process.env["WORKER_PATH_FROM_ELECTRON_RESOURCES"]
   );
 } else if (process.env["WORKER_PATH"]) {
-  if (process.env.IS_ELECTRON) {
-    // Electron in development
-    workerPath = process.env.WORKER_PATH;
-  } else {
-    // CLI
-    workerPath = path.join(__dirname, process.env.WORKER_PATH);
-  }
+  // CLI
+  workerPath = path.join(__dirname, process.env.WORKER_PATH);
 } else {
   // development
   workerPath = path.resolve(__dirname, "../../build/worker.js");
 }
 
 const numCpus = os.cpus().length;
-const numWorkers = numCpus;
-// const numWorkers = Math.max(1, numCpus - 1);
+const numWorkers = cluster.isMaster ? numCpus : 1;
 if (!process.env.IS_TEST) {
-  log("starting workers", { numCpus, numWorkers });
+  log("starting background worker threads", {
+    numCpus,
+    numWorkers,
+    isMaster: cluster.isMaster,
+    isWorker: cluster.isWorker,
+  });
 }
 
 let workerPool = workerpool.pool(workerPath, {
-    workerType: process.env.IS_ELECTRON ? "process" : "thread",
+    workerType: "thread",
     maxWorkers: numWorkers,
     minWorkers: "max",
   }),

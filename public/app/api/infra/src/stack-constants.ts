@@ -73,6 +73,7 @@ export enum CfStack {
   ENVKEY_CLOUD_BILLING = "envkey-cloud-billing",
   ENVKEY_CLOUD_OUTGOING_PROXY = "envkey-cloud-outgoing",
   ENVKEY_CLOUD_INTEGRATION_VANTA = "envkey-cloud-integration-vanta",
+  ENVKEY_CLOUD_ERROR_REPORTING = "envkey-cloud-error-reporting",
 }
 
 export const CAPABILITIES = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"];

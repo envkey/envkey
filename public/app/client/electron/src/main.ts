@@ -4,16 +4,17 @@ import { initFileLogger, log } from "@core/lib/utils/logger";
 import url from "url";
 import { app, screen, BrowserWindow, Menu, MenuItem, ipcMain } from "electron";
 import { Client } from "../../../core/src/types";
-import { stopInlineCoreProcess } from "./core_proc";
-import { terminateWorkerPool } from "@core/worker/start";
 import path from "path";
 import {
   runCheckUpgradesLoop,
   checkUpgrade,
   downloadAndInstallUpgrade,
   stopCheckUpgradesLoop,
+  restartWithLatestVersion,
 } from "./app_upgrades";
 import { startup } from "./startup";
+import { handleUILogger } from "./ui_logger";
+import { execErrorReport } from "./report_error";
 
 // allows for self-signed certs on TLS requests in development
 if (process.env.NODE_ENV != "production") {
@@ -29,12 +30,6 @@ let appReady = false;
 let win: BrowserWindow | undefined;
 let stripeWin: BrowserWindow | undefined;
 let authToken: string | undefined;
-
-let appWillAutoExit = false;
-
-export const enableAppWillAutoExitFlag = () => {
-  appWillAutoExit = true;
-};
 
 export const getWin = () => win;
 
@@ -62,12 +57,27 @@ app.on("ready", () => {
     }
   });
 
+  ipcMain.on("restart-with-latest-version", () => {
+    restartWithLatestVersion();
+  });
+
+  handleUILogger();
+
+  ipcMain.on(
+    "report-error",
+    (e, params: { msg: string; userId: string; email: string }) => {
+      execErrorReport(params);
+    }
+  );
+
   createWindow();
 
-  startup((authTokenRes) => {
-    appReady = true;
-    authToken = authTokenRes;
-    loadUi().then(() => runCheckUpgradesLoop());
+  startup({
+    onInit: (authTokenRes) => {
+      appReady = true;
+      authToken = authTokenRes;
+      loadUi().then(() => runCheckUpgradesLoop());
+    },
   });
 });
 
@@ -83,43 +93,14 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", async (e) => {
-  if (!appWillAutoExit) {
-    e.preventDefault();
-  }
   log("on:before-quit", {
     currentAppVersion: app.getVersion(),
-    appWillAutoExit,
   });
   try {
     log("Stopping check updates loop...");
     stopCheckUpgradesLoop();
-    // if it's running inline, core process must be stopped before the worker pool, since the core process itself relies on workers.
-    log("stopping core process if it's running inline...");
-    stopInlineCoreProcess(async (stopped) => {
-      if (stopped) {
-        log("stopped inline core process.");
-      } else {
-        log("core process wasn't running inline.");
-      }
-
-      // manually terminating worker pool seems to cause more harm than good now.
-      // at one point it had seemed necessary.
-      // log("terminating worker pool...");
-      // try {
-      //   await terminateWorkerPool().catch((err) => {
-      //     log(".catch error terminating worker pool", { err });
-      //   });
-      // } catch (err) {
-      //   log("try/catch error terminating worker pool", { err });
-      // }
-
-      app.exit();
-    });
   } catch (err) {
     log("before-exit cleanup failed", { err });
-  }
-  if (appWillAutoExit) {
-    return;
   }
 });
 

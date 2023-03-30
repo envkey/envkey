@@ -27,6 +27,7 @@ export * from "./sso";
 export * from "./rbac";
 export * from "./onboard";
 export * from "./archive";
-export * from "./upgrades";
+export * from "./client_upgrades";
 export * from "./integrations";
 export * from "./v1_upgrade";
+export * from "./report_error";

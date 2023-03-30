@@ -213,6 +213,15 @@ apiAction<
         payload.v1Token
     );
 
+    log("CREATE_INVITE", {
+      orgId: auth.org.id,
+      isV1UpgradeInvite,
+      "auth.org.importedFromV1": auth.org.importedFromV1,
+      "auth.org.startedOrgImportAt": auth.org.startedOrgImportAt,
+      "auth.org.finishedOrgImportAt": auth.org.finishedOrgImportAt,
+      "payload.v1Token": payload.v1Token,
+    });
+
     let emailToken = "";
     if (!isV1UpgradeInvite) {
       emailToken = [
@@ -318,7 +327,7 @@ apiAction<
     let deleteActiveTransactionItems: Api.Db.ObjectTransactionItems;
     ({ updatedGraph, transactionItems: deleteActiveTransactionItems } =
       getDeleteUsersWithTransactionItems(
-        auth,
+        auth.org.id,
         orgGraph,
         updatedGraph,
         activeOrgUsersWithEmail.map(R.prop("id")),
@@ -512,7 +521,7 @@ apiAction<
     const invite = orgGraph[action.payload.id] as Api.Db.Invite;
 
     let { transactionItems, updatedGraph } = getDeleteUsersWithTransactionItems(
-      auth,
+      auth.org.id,
       orgGraph,
       orgGraph,
       [invite.inviteeId],

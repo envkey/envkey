@@ -31,6 +31,7 @@ const SvgComponents = {
   folder: require("./folder.svg").default,
   reset: require("./reset.svg").default,
   "powered-by-stripe": require("./powered-by-stripe.svg").default,
+  megaphone: require("./megaphone.svg").default,
 } as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>;
 
 const UseOwnDefaultViewBox = new Set<keyof typeof SvgComponents>([

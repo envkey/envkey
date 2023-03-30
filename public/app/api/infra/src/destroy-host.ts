@@ -207,6 +207,7 @@ export const destroyHost = async (params: {
   await Promise.all([
     deleteStackAndWait(cfPrimary, CfStack.ENVKEY_CLOUD_BILLING),
     deleteStackAndWait(cfPrimary, CfStack.ENVKEY_FAILOVER_LAMBDA),
+    deleteStackAndWait(cfPrimary, CfStack.ENVKEY_CLOUD_ERROR_REPORTING),
     cfSecondary
       ? deleteStackAndWait(cfSecondary, CfStack.ENVKEY_SECONDARY_LAMBDA)
       : undefined,

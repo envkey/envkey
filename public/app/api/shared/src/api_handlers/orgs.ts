@@ -132,6 +132,7 @@ apiAction<
     let updatedGraph = orgGraph;
     let transactionItems: Api.Db.ObjectTransactionItems = {};
 
+    let importedFromV1 = auth.org.importedFromV1;
     if (env.IS_CLOUD) {
       // on cloud, don't send lifecycle emails if it's an imported org
       const { orgUsers } = graphTypes(orgGraph);
@@ -144,6 +145,7 @@ apiAction<
       });
 
       // if upgrading into an existing org, init v2 billing
+
       if (payload.isV1UpgradeIntoExistingOrg) {
         log("STARTED_ORG_IMPORT - v1 upgrade - into existing org", {
           org: auth.org,
@@ -168,6 +170,7 @@ apiAction<
 
         updatedGraph = res[0];
         transactionItems = res[1];
+        importedFromV1 = true;
       }
     }
 
@@ -180,6 +183,7 @@ apiAction<
           startedOrgImportAt: now,
           finishedOrgImportAt: undefined,
           updatedAt: now,
+          importedFromV1,
         },
       },
       transactionItems,
@@ -388,7 +392,7 @@ apiAction<
     );
 
     let { transactionItems, updatedGraph } = getDeleteUsersWithTransactionItems(
-      auth,
+      auth.org.id,
       orgGraph,
       orgGraph,
       [userId],

@@ -69,12 +69,12 @@ const config: webpack.Configuration = {
             // in electron, things are relative to process.resourcesPath, which is only available at runtime
             // and we cannot reuse it the same as WORKER_PATH
             WORKER_PATH_FROM_ELECTRON_RESOURCES: "app/worker.js",
-            MINISIGN_PATH_FROM_ELECTRON_RESOURCES: "app/minisign",
+            BIN_PATH_FROM_ELECTRON_RESOURCES: "app/bin",
             ICON_DIR_FROM_ELECTRON_RESOURCES: "app/icon",
           }
         : {
             WORKER_PATH: "./worker.js",
-            MINISIGN_PATH: "./minisign",
+            BIN_PATH: "./bin",
             ICON_DIR: "./icon",
           }),
     }),

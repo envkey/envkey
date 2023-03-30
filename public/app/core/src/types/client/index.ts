@@ -669,6 +669,47 @@ namespace Client {
       error?: string;
     };
   };
+
+  export type OrgSocketStateSlice = Pick<
+    Client.State,
+    "locked" | "networkUnreachable" | "orgUserAccounts"
+  >;
+
+  export type MainToWorkerProcessMessage =
+    | {
+        type: "v1UpgradeStatus";
+        v1UpgradeStatus: Client.State["v1UpgradeStatus"];
+        generatedInvites?: Client.State["generatedInvites"];
+      }
+    | {
+        type: "resolveOrgSockets";
+        state: OrgSocketStateSlice;
+        skipJitter?: boolean;
+      };
+
+  export type WorkerToMainProcessMessage =
+    | {
+        type: "workerStarted";
+      }
+    | {
+        type: "clientAlive";
+      }
+    | {
+        type: "v1Alive";
+      }
+    | {
+        type: "v1FinishedUpgrade";
+      }
+    | {
+        type: "refreshSession";
+        userId?: string;
+        abortIfError?: boolean;
+      }
+    | {
+        type: "accountUpdated";
+        account: Client.ClientUserAuth;
+        message: Api.OrgSocketUpdateMessage;
+      };
 }
 
 export default Client;

@@ -3,27 +3,16 @@ import * as os from "os";
 import * as path from "path";
 import { exec } from "child_process";
 import { promises as fsp } from "fs";
-import * as fs from "fs";
-import gunzip from "gunzip-maybe";
-import * as tar from "tar-fs";
 import mkdirp from "mkdirp";
 import which from "which";
-import {
-  getReleaseAsset,
-  getLatestReleaseVersion,
-} from "@infra/artifact-helpers";
+import { getLatestReleaseVersion } from "@infra/artifact-helpers";
 import { ENVKEY_RELEASES_BUCKET } from "@infra/stack-constants";
 import { log } from "@core/lib/utils/logger";
 import { dialog } from "electron";
-import tempDir from "temp-dir";
 import * as sudoPrompt from "@vscode/sudo-prompt";
-import { UpgradeProgress } from "@core/types/electron";
 import * as R from "ramda";
-import { isInline, stop } from "@core/lib/core_proc";
-import { stopInlineCoreProcess, startCore } from "./core_proc";
-
-const MINISIGN_PUBKEY =
-  "RWQ5lgVbbidOxaoIEsqZjbI6hHdS5Ri/SrDk9rNFFgiQZ4COuk6Li2HK";
+import { version as cliVersion } from "../../cli/package.json";
+import * as semver from "semver";
 
 const arch = os.arch() == "arm64" ? "arm64" : "amd64";
 const platform = os.platform() as "win32" | "darwin" | "linux";
@@ -34,13 +23,137 @@ if (platform === "win32") {
   platformIdentifier = "windows";
 }
 
-const PROGRESS_INTERVAL = 100;
-const throttlingProgress: Record<"cli" | "envkeysource", boolean> = {
-  cli: false,
-  envkeysource: false,
+export const ELECTRON_BIN_DIR = path.join(
+  ...[
+    ...(process.env.BIN_PATH_FROM_ELECTRON_RESOURCES
+      ? [process.resourcesPath, process.env.BIN_PATH_FROM_ELECTRON_RESOURCES]
+      : [process.env.BIN_PATH!]),
+    ...({
+      win32: ["windows"],
+      darwin: ["mac", arch],
+      linux: ["linux"],
+    }[platform] ?? []),
+  ]
+);
+
+export const installMissingOrOutdatedCliTools = async () => {
+  const [
+    bundledCliInstalled,
+    cliLatestInstalledRes,
+    envkeySourceLatestInstalledRes,
+  ] = await Promise.all([
+    isBundledCliInstalled(),
+    isLatestCliInstalled(),
+    isLatestEnvkeysourceInstalled(),
+  ]);
+
+  // Installs the CLI and envkey-source on app start if
+  // either is missing from the system or is outdated
+  // (or if only envkey-source v1 is there)
+  // Otherwise will be handled by upgrades
+
+  let isUpgradingCli = false;
+
+  if (
+    cliLatestInstalledRes !== true &&
+    cliVersion != cliLatestInstalledRes.currentVersion
+  ) {
+    isUpgradingCli = true;
+  }
+
+  const shouldInstallCli = !bundledCliInstalled;
+
+  const envkeySourceUpgradeRequiredPath = path.join(
+    os.homedir(),
+    ".envkey",
+    "envkey-source-upgrade-required"
+  );
+  const envkeySourceUpgradeRequiredVersion = await fsp
+    .readFile(envkeySourceUpgradeRequiredPath)
+    .catch(() => undefined)
+    .then((v) => v?.toString().trim());
+
+  const shouldInstallEnvkeysource =
+    envkeySourceLatestInstalledRes !== true &&
+    (envkeySourceLatestInstalledRes.currentVersion == false ||
+      envkeySourceLatestInstalledRes.currentVersion.startsWith("1.") ||
+      Boolean(
+        envkeySourceUpgradeRequiredVersion &&
+          semver.gt(
+            envkeySourceUpgradeRequiredVersion,
+            envkeySourceLatestInstalledRes.currentVersion
+          )
+      ));
+
+  log("installMissingOrOutdatedCliTools", {
+    bundledCliInstalled,
+    cliLatestInstalledRes,
+    cliVersion,
+    isUpgradingCli,
+    shouldInstallCli,
+    envkeySourceLatestInstalledRes,
+    shouldInstallEnvkeysource,
+  });
+
+  if (shouldInstallCli || shouldInstallEnvkeysource) {
+    log("Sending started-cli-tools-install", { win: !!getWin() });
+
+    getWin()!.webContents.send("started-cli-tools-install");
+
+    log(
+      "CLI or envkey-source not installed. Installation will be attempted in background now."
+    );
+
+    await installCliTools(
+      {
+        cli: cliLatestInstalledRes == true ? undefined : cliLatestInstalledRes,
+        envkeysource:
+          envkeySourceLatestInstalledRes == true
+            ? undefined
+            : envkeySourceLatestInstalledRes,
+      },
+      "install",
+      shouldInstallCli,
+      shouldInstallEnvkeysource
+    )
+      .then(() => {
+        log("CLI tools were installed on startup");
+        log("Sending finished-cli-tools-install", { win: !!getWin() });
+        getWin()!.webContents.send("finished-cli-tools-install");
+        if (cliLatestInstalledRes !== true && !isUpgradingCli) {
+          installCliAutocomplete()
+            .then((shells) => {
+              log("CLI shell autocompletion was installed", {
+                shells: shells.filter(Boolean),
+              });
+            })
+            .catch((err) =>
+              log("CLI failed to install shell autocompletion", { err })
+            );
+        }
+
+        if (envkeySourceUpgradeRequiredVersion) {
+          fsp
+            .unlink(envkeySourceUpgradeRequiredPath)
+            .then(() => {
+              log("Removed envkey-source-upgrade-required file");
+            })
+            .catch((err) => {
+              log("Failed to remove envkey-source-upgrade-required file", {
+                err,
+              });
+            });
+        }
+      })
+      .catch((err) => {
+        log("CLI tools failed to install on startup", { err });
+      });
+  } else {
+    log("CLI tools already installed");
+  }
 };
 
-export const downloadAndInstallCliTools = async (
+export const installCliTools = async (
   params: {
     cli?: {
       nextVersion: string;
@@ -52,38 +165,26 @@ export const downloadAndInstallCliTools = async (
     };
   },
   installType: "install" | "upgrade",
-  onProgress?: (p: UpgradeProgress) => void,
-  upgradingDesktop?: boolean
+  shouldInstallCli: boolean,
+  shouldInstallEnvkeysource: boolean
 ) => {
-  let cliFolder: string | undefined;
-  let envkeysourceFolder: string | undefined;
-
-  try {
-    [cliFolder, envkeysourceFolder] = await Promise.all([
-      params.cli
-        ? download("cli", params.cli.nextVersion, onProgress)
-        : undefined,
-      params.envkeysource
-        ? download("envkeysource", params.envkeysource.nextVersion, onProgress)
-        : undefined,
-    ]);
-  } catch (err) {
-    log("Error downloading CLI tools upgrade", { err });
-    throw err;
-  }
-
   try {
     await install(
       params,
-      cliFolder,
-      envkeysourceFolder,
+      ELECTRON_BIN_DIR,
       installType,
-      upgradingDesktop
+      shouldInstallCli,
+      shouldInstallEnvkeysource
     );
   } catch (err) {
-    log("Error installing CLI tools upgrade", { err });
+    log("Error installing CLI tools", { err });
     throw err;
   }
+};
+
+export const isBundledCliInstalled = async () => {
+  const currentVersionRes = await getCurrentVersion("cli");
+  return currentVersionRes === cliVersion;
 };
 
 export const isLatestCliInstalled = () => isLatestInstalled("cli");
@@ -91,7 +192,12 @@ export const isLatestCliInstalled = () => isLatestInstalled("cli");
 export const isLatestEnvkeysourceInstalled = () =>
   isLatestInstalled("envkeysource");
 
-export const getCliBinPath = () => getBinPath("cli");
+let cliBinPath: string | false | undefined;
+export const getCliBinPath = async () => {
+  if (typeof cliBinPath !== "undefined") return cliBinPath;
+  cliBinPath = await getBinPath("cli");
+  return cliBinPath;
+};
 
 export const getCliCurrentVersion = () => getCurrentVersion("cli");
 
@@ -150,7 +256,7 @@ export const fileExists = async (filepath: string): Promise<boolean> => {
 
 const isLatestInstalled = async (
   project: "cli" | "envkeysource"
-): Promise<true | [string, string | false]> => {
+): Promise<true | { nextVersion: string; currentVersion: string | false }> => {
   const [currentVersion, nextVersion] = await Promise.all([
     getCurrentVersion(project),
     getLatestVersion(project),
@@ -161,7 +267,7 @@ const isLatestInstalled = async (
   }
 
   if (!currentVersion || currentVersion != nextVersion) {
-    return [nextVersion, currentVersion];
+    return { nextVersion, currentVersion };
   }
 
   return true;
@@ -253,59 +359,6 @@ const getCurrentVersion = async (
   });
 };
 
-const download = async (
-  projectType: "cli" | "envkeysource",
-  nextVersion: string,
-  onProgress?: (p: UpgradeProgress) => void
-) => {
-  const execName = projectType == "cli" ? "envkey" : "envkey-source";
-  const assetPrefix = projectType == "cli" ? "envkey-cli" : "envkey-source";
-  const friendlyName = projectType == "cli" ? "EnvKey CLI" : "envkey-source";
-
-  log(`${projectType} upgrade: init`);
-
-  const assetName = `${assetPrefix}_${nextVersion}_${platformIdentifier}_${arch}.tar.gz`;
-  const releaseTag = `${projectType}-v${nextVersion}`;
-
-  const [fileBuf, sigBuf] = await Promise.all([
-    getReleaseAsset({
-      bucket: ENVKEY_RELEASES_BUCKET,
-      releaseTag,
-      assetName,
-      progress: (totalBytes: number, downloadedBytes: number) => {
-        const throttling = throttlingProgress[projectType];
-
-        if (onProgress && (!throttling || totalBytes == downloadedBytes)) {
-          onProgress({
-            clientProject: projectType,
-            downloadedBytes,
-            totalBytes,
-          });
-
-          throttlingProgress[projectType] = true;
-          setTimeout(() => {
-            throttlingProgress[projectType] = false;
-          }, PROGRESS_INTERVAL);
-        }
-      },
-    }),
-    getReleaseAsset({
-      bucket: ENVKEY_RELEASES_BUCKET,
-      releaseTag,
-      assetName: assetName + ".minisig",
-    }),
-  ]);
-  log(`${friendlyName} upgrade: fetched latest archive`, {
-    sizeBytes: Buffer.byteLength(fileBuf),
-    assetName,
-  });
-
-  const folder = await unpackToFolder(fileBuf, sigBuf, execName);
-  log(`${friendlyName} upgrade: unpacked to folder`, { folder });
-
-  return folder;
-};
-
 // resolves to version number installed
 const install = async (
   params: {
@@ -318,21 +371,18 @@ const install = async (
       currentVersion: string | false;
     };
   },
-  cliFolder: string | undefined,
-  envkeysourceFolder: string | undefined,
+  sourceDir: string,
   installType: "install" | "upgrade",
-  upgradingDesktop?: boolean
+  shouldInstallCli: boolean,
+  shouldInstallEnvkeysource: boolean
 ): Promise<void> => {
   // installs envkey-source as envkey-source-v2 if envkey-source v1 is already installed to avoid overwriting it and breaking things
-  if (envkeysourceFolder && (await hasV1Envkeysource())) {
-    const envkeysourcePath = path.resolve(
-      envkeysourceFolder,
-      `envkey-source${ext}`
-    );
+  if (shouldInstallEnvkeysource && (await hasV1Envkeysource())) {
+    const envkeysourcePath = path.resolve(sourceDir, `envkey-source${ext}`);
     if (await fileExists(envkeysourcePath)) {
       await fsp.rename(
         envkeysourcePath,
-        path.resolve(envkeysourceFolder, `envkey-source-v2${ext}`)
+        path.resolve(sourceDir, `envkey-source-v2${ext}`)
       );
     }
   }
@@ -352,22 +402,12 @@ const install = async (
       );
   }
 
-  // If we're on windows and upgrading the CLI, first kill core process and move to inline prior to upgrade
-  if (platform == "win32" && installType == "upgrade" && cliFolder) {
-    const runningInline = await isInline();
-
-    if (!runningInline) {
-      await stop();
-      await new Promise((resolve, reject) => {
-        stopInlineCoreProcess((stopped) => {
-          resolve(stopped);
-        });
-      });
-      await startCore(false, true);
-    }
-  }
-
-  await copyExecFiles(cliFolder, envkeysourceFolder, binDir);
+  await copyExecFiles(
+    sourceDir,
+    binDir,
+    shouldInstallCli,
+    shouldInstallEnvkeysource
+  );
 
   if (installType == "install") {
     // add `es` alias for envkey-source unless an `es` is already in PATH
@@ -440,23 +480,6 @@ const install = async (
     }
   }
 
-  // If we're on windows and upgrading the CLI, now kill inline core proc and restart with latest version
-  if (
-    platform == "win32" &&
-    installType == "upgrade" &&
-    cliFolder &&
-    !upgradingDesktop
-  ) {
-    log("now kill inline core proc and restart with latest version");
-    await new Promise((resolve, reject) => {
-      stopInlineCoreProcess((stopped) => {
-        resolve(stopped);
-      });
-    });
-
-    await startCore(true);
-  }
-
   log(`CLI tools upgrade: completed successfully`, {
     cli: params.cli?.nextVersion,
     envkeysource: params.envkeysource?.nextVersion,
@@ -465,93 +488,12 @@ const install = async (
 
 const getWindowsBin = () => path.resolve(os.homedir(), "bin");
 
-// resolves to the folder where it unrolled the archive
-const unpackToFolder = async (
-  archiveBuf: Buffer,
-  sigBuf: Buffer,
-  execName: string
-): Promise<string> => {
-  return new Promise(async (resolve, reject) => {
-    const tempFileBase = `${execName}_${+new Date() / 1000}`;
-    const tempFilePath = path.resolve(tempDir, `${tempFileBase}.tar.gz`);
-    const tempSigPath = path.resolve(tempDir, `${tempFileBase}.tar.gz.minisig`);
-    const tempFileTarPath = path.resolve(tempDir, `${tempFileBase}.tar`);
-    const tempOutputDir = path.resolve(tempDir, tempFileBase);
-
-    await Promise.all([
-      fsp.writeFile(tempFilePath, archiveBuf),
-      fsp.writeFile(tempSigPath, sigBuf),
-    ]);
-
-    // verify binary with vendored minisign
-    const minisignPath = path.join.apply(this, [
-      ...(process.env.MINISIGN_PATH_FROM_ELECTRON_RESOURCES
-        ? [
-            process.resourcesPath,
-            process.env.MINISIGN_PATH_FROM_ELECTRON_RESOURCES,
-          ]
-        : [process.env.MINISIGN_PATH!]),
-      ...({
-        win32: ["windows", "minisign.exe"],
-        darwin: ["mac", arch, "minisign"],
-        linux: ["linux", "minisign"],
-      }[platform] ?? []),
-    ]);
-
-    log(`Verifying ${execName} with minisign`, {
-      platform,
-      arch,
-      minisignPath,
-    });
-
-    await new Promise((resolve, reject) => {
-      exec(
-        `"${minisignPath}" -Vm ${tempFilePath} -P ${MINISIGN_PUBKEY}`,
-        (error, stdout, stderr) => {
-          if (stderr) {
-            log(`Error verifying signature with minisig`, { stderr });
-
-            dialog.showMessageBox({
-              title: "EnvKey CLI Tools",
-              message: `There was a problem verifying the signature of the \`${execName}\` CLI tool executable. This might indicate a security issue. Please contact support@envkey.com so we can investigate.`,
-              buttons: ["OK"],
-            });
-
-            return reject(new Error(stderr));
-          }
-          if (error) {
-            log(`Error executing minisign`, { error });
-            return reject(error);
-          }
-          log(`Verified signature with minisig`, { stdout });
-          resolve(true);
-        }
-      );
-    });
-
-    const tarredGzipped = fs.createReadStream(tempFilePath);
-    const tarredOnlyWrite = fs.createWriteStream(tempFileTarPath);
-
-    tarredGzipped.on("error", reject);
-    tarredOnlyWrite.on("error", reject);
-    tarredOnlyWrite.on("close", () => {
-      const tarredOnlyRead = fs.createReadStream(tempFileTarPath);
-      tarredOnlyRead.on("error", reject);
-      tarredOnlyRead.on("close", () => {
-        resolve(tempOutputDir);
-      });
-      tarredOnlyRead.pipe(tar.extract(tempOutputDir));
-    });
-
-    tarredGzipped.pipe(gunzip()).pipe(tarredOnlyWrite);
-  });
-};
-
 // cross-platform copy a file and overwrite if it exists.
 const copyExecFiles = async (
-  cliFolder: string | undefined,
-  envkeysourceFolder: string | undefined,
+  sourceDir: string,
   destinationFolder: string,
+  shouldInstallCli: boolean,
+  shouldInstallEnvkeysource: boolean,
   withSudoPrompt?: boolean,
   argFiles?: [string, string][]
 ): Promise<void> => {
@@ -560,13 +502,13 @@ const copyExecFiles = async (
     ((await Promise.all(
       (
         [
-          [envkeysourceFolder, `envkey-source${ext}`],
-          [envkeysourceFolder, `envkey-source-v2${ext}`],
-          [cliFolder, `envkey${ext}`],
-          [cliFolder, "envkey-keytar.node"],
-        ] as [string | undefined, string][]
-      ).map(([folder, file]) => {
-        if (!folder) {
+          [shouldInstallEnvkeysource, sourceDir, `envkey-source${ext}`],
+          [shouldInstallEnvkeysource, sourceDir, `envkey-source-v2${ext}`],
+          [shouldInstallCli, sourceDir, `envkey${ext}`],
+          [shouldInstallCli, sourceDir, "envkey-keytar.node"],
+        ] as [boolean, string, string][]
+      ).map(([shouldInstall, folder, file]) => {
+        if (!shouldInstall) {
           return undefined;
         }
         const tmpPath = path.resolve(folder, file);
@@ -641,14 +583,19 @@ const copyExecFiles = async (
         err,
       });
       return copyExecFiles(
-        cliFolder,
-        envkeysourceFolder,
+        sourceDir,
         destinationFolder,
+        shouldInstallCli,
+        shouldInstallEnvkeysource,
         true,
         files
       );
     } else {
-      if (platform == "win32" && err.code == "EBUSY" && envkeysourceFolder) {
+      if (
+        platform == "win32" &&
+        err.code == "EBUSY" &&
+        shouldInstallEnvkeysource
+      ) {
         await dialog.showMessageBox({
           title: "EnvKey CLI",
           message: `In order to upgrade, any running envkey-source.exe processes will be closed`,
@@ -662,9 +609,10 @@ const copyExecFiles = async (
         });
 
         return copyExecFiles(
-          cliFolder,
-          envkeysourceFolder,
+          sourceDir,
           destinationFolder,
+          shouldInstallCli,
+          shouldInstallEnvkeysource,
           withSudoPrompt,
           files
         );

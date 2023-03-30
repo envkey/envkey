@@ -32,7 +32,7 @@ export const SelfHostedUpgrade: OrgComponent = (props) => {
   const [upgrading, setUpgrading] = useState(false);
 
   return (
-    <div className={styles.Upgrades}>
+    <div className={styles.ClientUpgradesAvailable}>
       <div className="overlay disabled" />
 
       <div className="modal">

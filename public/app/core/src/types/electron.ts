@@ -12,16 +12,9 @@ export type AvailableClientUpgrade = {
   envkeysource?: ClientUpgrade;
 };
 
-export type UpgradeProgress = {
-  clientProject: "desktop" | "cli" | "envkeysource";
+export type ClientUpgradeProgress = {
   downloadedBytes: number;
   totalBytes: number;
-};
-
-export type ClientUpgradeProgress = {
-  desktop?: UpgradeProgress;
-  cli?: UpgradeProgress;
-  envkeysource?: UpgradeProgress;
 };
 
 export interface ElectronWindow extends Window {
@@ -45,11 +38,7 @@ export interface ElectronWindow extends Window {
     ) => void;
 
     registerUpgradeProgressHandler: (
-      handler: (progress: UpgradeProgress) => void
-    ) => void;
-
-    registerNewerUpgradeAvailableHandler: (
-      handler: (available: AvailableClientUpgrade) => void
+      handler: (progress: ClientUpgradeProgress) => void
     ) => void;
 
     registerUpgradeCompleteHandler: (handler: () => void) => void;
@@ -58,6 +47,8 @@ export interface ElectronWindow extends Window {
 
     downloadAndInstallUpgrades: () => void;
 
+    restartWithLatestVersion: () => void;
+
     openStripeForm: (params: Client.CloudBillingStripeFormParams) => void;
 
     closeStripeForm: () => void;
@@ -65,5 +56,9 @@ export interface ElectronWindow extends Window {
     registerCloseStripeFormHandler: (handler: () => void) => void;
 
     deregisterCloseStripeFormHandler: (handler: () => void) => void;
+
+    uiLogger: (batch: { msg: string; obj?: any }[]) => void;
+
+    reportError: (msg: string, userId: string, email: string) => void;
   };
 }

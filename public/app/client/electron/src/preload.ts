@@ -2,14 +2,14 @@ import { contextBridge, remote, ipcRenderer } from "electron";
 import {
   ElectronWindow,
   AvailableClientUpgrade,
-  UpgradeProgress,
+  ClientUpgradeProgress,
 } from "@core/types/electron";
 import Client from "@core/types/client";
 
 const { dialog, app } = remote;
 
 let progressHandler:
-  | ((event: any, progress: UpgradeProgress) => void)
+  | ((event: any, progress: ClientUpgradeProgress) => void)
   | undefined;
 
 const exposeInterface: ElectronWindow["electron"] = {
@@ -52,13 +52,6 @@ const exposeInterface: ElectronWindow["electron"] = {
       handler(available as AvailableClientUpgrade);
     }),
 
-  registerNewerUpgradeAvailableHandler: (handler) =>
-    ipcRenderer.on("newer-upgrade-available", (event, available) => {
-      console.log("on newer-upgrade-available", available);
-
-      handler(available as AvailableClientUpgrade);
-    }),
-
   registerUpgradeProgressHandler: (handler) => {
     if (progressHandler) {
       ipcRenderer.off("upgrade-progress", progressHandler);
@@ -66,7 +59,7 @@ const exposeInterface: ElectronWindow["electron"] = {
 
     progressHandler = (event, progress) => {
       console.log("on upgrade-progress", progress);
-      handler(progress as UpgradeProgress);
+      handler(progress as ClientUpgradeProgress);
     };
 
     ipcRenderer.on("upgrade-progress", progressHandler);
@@ -75,7 +68,6 @@ const exposeInterface: ElectronWindow["electron"] = {
   registerUpgradeCompleteHandler: (handler) =>
     ipcRenderer.on("upgrade-complete", (event) => {
       console.log("on upgrade-complete");
-
       handler();
     }),
 
@@ -86,6 +78,9 @@ const exposeInterface: ElectronWindow["electron"] = {
     }),
 
   downloadAndInstallUpgrades: () => ipcRenderer.send("install-update"),
+
+  restartWithLatestVersion: () =>
+    ipcRenderer.send("restart-with-latest-version"),
 
   openStripeForm: (params: Client.CloudBillingStripeFormParams) =>
     ipcRenderer.send(
@@ -103,6 +98,14 @@ const exposeInterface: ElectronWindow["electron"] = {
 
   deregisterCloseStripeFormHandler: (handler) => {
     ipcRenderer.off("close-stripe-form", handler);
+  },
+
+  uiLogger: (batch: { msg: string; data?: any }[]) => {
+    ipcRenderer.send("ui-logger", batch);
+  },
+
+  reportError: (msg: string, userId: string, email: string) => {
+    ipcRenderer.send("report-error", { msg, userId, email });
   },
 };
 

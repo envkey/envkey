@@ -1,5 +1,6 @@
 import { verifyV1Upgrade } from "./../../../core/src/lib/v1_upgrade";
-import express, { NextFunction, Request, Response } from "express";
+import express, { NextFunction, Request, Response, Express } from "express";
+import { Server } from "http";
 import asyncHandler from "express-async-handler";
 import WebSocket from "ws";
 import { getDefaultStore, clearStore } from "./redux_store";
@@ -41,68 +42,228 @@ import { createPatch, Patch } from "rfc6902";
 import { version as cliVersion } from "../../cli/package.json";
 import { pick } from "@core/lib/utils/pick";
 import { openExternalUrl } from "./lib/open";
+import cluster from "cluster";
+import * as procStatusWorker from "./proc_status_worker";
 
-export const start = async (port = 19047, wsport = 19048) => {
-  log("Starting EnvKey core process...", { cliVersion });
-  initFileLogger("core");
-  await init();
-
-  const app = express();
-
-  startSocketServer(port, wsport);
-
-  app.use(express.json({ limit: "50mb" }));
-
-  /*
-   * put /alive route *before* loggerMiddleware so we
-   * don't fill * up log file with /alive requests
-   */
-  app.get("/alive", (req, res) => {
-    res.status(200).json({ cliVersion });
-  });
-
-  app.get("/inline", (req, res) => {
-    res.status(200).json({ isInline: Boolean(process.env.IS_ELECTRON) });
-  });
-
-  app.use(loggerMiddleware);
-
-  app.get("/stop", (req, res) => {
-    res.status(200).send("Stopping local server...");
-    process.kill(process.pid, "SIGTERM");
-  });
-
-  app.get(
-    "/v1-upgrade-status",
-    asyncHandler(async (req, res) => {
-      if (isLocked()) {
-        log("Cannot return v1 upgrade status while locked");
-        res.status(401).send("Locked");
-        return;
+let v1UpgradeStatus: Client.State["v1UpgradeStatus"] | undefined;
+let v1UpgradeInviteTokensById:
+  | Record<
+      string,
+      {
+        id: string;
+        identityHash: string;
+        encryptionKey: string;
       }
+    >
+  | undefined;
 
-      if (!reduxStore) {
-        const msg = "Error: Redux store is not defined.";
-        log(msg);
-        res.status(500).json({ error: msg });
-        return;
-      }
+export const start = async (
+  port = 19047,
+  wsport = 19048,
+  statusPort = 19049
+) => {
+  log("Starting EnvKey core process...", {
+    cliVersion,
+    isMaster: cluster.isMaster,
+    isWorker: cluster.isWorker,
+  });
+  cluster.isMaster
+    ? initMaster(port, wsport, statusPort)
+    : initWorker(statusPort);
+};
 
+let reduxStore: Client.ReduxStore | undefined,
+  lockoutTimeout: ReturnType<typeof setTimeout> | undefined,
+  heartbeatTimeout: ReturnType<typeof setTimeout> | undefined,
+  lastProcHeartbeatAt = Date.now(),
+  wss: WebSocket.Server | undefined;
+
+const initMaster = async (port: number, wsport: number, statusPort: number) => {
+    initFileLogger("core");
+
+    await Promise.all([
+      fkill(`:${port}`, { force: true }).catch(() => {}),
+      fkill(`:${wsport}`, { force: true }).catch(() => {}),
+      fkill(`:${statusPort}`, { force: true }).catch(() => {}),
+    ]);
+
+    // windowsHide isn't present on ClusterSettings type, but it's supported
+    cluster.setupMaster({ windowsHide: true } as any);
+
+    procStatusWorker.setWorker(cluster.fork());
+    await procStatusWorker.waitForStart();
+    procStatusWorker.handleWorkerToMainMessage(workerToMainMessageHandler);
+
+    await mainServer(port, wsport);
+  },
+  initWorker = (statusPort: number) => {
+    initFileLogger("core");
+    statusServer(statusPort);
+    handleMainToWorkerMessage();
+    procStatusWorker.sendWorkerToMainMessage({ type: "workerStarted" });
+  },
+  statusServer = async (port: number) => {
+    const app = express();
+    addAliveRoute(app);
+    addV1AliveRoute(app);
+    addUpgradeStatusRoute(app);
+    app.listen(port, () => {
+      log(`Status-only server listening on port ${port}...`);
+    });
+  },
+  mainServer = async (port: number, wsport: number) => {
+    await init();
+
+    const app = express();
+    startSocketServer(port, wsport);
+
+    app.use(express.json({ limit: "50mb" }));
+    app.use(loggerMiddleware);
+
+    addStopRoute(app);
+
+    app.use([authMiddleware, lockoutMiddleware]);
+
+    // Adding alive route to main server too for legacy alive check
+    addAliveRoute(app);
+
+    addStateRoute(app);
+    addActionRoute(app);
+
+    const serverRunningMsg = `EnvKey local server is running. Server port: ${port}. Websocket port: ${wsport}.`;
+
+    const server = await new Promise<Server>((resolve) => {
+      const s = app
+        .listen(port, () => {
+          log(serverRunningMsg);
+          resolve(s);
+        })
+        .on("error", (err) => {
+          log("Error starting server:", { err });
+          throw err;
+        });
+    });
+
+    handleMainProcessErrorOrExit(app, server);
+  },
+  workerToMainMessageHandler = async (
+    message: Client.WorkerToMainProcessMessage
+  ) => {
+    // log("handleWorkerToMainMessage", { type: message.type });
+
+    // handled by proc_status_worker
+    if (message.type == "workerStarted") {
+      return;
+    }
+
+    if (message.type == "clientAlive") {
+      await dispatch({ type: Client.ActionType.CLIENT_ALIVE }, getContext());
+    } else if (message.type == "v1Alive") {
       await dispatch({ type: Client.ActionType.V1_CLIENT_ALIVE }, getContext());
+    } else if (message.type == "v1FinishedUpgrade") {
+      if (!reduxStore) {
+        throw new Error("reduxStore not initialized");
+      }
+      const procState = reduxStore.getState();
+
+      await dispatch(
+        {
+          type: Client.ActionType.RESET_V1_UPGRADE,
+          payload: {},
+        },
+        { ...getContext(procState.v1UpgradeAccountId), localSocketUpdate }
+      );
+    } else if (message.type == "refreshSession") {
+      if (!reduxStore) {
+        throw new Error("reduxStore not initialized");
+      }
 
       const procState = reduxStore.getState();
 
-      if (procState.v1UpgradeStatus == "finished") {
-        log("V1 upgrade finished, returning invite tokens if needed.");
+      if (procState.locked) {
+        return;
+      }
 
-        let inviteTokensById:
-          | Record<
-              string,
-              { id: string; identityHash: string; encryptionKey: string }
-            >
-          | undefined;
+      let shouldFetch = true;
 
-        if (!procState.v1UpgradeAcceptedInvite) {
+      if (message.abortIfError && message.userId) {
+        const accountState = procState.accountStates[message.userId];
+        if (accountState && accountState.fetchSessionError) {
+          shouldFetch = false;
+        }
+      }
+
+      if (shouldFetch) {
+        await refreshSessions(
+          procState,
+          localSocketUpdate,
+          message.userId ? [message.userId] : undefined
+        );
+      }
+    } else if (message.type == "accountUpdated") {
+      dispatch(
+        {
+          type: Client.ActionType.RECEIVED_ORG_SOCKET_MESSAGE,
+          payload: { message: message.message, account: message.account },
+        },
+        getContext(message.account.userId)
+      ).then(() => {
+        localSocketUpdate({
+          type: "update",
+          accountId: message.account.userId,
+        });
+      });
+    }
+  },
+  handleMainToWorkerMessage = () => {
+    process.on("message", (message: Client.MainToWorkerProcessMessage) => {
+      // log("handleMainToWorkerMessage", {
+      //   message,
+      // });
+      if (message.type == "v1UpgradeStatus") {
+        v1UpgradeStatus = message.v1UpgradeStatus;
+
+        if (message.v1UpgradeStatus == "finished") {
+          if (!message.generatedInvites) {
+            return;
+          }
+
+          v1UpgradeInviteTokensById = R.indexBy(
+            R.prop("id"),
+            message.generatedInvites.map(
+              ({ user, identityHash, encryptionKey }) => ({
+                id: user.importId!,
+                identityHash,
+                encryptionKey,
+              })
+            )
+          );
+        }
+      } else if (message.type == "resolveOrgSockets") {
+        resolveOrgSockets(message.state, message.skipJitter);
+      }
+    });
+  },
+  addAliveRoute = (app: Express) => {
+    app.get("/alive", (req, res) => {
+      procStatusWorker.sendWorkerToMainMessage({ type: "clientAlive" });
+      res.status(200).json({ cliVersion });
+    });
+  },
+  addV1AliveRoute = (app: Express) => {
+    app.get("/v1-alive", (req, res) => {
+      res.status(200).json({ cliVersion });
+
+      procStatusWorker.sendWorkerToMainMessage({ type: "v1Alive" });
+    });
+  },
+  addUpgradeStatusRoute = (app: Express) => {
+    app.get(
+      "/v1-upgrade-status",
+      asyncHandler(async (req, res) => {
+        procStatusWorker.sendWorkerToMainMessage({ type: "v1Alive" });
+
+        if (v1UpgradeStatus == "finished" && v1UpgradeInviteTokensById) {
           // this is the only case where sensitive data is returned
           // (when doing initial upgrade, not accepting an upgrade invite)
           // so we'll only check auth here
@@ -122,399 +283,350 @@ export const start = async (port = 19047, wsport = 19048) => {
             res.status(401).send(verifyRes);
           }
 
-          const accountId = procState.v1UpgradeAccountId;
-          const clientId = procState.v1UpgradeClientId!;
-
-          const clientState = getState(reduxStore, {
-            accountIdOrCliKey: accountId,
-            clientId,
+          procStatusWorker.sendWorkerToMainMessage({
+            type: "v1FinishedUpgrade",
           });
 
-          const inviteTokens = clientState.generatedInvites.map(
-            ({ user, identityHash, encryptionKey }) => ({
-              id: user.importId!,
-              identityHash,
-              encryptionKey,
-            })
-          );
+          log("V1 upgrade finished, returning invite tokens.");
 
-          inviteTokensById = R.indexBy(R.prop("id"), inviteTokens);
-        }
+          res.status(200).json({
+            upgradeStatus: "finished",
+            inviteTokensById: v1UpgradeInviteTokensById,
+          });
 
-        await dispatch(
-          {
-            type: Client.ActionType.RESET_V1_UPGRADE,
-            payload: {},
-          },
-          { ...getContext(procState.v1UpgradeAccountId), localSocketUpdate }
-        );
+          v1UpgradeInviteTokensById = undefined;
+          v1UpgradeStatus = undefined;
+        } else if (v1UpgradeStatus == "canceled") {
+          procStatusWorker.sendWorkerToMainMessage({
+            type: "v1FinishedUpgrade",
+          });
 
-        res.status(200).json({
-          upgradeStatus: "finished",
-          inviteTokensById,
-        });
-        return;
-      } else if (procState.v1UpgradeStatus == "canceled") {
-        await dispatch(
-          {
-            type: Client.ActionType.RESET_V1_UPGRADE,
-            payload: {},
-          },
-          getContext(procState.v1UpgradeAccountId)
-        );
+          res.status(200).json({
+            upgradeStatus: "canceled",
+          });
 
-        res.status(200).json({
-          upgradeStatus: "canceled",
-        });
-        return;
-      } else {
-        res.status(200).json({
-          upgradeStatus: procState.v1UpgradeStatus,
-        });
-        return;
-      }
-    })
-  );
-
-  app.use([authMiddleware, lockoutMiddleware]);
-
-  app.get(
-    "/state",
-    asyncHandler(async (req, res) => {
-      if (isLocked()) {
-        log("Responding with LOCKED state.");
-        res.status(200).json(Client.lockedState);
-        return;
-      }
-
-      if (!reduxStore) {
-        const msg = "Error: Redux store is not defined.";
-        log(msg);
-        res.status(500).json({ error: msg });
-        return;
-      }
-
-      const accountIdOrCliKey = req.query.accountIdOrCliKey as
-          | string
-          | undefined,
-        clientId = req.query.clientId as string | undefined;
-
-      if (!clientId) {
-        const msg = "Error: Missing clientId query parameter";
-        log(msg);
-        res.status(400).json({ error: msg });
-        return;
-      }
-
-      const state = getState(reduxStore, {
-        accountIdOrCliKey,
-        clientId,
-      });
-
-      const keysParam = req.query.keys as
-        | string
-        | (keyof Client.State)[]
-        | undefined;
-      const keys = (typeof keysParam == "string" ? [keysParam] : keysParam) as
-        | (keyof Client.State)[]
-        | undefined;
-
-      // to update lastActiveAt
-      await dispatch(
-        {
-          type: Client.ActionType.FETCHED_CLIENT_STATE,
-        },
-        getContext()
-      );
-
-      resolveLockoutTimer();
-
-      res.status(200).json(keys ? pick(keys, state) : state);
-    })
-  );
-
-  app.post(
-    "/action",
-    asyncHandler(async (req, res) => {
-      const action = req.body.action as Client.Action.ClientAction | undefined,
-        context = req.body.context as Client.Context | undefined,
-        returnFullState = req.body.returnFullState as boolean | undefined;
-
-      if (context) {
-        context.localSocketUpdate = localSocketUpdate;
-      }
-
-      if (!action || !context) {
-        const msg =
-          "Bad request. Requires 'action' and 'context' in post body.";
-        log(msg, req.body);
-        res.status(400).json({ error: msg });
-        return;
-      }
-
-      log("Received", { action: action.type });
-
-      // shortcut to speed this up
-      if (action.type == Client.ActionType.OPEN_URL) {
-        openExternalUrl(action.payload.url);
-        res.status(301).json({ success: true });
-        return;
-      }
-
-      let unlocked = false;
-      if (isLocked()) {
-        if (action.type == Client.ActionType.UNLOCK_DEVICE) {
-          try {
-            await unlockDevice(action.payload.passphrase);
-            unlocked = true;
-          } catch (err) {
-            log("Error unlocking device:", { err });
-            res.status(403).json({ error: err.message });
-            return;
-          }
-        } else if (action.type == Client.ActionType.LOAD_RECOVERY_KEY) {
-          try {
-            log(
-              "Re-initializing locked device before handling LOAD_RECOVERY_KEY"
-            );
-            await init(true);
-            unlocked = true;
-          } catch (err) {
-            log(
-              "Error resetting device key for LOAD_RECOVERY_KEY with locked device:",
-              { err }
-            );
-            res.status(500).json({ error: err.message });
-            return;
-          }
-        } else if (action.type == Client.ActionType.INIT_DEVICE) {
-          try {
-            log("Re-initializing locked device");
-            await init(true);
-            unlocked = true;
-          } catch (err) {
-            log("Error resetting device key ", { err });
-            res.status(500).json({ error: err.message });
-            return;
-          }
+          v1UpgradeInviteTokensById = undefined;
+          v1UpgradeStatus = undefined;
         } else {
-          const msg =
-            "Error: EnvKey is LOCKED. Can only receive UNLOCK_DEVICE, INIT_DEVICE, or LOAD_RECOVERY_KEY actions.";
-          log(msg);
-          res.status(403).json({ error: msg });
+          res.status(200).json({
+            upgradeStatus: v1UpgradeStatus,
+          });
+        }
+      })
+    );
+  },
+  addStopRoute = (app: Express) => {
+    app.get("/stop", (req, res) => {
+      res.status(200).send("Stopping local server...");
+      process.kill(process.pid, "SIGTERM"); // this is caught and handled for a proper shutdown
+    });
+  },
+  addStateRoute = (app: Express) => {
+    app.get(
+      "/state",
+      asyncHandler(async (req, res) => {
+        if (isLocked()) {
+          log("Responding with LOCKED state.");
+          res.status(200).json(Client.lockedState);
           return;
         }
-      } else if (action.type == Client.ActionType.UNLOCK_DEVICE) {
-        const msg = "Error: Device isn't locked.";
-        log(msg);
-        res.status(422).json({ error: msg });
-        return;
-      }
 
-      if (!reduxStore) {
-        const msg = "Error: Redux store is not defined.";
-        log(msg);
-        res.status(500).json({ error: msg });
-        return;
-      }
+        if (!reduxStore) {
+          const msg = "Error: Redux store is not defined.";
+          log(msg);
+          res.status(500).json({ error: msg });
+          return;
+        }
 
-      if (action.type == Client.ActionType.LOCK_DEVICE) {
-        const { requiresPassphrase } = reduxStore.getState();
-        if (!requiresPassphrase) {
-          const msg = "Error: Cannot lock device if no passphrase is set.";
+        const accountIdOrCliKey = req.query.accountIdOrCliKey as
+            | string
+            | undefined,
+          clientId = req.query.clientId as string | undefined;
+
+        if (!clientId) {
+          const msg = "Error: Missing clientId query parameter";
+          log(msg);
+          res.status(400).json({ error: msg });
+          return;
+        }
+
+        const state = getState(reduxStore, {
+          accountIdOrCliKey,
+          clientId,
+        });
+
+        const keysParam = req.query.keys as
+          | string
+          | (keyof Client.State)[]
+          | undefined;
+        const keys = (
+          typeof keysParam == "string" ? [keysParam] : keysParam
+        ) as (keyof Client.State)[] | undefined;
+
+        // to update lastActiveAt
+        await dispatch(
+          {
+            type: Client.ActionType.FETCHED_CLIENT_STATE,
+          },
+          getContext()
+        );
+
+        resolveLockoutTimer();
+
+        res.status(200).json(keys ? pick(keys, state) : state);
+      })
+    );
+  },
+  addActionRoute = (app: Express) => {
+    app.post(
+      "/action",
+      asyncHandler(async (req, res) => {
+        const action = req.body.action as
+            | Client.Action.ClientAction
+            | undefined,
+          context = req.body.context as Client.Context | undefined,
+          returnFullState = req.body.returnFullState as boolean | undefined;
+
+        if (context) {
+          context.localSocketUpdate = localSocketUpdate;
+        }
+
+        if (!action || !context) {
+          const msg =
+            "Bad request. Requires 'action' and 'context' in post body.";
+          log(msg, req.body);
+          res.status(400).json({ error: msg });
+          return;
+        }
+
+        log("Received", { action: action.type });
+
+        // shortcut to speed this up
+        if (action.type == Client.ActionType.OPEN_URL) {
+          openExternalUrl(action.payload.url);
+          res.status(301).json({ success: true });
+          return;
+        }
+
+        let unlocked = false;
+        if (isLocked()) {
+          if (action.type == Client.ActionType.UNLOCK_DEVICE) {
+            try {
+              await unlockDevice(action.payload.passphrase);
+              unlocked = true;
+            } catch (err) {
+              log("Error unlocking device:", { err });
+              res.status(403).json({ error: err.message });
+              return;
+            }
+          } else if (action.type == Client.ActionType.LOAD_RECOVERY_KEY) {
+            try {
+              log(
+                "Re-initializing locked device before handling LOAD_RECOVERY_KEY"
+              );
+              await init(true);
+              unlocked = true;
+            } catch (err) {
+              log(
+                "Error resetting device key for LOAD_RECOVERY_KEY with locked device:",
+                { err }
+              );
+              res.status(500).json({ error: err.message });
+              return;
+            }
+          } else if (action.type == Client.ActionType.INIT_DEVICE) {
+            try {
+              log("Re-initializing locked device");
+              await init(true);
+              unlocked = true;
+            } catch (err) {
+              log("Error resetting device key ", { err });
+              res.status(500).json({ error: err.message });
+              return;
+            }
+          } else {
+            const msg =
+              "Error: EnvKey is LOCKED. Can only receive UNLOCK_DEVICE, INIT_DEVICE, or LOAD_RECOVERY_KEY actions.";
+            log(msg);
+            res.status(403).json({ error: msg });
+            return;
+          }
+        } else if (action.type == Client.ActionType.UNLOCK_DEVICE) {
+          const msg = "Error: Device isn't locked.";
           log(msg);
           res.status(422).json({ error: msg });
           return;
         }
 
-        await lockDevice();
-        res.status(200).json({ success: true, state: Client.lockedState });
-        return;
-      }
+        if (!reduxStore) {
+          const msg = "Error: Redux store is not defined.";
+          log(msg);
+          res.status(500).json({ error: msg });
+          return;
+        }
 
-      const initialClientState = unlocked
-        ? Client.lockedState
-        : getState(reduxStore, context);
+        if (action.type == Client.ActionType.LOCK_DEVICE) {
+          const { requiresPassphrase } = reduxStore.getState();
+          if (!requiresPassphrase) {
+            const msg = "Error: Cannot lock device if no passphrase is set.";
+            log(msg);
+            res.status(422).json({ error: msg });
+            return;
+          }
 
-      const actionParams = getActionParams(action.type);
-      const dispatchPromise = dispatch(action, context);
+          await lockDevice();
+          res.status(200).json({ success: true, state: Client.lockedState });
+          return;
+        }
 
-      const afterDispatchClientState = getState(reduxStore, context);
+        const initialClientState = unlocked
+          ? Client.lockedState
+          : getState(reduxStore, context);
 
-      const skipSocketUpdate =
-        "skipLocalSocketUpdate" in actionParams &&
-        actionParams.skipLocalSocketUpdate;
+        const actionParams = getActionParams(action.type);
+        const dispatchPromise = dispatch(action, context);
 
-      const shouldSendSocketUpdate =
-        !skipSocketUpdate &&
-        (context.client.clientName == "cli" ||
-          actionParams.type == "asyncClientAction" ||
-          actionParams.type == "apiRequestAction");
+        const afterDispatchClientState = getState(reduxStore, context);
 
-      const shouldIncludeEnvsInDiffs =
-        action.type == Client.ActionType.FETCH_ENVS ||
-        action.type == Client.ActionType.COMMIT_ENVS;
+        const skipSocketUpdate =
+          "skipLocalSocketUpdate" in actionParams &&
+          actionParams.skipLocalSocketUpdate;
 
-      if (shouldSendSocketUpdate) {
-        localSocketUpdate({
-          type: "diffs",
-          diffs: shouldIncludeEnvsInDiffs
-            ? createPatch(initialClientState, afterDispatchClientState)
-            : createPatch(
-                R.omit(["envs", "changesets"], initialClientState),
-                R.omit(["envs", "changesets"], afterDispatchClientState)
-              ),
-        });
-      }
+        const shouldSendSocketUpdate =
+          !skipSocketUpdate &&
+          (context.client.clientName == "cli" ||
+            actionParams.type == "asyncClientAction" ||
+            actionParams.type == "apiRequestAction");
 
-      const dispatchRes = await dispatchPromise;
+        const shouldIncludeEnvsInDiffs =
+          action.type == Client.ActionType.FETCH_ENVS ||
+          action.type == Client.ActionType.COMMIT_ENVS;
 
-      if (dispatchRes.success) {
-        const updatedProcState = reduxStore.getState();
+        if (shouldSendSocketUpdate) {
+          localSocketUpdate({
+            type: "diffs",
+            diffs: shouldIncludeEnvsInDiffs
+              ? createPatch(initialClientState, afterDispatchClientState)
+              : createPatch(
+                  R.omit(["envs", "changesets"], initialClientState),
+                  R.omit(["envs", "changesets"], afterDispatchClientState)
+                ),
+          });
+        }
 
-        // persist updated state to disk in background (don't block request for this)
-        queuePersistState(updatedProcState);
+        const dispatchRes = await dispatchPromise;
 
-        // connect to the org sockets of any new accounts that this action may have added to core state
-        // (usually a no-op)
-        resolveOrgSockets(reduxStore, localSocketUpdate, true);
-      }
+        if (dispatchRes.success) {
+          const updatedProcState = reduxStore.getState();
 
-      await resolveLockoutTimer();
+          // persist updated state to disk in background (don't block request for this)
+          queuePersistState(updatedProcState);
 
-      const finalDiffsPreviousState =
-        actionParams.type == "clientAction" || !shouldSendSocketUpdate
-          ? initialClientState
-          : afterDispatchClientState;
+          // connect to the org sockets of any new accounts that this action may have added to core state
+          // (usually a no-op)
+          procStatusWorker.sendMainToWorkerMessage({
+            type: "resolveOrgSockets",
+            state: pick(
+              ["locked", "networkUnreachable", "orgUserAccounts"],
+              updatedProcState
+            ),
+            skipJitter: true,
+          });
+        }
 
-      const finalDiffs = shouldIncludeEnvsInDiffs
-        ? createPatch(finalDiffsPreviousState, dispatchRes.state)
-        : createPatch(
-            R.omit(["envs", "changesets"], finalDiffsPreviousState),
-            R.omit(["envs", "changesets"], dispatchRes.state)
-          );
+        await resolveLockoutTimer();
 
-      if (
-        !skipSocketUpdate &&
-        (context.client.clientName == "cli" ||
-          context.client.clientName == "v1")
-      ) {
-        localSocketUpdate({ type: "diffs", diffs: finalDiffs });
-      }
+        const finalDiffsPreviousState =
+          actionParams.type == "clientAction" || !shouldSendSocketUpdate
+            ? initialClientState
+            : afterDispatchClientState;
 
-      res.status(200).json(
-        returnFullState
-          ? dispatchRes
-          : {
-              ...R.omit(["state"], dispatchRes),
-              diffs: finalDiffs,
-            }
-      );
-    })
-  );
+        const finalDiffs = shouldIncludeEnvsInDiffs
+          ? createPatch(finalDiffsPreviousState, dispatchRes.state)
+          : createPatch(
+              R.omit(["envs", "changesets"], finalDiffsPreviousState),
+              R.omit(["envs", "changesets"], dispatchRes.state)
+            );
 
-  // uncaught error handling
-  app.use(function (
-    error: Error,
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) {
-    logStderr("Core Process Unhandled Error", { err: error });
-
-    res.status(500).send({
-      type: "error",
-      error: true,
-      errorStatus: 500,
-      errorReason: error.message,
-    });
-
-    gracefulShutdown(undefined, 1);
-  });
-
-  let server: ReturnType<typeof app.listen>;
-  const serverRunningMsg = `EnvKey local server is running. Server port: ${port}. Websocket port: ${wsport}.`;
-
-  const startServer = (resolve: (res: boolean) => void, n = 0) => {
-    server = app
-      .listen(port, () => {
-        log(serverRunningMsg);
-        resolve(true);
-      })
-      .on("error", (err) => {
-        log("Error starting server:", { err });
         if (
-          err.message.includes(`address already in use :::${port}`) ||
-          err.message.includes("EADDRINUSE")
+          !skipSocketUpdate &&
+          (context.client.clientName == "cli" ||
+            context.client.clientName == "v1")
         ) {
-          handleAddrInUse(resolve, n);
-        } else {
-          throw err;
+          localSocketUpdate({ type: "diffs", diffs: finalDiffs });
         }
+
+        res.status(200).json(
+          returnFullState
+            ? dispatchRes
+            : {
+                ...R.omit(["state"], dispatchRes),
+                diffs: finalDiffs,
+              }
+        );
+      })
+    );
+  },
+  handleMainProcessErrorOrExit = (app: Express, server: Server) => {
+    // uncaught error handling
+    app.use(function (
+      error: Error,
+      req: Request,
+      res: Response,
+      next: NextFunction
+    ) {
+      logStderr("Core Process Unhandled Error", { err: error });
+
+      res.status(500).send({
+        type: "error",
+        error: true,
+        errorStatus: 500,
+        errorReason: error.message,
       });
-  };
 
-  const handleAddrInUse = (resolve: (res: boolean) => void, n = 0) => {
-    if (n > 1) {
-      log(`Couldn't kill process blocking express port ${port}. Giving up.`);
-      return;
-    }
-
-    log(`Killing process blocking express port ${port} and trying again...`);
-    fkill(`:${port}`, {
-      force: true,
-      tree: true,
-      silent: true,
-    }).then(() => {
-      setTimeout(() => {
-        startServer(resolve, n + 1);
-      }, 500);
+      gracefulShutdown(undefined, 1);
     });
-  };
 
-  await new Promise((resolve) => startServer(resolve));
+    const shutdownNetworking = () => {
+      stopSocketPingLoop();
+      closeAllOrgSockets();
 
-  const shutdownNetworking = () => {
-    stopSocketPingLoop();
-    closeAllOrgSockets();
+      if (wss) {
+        wss.clients.forEach((client) => {
+          try {
+            client.send(JSON.stringify({ type: "closing" }));
+          } catch (err) {
+            log("error sending 'closing' message to local socket", { err });
+          }
 
-    if (wss) {
-      wss.clients.forEach((client) => {
-        try {
-          client.send(JSON.stringify({ type: "closing" }));
-        } catch (err) {
-          log("error sending 'closing' message to local socket", { err });
-        }
+          try {
+            client.close();
+          } catch (err) {}
+        });
+        wss.close();
+      }
 
-        try {
-          client.close();
-        } catch (err) {}
-      });
-      wss.close();
-    }
+      server.close();
+    };
 
-    server.close();
-  };
+    const gracefulShutdown = (onShutdown?: () => void, code?: number) => {
+      log(`Shutting down gracefully...`);
+      clearTimers();
+      shutdownNetworking();
 
-  const gracefulShutdown = (onShutdown?: () => void, code?: number) => {
-    log(`Shutting down gracefully...`);
-    clearTimers();
-    shutdownNetworking();
-
-    if (reduxStore) {
-      const procState = reduxStore.getState();
-      queuePersistState(procState, true);
-      log(`Persisting final state before shutdown...`);
-      processPersistStateQueue().then(() => {
-        log(`Finished persisting state. Shutting down.`);
+      if (reduxStore) {
+        const procState = reduxStore.getState();
+        queuePersistState(procState, true);
+        log(`Persisting final state before shutdown...`);
+        processPersistStateQueue().then(() => {
+          log(`Finished persisting state. Shutting down.`);
+          onShutdown ? onShutdown() : process.exit(code ?? 0);
+        });
+      } else {
         onShutdown ? onShutdown() : process.exit(code ?? 0);
-      });
-    } else {
-      onShutdown ? onShutdown() : process.exit(code ?? 0);
-    }
-  };
+      }
+    };
 
-  if (!process.env.IS_ELECTRON) {
     ["SIGINT", "SIGUSR1", "SIGUSR2", "SIGTERM", "SIGHUP"].forEach(
       (eventType) => {
         process.on(eventType, () => {
@@ -541,18 +653,8 @@ export const start = async (port = 19047, wsport = 19048) => {
       log(`Core process uncaughtException.`, { err });
       gracefulShutdown(undefined, 1);
     });
-  }
-
-  return { shutdownNetworking, gracefulShutdown };
-};
-
-let reduxStore: Client.ReduxStore | undefined,
-  lockoutTimeout: ReturnType<typeof setTimeout> | undefined,
-  heartbeatTimeout: ReturnType<typeof setTimeout> | undefined,
-  lastProcHeartbeatAt = Date.now(),
-  wss: WebSocket.Server | undefined;
-
-const initReduxStore = async (forceReset?: true) => {
+  },
+  initReduxStore = async (forceReset?: true) => {
     // if we haven't established a root device key OR we're forcing a reset, init/re-init device key
     if (forceReset || !(await hasDeviceKey())) {
       await initDeviceKey();
@@ -626,7 +728,14 @@ const initReduxStore = async (forceReset?: true) => {
   },
   initSocketsAndTimers = async () => {
     if (reduxStore) {
-      await resolveOrgSockets(reduxStore, localSocketUpdate, true);
+      procStatusWorker.sendMainToWorkerMessage({
+        type: "resolveOrgSockets",
+        state: pick(
+          ["locked", "networkUnreachable", "orgUserAccounts"],
+          reduxStore.getState()
+        ),
+        skipJitter: true,
+      });
       socketPingLoop();
       killIfIdleLoop(reduxStore);
       // clearCacheLoop(reduxStore, localSocketUpdate);
@@ -657,32 +766,7 @@ const initReduxStore = async (forceReset?: true) => {
 
       wss.on("error", (err) => {
         log("Error starting local socket server: " + err.message);
-        if (
-          err.message.includes(`address already in use :::${wsport}`) ||
-          err.message.includes("EADDRINUSE")
-        ) {
-          handleAddrInUse(n);
-        } else {
-          throw err;
-        }
-      });
-    };
-
-    const handleAddrInUse = (n = 0) => {
-      if (n > 1) {
-        log(`Couldn't kill process blocking wss port ${wsport}. Giving up.`);
-        return;
-      }
-
-      log(`Killing process blocking wss port ${wsport} and trying again...`);
-      fkill(`:${wsport}`, {
-        force: true,
-        tree: true,
-        silent: true,
-      }).then(() => {
-        setTimeout(() => {
-          startFn(n + 1);
-        }, 500);
+        throw err;
       });
     };
 
@@ -843,6 +927,8 @@ const initReduxStore = async (forceReset?: true) => {
           return;
         }
       }
+
+      // Client.ActionType.LOAD_V1_UPGRADE_INVITE doesn't need to be verified here, will be authenticated by invite tokens
 
       next();
       return;

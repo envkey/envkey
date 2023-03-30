@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { BaseRoutes } from "./routes";
 import { Client } from "@core/types";
-import { dispatchCore, fetchState } from "@core/lib/core_proc";
+import { dispatchCore, fetchState, isAlive } from "@core/lib/core_proc";
 import {
   LocalUiState,
   ComponentProps,
@@ -25,12 +25,13 @@ import {
   ElectronWindow,
   AvailableClientUpgrade,
   ClientUpgradeProgress,
-  UpgradeProgress,
 } from "@core/types/electron";
-import { SmallLoader } from "@images";
-import { ClientUpgrades } from "@ui";
+import { SmallLoader, EnvkeyLogo } from "@images";
+import { ClientUpgradesAvailable, ClientUpgradeStatus } from "@ui";
 import { forceApplyPatch } from "@core/lib/utils/patch";
 import { version } from "../../../electron/package.json";
+import { style } from "typestyle";
+import { ReportError } from "./base";
 
 declare var window: ElectronWindow;
 
@@ -113,7 +114,10 @@ const clientParams: Client.ClientParams<"app"> = {
       [availableClientUpgrade, setAvailableClientUpgrade] =
         useState<AvailableClientUpgrade>({}),
       [clientUpgradeProgress, setClientUpgradeProgress] =
-        useState<ClientUpgradeProgress>({}),
+        useState<ClientUpgradeProgress>(),
+      [upgradeDownloaded, setUpgradeDownloaded] = useState(false),
+      [startedUpgrade, setStartedUpgrade] = useState(false),
+      [isStartingCore, setIsStartingCore] = useState(false),
       [winWidth, winHeight] = useWindowSize(uiState),
       fetchingStateRef = useRef(false),
       queueFetchStateRef = useRef(false),
@@ -313,32 +317,41 @@ const clientParams: Client.ClientParams<"app"> = {
       });
     };
 
-    const init = useCallback(() => {
-      // ensures we don't start trying to connect to core proc until it's running and the auth token has been retrieved from OS keyring and added to user agent
-      if (!navigator.userAgent.startsWith(Client.CORE_PROC_AGENT_NAME)) {
-        console.log(
-          "navigator.userAgent does not include CORE_PROC_AGENT_NAME"
-        );
-        setTimeout(init, 300);
-        return;
-      }
+    const init = useCallback(
+      (n = 0) =>
+        (async () => {
+          // ensures we don't start trying to connect to core proc until it's running and the auth token has been retrieved from OS keyring and added to user agent
+          if (!navigator.userAgent.startsWith(Client.CORE_PROC_AGENT_NAME)) {
+            console.log(
+              "navigator.userAgent does not include CORE_PROC_AGENT_NAME"
+            );
 
-      window.addEventListener("beforeunload", () => {
-        console.log(
-          new Date().toISOString(),
-          "window beforeunload event--disconnecting client"
-        );
-        if (coreState && !coreState.locked) {
-          dispatch({ type: Client.ActionType.DISCONNECT_CLIENT });
-        }
-      });
+            if (n == 0 && !(await isAlive(200))) {
+              setIsStartingCore(true);
+            }
 
-      initLocalSocket();
+            setTimeout(() => init(n + 1), 300);
+            return;
+          }
 
-      fetchCoreState({ forceUpdate: true });
-    }, [coreState]);
+          window.addEventListener("beforeunload", () => {
+            console.log(
+              new Date().toISOString(),
+              "window beforeunload event--disconnecting client"
+            );
+            if (coreState && !coreState.locked) {
+              dispatch({ type: Client.ActionType.DISCONNECT_CLIENT });
+            }
+          });
+          initLocalSocket();
+          fetchCoreState({ forceUpdate: true });
+        })(),
+      [coreState]
+    );
 
-    useEffect(init, [navigator.userAgent]);
+    useEffect(() => {
+      init();
+    }, [navigator.userAgent]);
 
     useLayoutEffect(() => {
       forceRenderStyles();
@@ -370,17 +383,14 @@ const clientParams: Client.ClientParams<"app"> = {
     }, [uiState.now]);
 
     const upgradeProgressHandler = useCallback(
-      (progress: UpgradeProgress) => {
+      (progress: ClientUpgradeProgress) => {
         console.log(new Date().toISOString(), "Root - upgrade progress", {
           progress,
         });
         console.log(new Date().toISOString(), "Root - clientUpgrade progress", {
           clientUpgradeProgress,
         });
-        setClientUpgradeProgress({
-          ...clientUpgradeProgress,
-          [progress.clientProject]: progress,
-        });
+        setClientUpgradeProgress(progress);
       },
       [clientUpgradeProgress]
     );
@@ -399,38 +409,18 @@ const clientParams: Client.ClientParams<"app"> = {
         setAvailableClientUpgrade(availableUpgrade);
       });
 
-      window.electron.registerNewerUpgradeAvailableHandler(
-        (availableUpgrade) => {
-          console.log(
-            new Date().toISOString(),
-            "Root - newer upgrade available",
-            availableUpgrade
-          );
-          alert("A newer upgrade is available.");
-          setAvailableClientUpgrade(availableUpgrade);
-        }
-      );
-
-      // this is only called if there was no desktop upgrade
-      // (just CLI or envkey-source), otherwise the app will
-      // restart with the latest version
-      window.electron.registerUpgradeCompleteHandler(() => {
-        console.log(new Date().toISOString(), "Root - upgrade complete");
-
-        setTimeout(() => {
-          setClientUpgradeProgress({});
-          setAvailableClientUpgrade({});
-          alert("Upgrade complete.");
-        }, 2000);
-      });
-
       window.electron.registerUpgradeErrorHandler(() => {
         console.log(new Date().toISOString(), "Root - upgrade error");
         alert(
           "There was a problem downloading the upgrade. This might mean that a new upgrade is available. Please try again."
         );
-        setClientUpgradeProgress({});
+        setClientUpgradeProgress(undefined);
         setAvailableClientUpgrade({});
+      });
+
+      window.electron.registerUpgradeCompleteHandler(() => {
+        console.log(new Date().toISOString(), "Root - upgrade complete");
+        setUpgradeDownloaded(true);
       });
     }, []);
 
@@ -443,18 +433,46 @@ const clientParams: Client.ClientParams<"app"> = {
         dispatch,
         winWidth,
         winHeight,
+        startedUpgrade,
       };
+
       return (
-        <div className={styles.Root}>
+        <div
+          className={
+            styles.Root +
+            (startedUpgrade
+              ? " " +
+                style({
+                  paddingBottom: styles.layout.DEFAULT_PENDING_FOOTER_HEIGHT,
+                })
+              : "")
+          }
+        >
           <div id="content">
             <BaseRoutes {...props} />
 
-            {!R.isEmpty(availableClientUpgrade) && upgradeRestartLater == 0 ? (
-              <ClientUpgrades
+            {!R.isEmpty(availableClientUpgrade) &&
+            upgradeRestartLater == 0 &&
+            !startedUpgrade ? (
+              <ClientUpgradesAvailable
                 {...props}
                 availableClientUpgrade={availableClientUpgrade}
                 clientUpgradeProgress={clientUpgradeProgress}
                 onRestartLater={() => setUpgradeRestartLater(Date.now())}
+                onStartUpgrade={() => {
+                  setStartedUpgrade(true);
+                  window.electron.downloadAndInstallUpgrades();
+                }}
+              />
+            ) : (
+              ""
+            )}
+
+            {startedUpgrade ? (
+              <ClientUpgradeStatus
+                {...props}
+                upgradeDownloaded={upgradeDownloaded}
+                clientUpgradeProgress={clientUpgradeProgress}
               />
             ) : (
               ""
@@ -464,8 +482,32 @@ const clientParams: Client.ClientParams<"app"> = {
       );
     } else {
       return (
-        <div>
-          <SmallLoader />
+        <div
+          id="preloader"
+          className={style({
+            opacity: "1 !important",
+            pointerEvents: "initial !important" as any,
+          })}
+        >
+          <div className="container">
+            <EnvkeyLogo scale={1.7} />
+            <SmallLoader />
+
+            {isStartingCore ? (
+              <p
+                className={style({
+                  marginTop: "30px",
+                  marginBottom: 0,
+                  fontSize: "16px",
+                  color: "rgba(255,255,255,0.9)",
+                })}
+              >
+                Starting EnvKey core...{" "}
+              </p>
+            ) : (
+              ""
+            )}
+          </div>
         </div>
       );
     }

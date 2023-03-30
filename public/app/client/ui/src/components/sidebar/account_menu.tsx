@@ -7,6 +7,7 @@ import { LockLink } from "@ui";
 import { SvgImage } from "@images";
 import * as styles from "@styles";
 import { logAndAlertError } from "@ui_lib/errors";
+import { style } from "typestyle";
 
 const CLASS_NAME = "account-menu";
 
@@ -143,11 +144,56 @@ export const AccountMenu: OrgComponent = (props) => {
           </li>,
         ],
       ])}
+
+      <div
+        className={
+          "report-problem " +
+          style({
+            bottom:
+              (props.hasPendingEnvUpdates
+                ? styles.layout.DEFAULT_PENDING_FOOTER_HEIGHT
+                : 0) +
+              (props.startedUpgrade
+                ? styles.layout.DEFAULT_PENDING_FOOTER_HEIGHT
+                : 0),
+            borderBottom: props.hasPendingEnvUpdates
+              ? `1px solid rgba(255,255,255,0.2)`
+              : "none",
+          })
+        }
+        onClick={(e) => {
+          e.stopPropagation();
+          props.setUiState({
+            reportErrorOpen: true,
+          });
+        }}
+      >
+        <SvgImage type="megaphone" />
+        <label>Report a problem</label>
+      </div>
     </div>
   );
 
   return (
-    <div className={CLASS_NAME}>
+    <div
+      className={
+        CLASS_NAME +
+        " " +
+        (props.hasPendingEnvUpdates && props.startedUpgrade
+          ? style({
+              $nest: {
+                "@media screen and (max-height: 660px)": {
+                  $nest: {
+                    ".report-problem": {
+                      display: "none",
+                    },
+                  },
+                },
+              },
+            })
+          : "")
+      }
+    >
       <div
         className={
           styles.AccountMenu + " has-tooltip " + (expanded ? " expanded" : "")

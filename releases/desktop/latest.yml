@@ -1,8 +1,8 @@
-version: 2.3.4
+version: 2.4.0
 files:
-  - url: EnvKey_Windows_Installer-2.3.4.exe
-    sha512: QHmdT+VKuGrQ0msNP9miqLEFODRgdULA3D2UgG7E48AbsPRVU5Dy3Hxc2LxhCn+pEylq4R3/V9kpgBA2enxyTQ==
-    size: 73668376
-path: EnvKey_Windows_Installer-2.3.4.exe
-sha512: QHmdT+VKuGrQ0msNP9miqLEFODRgdULA3D2UgG7E48AbsPRVU5Dy3Hxc2LxhCn+pEylq4R3/V9kpgBA2enxyTQ==
-releaseDate: '2023-03-22T01:25:32.256Z'
+  - url: EnvKey_Windows_Installer-2.4.0.exe
+    sha512: Poj2vWpacTBAtjlf7Vdje2CW36lvhXg7TVggJpATrrfXTo+ipCO8bHvUlpnlgC3jMBzuJl6rRQvhVDFLbC7HAg==
+    size: 90947440
+path: EnvKey_Windows_Installer-2.4.0.exe
+sha512: Poj2vWpacTBAtjlf7Vdje2CW36lvhXg7TVggJpATrrfXTo+ipCO8bHvUlpnlgC3jMBzuJl6rRQvhVDFLbC7HAg==
+releaseDate: '2023-03-30T10:10:04.359Z'

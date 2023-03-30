@@ -3,9 +3,7 @@ import { button } from "./../mixins/buttons";
 import { style } from "typestyle";
 import { multi } from "../helpers";
 import * as colors from "../colors";
-import * as fonts from "../fonts";
 import { color } from "csx";
-import * as layout from "../layout";
 import { OrgContainer } from "./org_container";
 import { Modal } from "./modal";
 import { Diffs } from "./diffs";
@@ -18,7 +16,6 @@ export const PendingEnvsFooter = style({
   alignItems: "center",
   justifyContent: "center",
   padding: "0 30px",
-  bottom: 0,
   overflow: "hidden",
   transition: "height",
   transitionDuration: "0.2s",

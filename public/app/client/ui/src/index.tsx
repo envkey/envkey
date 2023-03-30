@@ -1,3 +1,4 @@
+import "./ui_logger";
 import React from "react";
 import ReactDOM from "react-dom";
 import { normalize, setupPage } from "csstips";

@@ -6,6 +6,7 @@ import os from "os";
 import fs from "fs";
 import mkdirp from "mkdirp";
 import { serializeError } from "serialize-error";
+import cluster from "cluster";
 
 const noop = (...args: any): any => {};
 
@@ -74,7 +75,7 @@ const logWithLogger = (
   const ts = new Date().toISOString();
 
   if (process.env.NODE_ENV !== "production") {
-    write(ts + " -- ");
+    write(ts + (cluster.isWorker ? " [status-worker]" : " [main]") + " -- ");
   }
 
   const frontPropsLogged: { msg?: string; alert?: boolean } | any = {
@@ -83,7 +84,12 @@ const logWithLogger = (
   if (stdioName === "stderr") {
     frontPropsLogged.alert = true;
   }
-  const logObj = { ts, ...frontPropsLogged, ...data };
+  const logObj = {
+    ts,
+    proc: cluster.isWorker ? "status-worker" : "main",
+    ...frontPropsLogged,
+    ...data,
+  };
   // dev logger, multiline with ms diff
   if (spaces) {
     delete logObj.msg;

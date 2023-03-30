@@ -7,17 +7,15 @@ import {
   ClientUpgradeProgress,
   ClientUpgrade,
 } from "@core/types/electron";
-import * as R from "ramda";
 import { SmallLoader } from "@images";
 import ReactMarkdown from "react-markdown";
 
-declare var window: ElectronWindow;
-
-export const ClientUpgrades: React.FC<
+export const ClientUpgradesAvailable: React.FC<
   ComponentBaseProps & {
     onRestartLater: () => void;
+    onStartUpgrade: () => void;
     availableClientUpgrade: AvailableClientUpgrade;
-    clientUpgradeProgress: ClientUpgradeProgress;
+    clientUpgradeProgress: ClientUpgradeProgress | undefined;
   }
 > = (props) => {
   const { cli, desktop, envkeysource } = props.availableClientUpgrade;
@@ -34,35 +32,15 @@ export const ClientUpgrades: React.FC<
     {} as Record<"cli" | "desktop" | "envkeysource", string[]>
   );
 
-  const numUpgrades = [cli, desktop, envkeysource].filter(Boolean).length;
-  const progressReportedForAllDownloads =
-    Object.keys(props.clientUpgradeProgress).length == numUpgrades;
-
-  const downloadedBytes = progressReportedForAllDownloads
-    ? R.sum(
-        Object.values(props.clientUpgradeProgress).map(
-          R.prop("downloadedBytes")
-        )
-      )
-    : 0;
-  const totalBytes = progressReportedForAllDownloads
-    ? R.sum(
-        Object.values(props.clientUpgradeProgress).map(R.prop("totalBytes"))
-      )
-    : 0;
-
   const [progressPct, setProgressPct] = useState(0);
-
-  const [startedUpgrade, setStartedUpgrade] = useState(false);
 
   const [showInitialLoader, setShowInitialLoader] = useState(true);
   const [showFinalLoader, setShowFinalLoader] = useState(false);
 
-  useEffect(() => {
-    if (startedUpgrade) {
-      setStartedUpgrade(false);
-    }
-  }, [JSON.stringify(props.availableClientUpgrade)]);
+  const { totalBytes, downloadedBytes } = props.clientUpgradeProgress ?? {
+    totalBytes: 0,
+    downloadedBytes: 0,
+  };
 
   useLayoutEffect(() => {
     const pct =
@@ -90,7 +68,7 @@ export const ClientUpgrades: React.FC<
   }, [progressPct]);
 
   return (
-    <div className={styles.Upgrades}>
+    <div className={styles.ClientUpgradesAvailable}>
       <div className="overlay disabled" />
 
       <div className="modal">
@@ -141,38 +119,22 @@ export const ClientUpgrades: React.FC<
             ))}
         </div>
 
-        {startedUpgrade ? (
-          [
-            <div className="progress">
-              {showInitialLoader || showFinalLoader ? (
-                <SmallLoader />
-              ) : (
-                <div
-                  className="bar"
-                  style={{ width: `${Math.min(progressPct * 100, 100)}%` }}
-                ></div>
-              )}
-            </div>,
-          ]
-        ) : (
-          <div className="buttons">
-            <button className="secondary" onClick={props.onRestartLater}>
-              Not Now
-            </button>
-            <button
-              className="primary"
-              onClick={() => {
-                setStartedUpgrade(true);
-                window.electron.downloadAndInstallUpgrades();
-              }}
-            >
-              Upgrade
-              {[desktop, cli, envkeysource].filter(Boolean).length > 1
-                ? " All"
-                : ""}
-            </button>
-          </div>
-        )}
+        <div className="buttons">
+          <button className="secondary" onClick={props.onRestartLater}>
+            Not Now
+          </button>
+          <button
+            className="primary"
+            onClick={() => {
+              props.onStartUpgrade();
+            }}
+          >
+            Upgrade
+            {[desktop, cli, envkeysource].filter(Boolean).length > 1
+              ? " All"
+              : ""}
+          </button>
+        </div>
       </div>
     </div>
   );

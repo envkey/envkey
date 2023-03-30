@@ -4,6 +4,7 @@ import { Infra } from "@core/types";
 import { Credentials, S3, SharedIniFileCredentials } from "aws-sdk";
 import fetch from "node-fetch";
 import xmlParser from "fast-xml-parser";
+import { wait } from "@core/lib/utils/wait";
 
 // These artifact-helpers must stay agnostic to the environment. Be careful about
 // using any stack-constants.
@@ -124,12 +125,15 @@ export const listObjects = async (params: {
 };
 
 // Returns semver version
-export const getLatestReleaseVersion = async (params: {
-  project: Infra.ProjectType;
-  bucket: string;
-  profile?: string;
-  creds?: { accessKeyId: string; secretAccessKey: string };
-}): Promise<string> => {
+export const getLatestReleaseVersion = async (
+  params: {
+    project: Infra.ProjectType;
+    bucket: string;
+    profile?: string;
+    creds?: { accessKeyId: string; secretAccessKey: string };
+  },
+  numRetry = 0
+): Promise<string> => {
   const { project, bucket, profile, creds } = params;
 
   return getReleaseObject({
@@ -137,15 +141,24 @@ export const getLatestReleaseVersion = async (params: {
     key: `latest/${project}-version.txt`,
     profile,
     creds,
-  }).then((contents) => {
-    const version = contents.toString().trim();
+  })
+    .then((contents) => {
+      const version = contents.toString().trim();
 
-    if (semver.valid(version)) {
-      return version;
-    } else {
-      throw new Error("Invalid version");
-    }
-  });
+      if (semver.valid(version)) {
+        return version;
+      } else {
+        throw new Error("Invalid version");
+      }
+    })
+    .catch(async (err) => {
+      if (numRetry < 3) {
+        await wait(1000 * (numRetry + 1));
+        return getLatestReleaseVersion(params, numRetry + 1);
+      } else {
+        throw err;
+      }
+    });
 };
 
 // tagPrefix like "apienterprise" and currentVersionNumber like "0.0.0"

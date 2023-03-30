@@ -1,4 +1,4 @@
-import { deepMergeStyles } from "../../helpers";
+import { deepMergeStyles, multi } from "../../helpers";
 import * as layout from "../../layout";
 import * as fonts from "../../fonts";
 import * as colors from "../../colors";
@@ -100,6 +100,52 @@ export const ExpandedAccountMenu = style({
             }
           )
         ),
+      },
+    },
+    ".report-problem": {
+      position: "fixed",
+      height: 50,
+      width: layout.SIDEBAR_WIDTH,
+      background: color(colors.OFF_BLACK).lighten(0.05).toString(),
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      paddingLeft: 15,
+      borderTop: "1px solid rgba(255,255,255,0.2)",
+
+      $nest: {
+        svg: {
+          width: 20,
+          $nest: {
+            ...multi(["&", "rect", "path"], {
+              fill: "rgba(255,255,255,0.9)",
+            }),
+          },
+        },
+        label: {
+          color: "rgba(255,255,255,0.9)",
+          pointerEvents: "none",
+          marginLeft: 10,
+          fontFamily: fonts.CONDENSED,
+          fontSize: "14px",
+          textTransform: "uppercase",
+        },
+        "&:hover": {
+          background: "rgba(255,255,255,0.1)",
+          $nest: {
+            label: {
+              color: "#fff",
+            },
+            svg: {
+              $nest: {
+                ...multi(["&", "rect", "path"], {
+                  fill: colors.LIGHT_ORANGE,
+                }),
+              },
+            },
+          },
+        },
       },
     },
   },

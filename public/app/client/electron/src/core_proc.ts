@@ -1,155 +1,116 @@
-import { getCliBinPath, getCliCurrentVersion } from "./cli_tools";
+import { wait } from "@core/lib/utils/wait";
+import { ELECTRON_BIN_DIR } from "./cli_tools";
 import { log } from "@core/lib/utils/logger";
-import { start } from "@core_proc/server";
 import { isAlive, stop } from "@core/lib/core_proc";
 import { version as cliVersion } from "../../cli/package.json";
 import * as semver from "semver";
-import { exec } from "child_process";
+import { spawn } from "child_process";
+import { app } from "electron";
+import { showErrorReportDialogSync } from "./report_error";
+import * as path from "path";
+import * as os from "os";
 
-const KEEP_ALIVE_POLL_INTERVAL = 1000;
+const platform = os.platform();
+const isWindows = platform === "win32";
 
-let keepAliveTimeout: ReturnType<typeof setTimeout> | undefined;
+const BUNDLED_CLI_PATH = path.resolve(
+  ELECTRON_BIN_DIR,
+  "envkey" + (isWindows ? ".exe" : "")
+);
+const CORE_START_TIMEOUT = 30000;
+const CHECK_ALIVE_INTERVAL = 2000;
 
-let gracefulShutdown: (onShutdown?: () => void) => void;
-
-export const startCore = async (
-  keepAlive = true,
-  inlineOnly = false
-): Promise<boolean> => {
-  log("startCore", { keepAlive, inlineOnly });
-  try {
-    let alive = await isAlive();
-    log("Core process status", { alive });
-    if (alive) {
-      if (semver.valid(alive) && semver.gt(cliVersion, alive)) {
-        log(
-          "Core process is running an outdated version. Stopping and retrying..."
-        );
-        const res = await stop();
-        if (res) {
-          return startCore(keepAlive);
-        } else {
-          throw new Error(
-            "Couldn't stop EnvKey core process that is running an outdated version."
-          );
-        }
-      } else {
-        log("Core process is already running");
-        return false;
-      }
-    }
-
-    const [cliBinPath, cliCurrent] = await Promise.all([
-      getCliBinPath(),
-      getCliCurrentVersion(),
-    ]);
-    let error = false;
-
-    log("", { cliBinPath, cliCurrent, cliVersion });
-
-    let startedCore = false;
-
-    if (
-      cliBinPath &&
-      cliCurrent != false &&
-      semver.gte(cliCurrent, cliVersion)
-    ) {
-      if (inlineOnly) {
-        log("inlineOnly, not starting core process via CLI");
-      } else {
-        log("Starting core process daemon via CLI");
-
-        await new Promise<void>((resolve, reject) => {
-          const child = exec(
-            `"${cliBinPath}" core start`,
-            {
-              env: {
-                LOG_REQUESTS: "1",
-              },
-            },
-            (err) => {
-              if (err) {
-                reject(err);
-              } else {
-                log("Executed core start command");
-                resolve();
-              }
-            }
-          );
-          child.unref();
-          startedCore = true;
-        }).catch((err) => {
-          log("Error starting core process daemon from CLI");
-          error = true;
-        });
-      }
-    } else if (!cliBinPath) {
-      log("Couldn't find CLI");
-    } else {
-      log("CLI is outdated for this version of UI");
-    }
-
-    if (!startedCore) {
-      log("Starting core process inline");
-      process.env.LOG_REQUESTS = "1";
-      ({ gracefulShutdown } = await start(19047, 19048));
-    }
-
-    log("Waiting for core proc alive...");
-    while (true) {
-      alive = await isAlive(200);
-      if (alive) {
-        break;
-      }
-    }
-
-    log("Successfully started core process");
-    return true;
-  } finally {
-    if (keepAlive) {
-      setTimeout(keepAliveLoop, 10000);
-    }
-  }
-};
-
-export const stopInlineCoreProcess = (
-  onShutdown?: (stopped: boolean) => void
-) => {
-  if (keepAliveTimeout) {
-    clearTimeout(keepAliveTimeout);
-    keepAliveTimeout = undefined;
-  }
-
-  if (gracefulShutdown) {
-    gracefulShutdown(() => onShutdown?.(true));
-  } else if (onShutdown) {
-    onShutdown(false);
-  }
-};
-
-const keepAliveLoop = async () => {
-  let alive = await isAlive(10000);
-
-  // if core process died, restart
-  // if core process is running an outdated version, stop it and restart
-  if (!alive) {
-    log("Core process died while EnvKey UI is running. Restarting now...");
-    await startCore(false);
-  } else if (
-    typeof alive == "string" &&
-    semver.valid(alive) &&
-    semver.gt(cliVersion, alive)
-  ) {
-    log("Core process is outdated. Restarting now...");
-    const res = await stop();
-    if (res) {
-      await startCore(false);
-    } else {
-      throw new Error(
-        "Couldn't stop EnvKey core process that is running an outdated version."
+export const startCore = async (): Promise<boolean> => {
+  log("startCore");
+  let alive = await isAlive();
+  log("Core process status", { alive });
+  if (alive) {
+    if (semver.valid(alive) && semver.gt(cliVersion, alive)) {
+      log(
+        "Core process is running an outdated version. Stopping and retrying..."
       );
+      const res = await stop();
+      if (res) {
+        return startCore();
+      } else {
+        throw new Error(
+          "Couldn't stop EnvKey core process that is running an outdated version."
+        );
+      }
+    } else {
+      log("Core process is already running");
+      log("Starting core process alive check loop...");
+      checkAliveLoop();
+      return false;
     }
   }
 
-  keepAliveTimeout = setTimeout(keepAliveLoop, KEEP_ALIVE_POLL_INTERVAL);
+  log("Starting core process daemon via CLI");
+
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(BUNDLED_CLI_PATH, ["core", "start"], {
+      env: {
+        LOG_REQUESTS: "1",
+      },
+      stdio: "ignore",
+      windowsHide: true,
+      detached: true,
+    });
+
+    child.on("error", (err) => {
+      const msg = "Error starting core process daemon from CLI: " + err.message;
+      log(msg);
+      reject(new Error(msg));
+    });
+
+    child.on("exit", (code) => {
+      if (code === 0) {
+        log("Executed core start command");
+        resolve();
+      } else {
+        const msg = `Error starting core process daemon from CLI: Process exited with code ${code}`;
+        log(msg);
+        reject(new Error(msg));
+      }
+    });
+
+    child.unref();
+  });
+  log("Waiting for core proc alive...");
+  let start = Date.now();
+  let timeElapsed = 0;
+  while (true) {
+    await wait(200);
+    alive = await isAlive(200);
+
+    if (alive === false) {
+      timeElapsed = Date.now() - start;
+      if (timeElapsed > CORE_START_TIMEOUT) {
+        throw new Error("Starting core process timed out");
+      }
+    } else if (alive) {
+      break;
+    }
+  }
+  log("Successfully started core process");
+
+  log("Starting core process alive check loop...");
+  checkAliveLoop();
+
+  return true;
+};
+
+const checkAliveLoop = async () => {
+  const alive = await isAlive();
+  if (alive) {
+    setTimeout(checkAliveLoop, CHECK_ALIVE_INTERVAL);
+  } else {
+    log("Core process died while UI is running. Closing EnvKey UI...");
+    await showErrorReportDialogSync(
+      "The EnvKey core process exited unexpectedly.",
+      BUNDLED_CLI_PATH
+    );
+
+    app.quit();
+  }
 };

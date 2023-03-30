@@ -159,7 +159,7 @@ apiAction<
     const userId = action.payload.id;
 
     let { updatedGraph, transactionItems } = getDeleteUsersWithTransactionItems(
-      auth,
+      auth.org.id,
       orgGraph,
       orgGraph,
       [userId],

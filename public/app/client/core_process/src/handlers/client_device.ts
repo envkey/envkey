@@ -1,13 +1,12 @@
 import { clearNonPendingEnvsProducer } from "./../lib/envs/updates";
-import { Client, Model } from "@core/types";
+import { Client } from "@core/types";
 import { clientAction, dispatch } from "../handler";
 import os from "os";
 import { initDeviceKey } from "@core/lib/client_store/key_store";
 import * as R from "ramda";
-import { getPendingUpdateDetails } from "@core/lib/client";
-import { parseUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import { sha256 } from "@core/lib/crypto/utils";
 import { log } from "@core/lib/utils/logger";
+import { sendMainToWorkerMessage } from "../proc_status_worker";
 
 clientAction<Client.Action.ClientActions["InitDevice"]>({
   type: "clientAction",
@@ -179,6 +178,14 @@ clientAction<Client.Action.ClientActions["MergePersisted"]>({
       }
     }
   },
+  handler: async (state, { payload }) => {
+    if (payload.v1UpgradeStatus) {
+      sendMainToWorkerMessage({
+        type: "v1UpgradeStatus",
+        v1UpgradeStatus: payload.v1UpgradeStatus,
+      });
+    }
+  },
 });
 
 clientAction<Client.Action.ClientActions["FetchedClientState"]>({
@@ -211,4 +218,9 @@ clientAction<Client.Action.ClientActions["ClearCached"]>({
 clientAction<Client.Action.ClientActions["AccountActive"]>({
   type: "clientAction",
   actionType: Client.ActionType.ACCOUNT_ACTIVE,
+});
+
+clientAction<Client.Action.ClientActions["ClientAlive"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.CLIENT_ALIVE,
 });

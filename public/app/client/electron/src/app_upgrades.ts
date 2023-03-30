@@ -1,4 +1,4 @@
-import { enableAppWillAutoExitFlag, getWin } from "./main";
+import { getWin } from "./main";
 import { autoUpdater } from "electron-updater";
 import { log } from "@core/lib/utils/logger";
 import { app, dialog } from "electron";
@@ -10,13 +10,19 @@ import {
   ENVKEY_RELEASES_BUCKET,
   envkeyReleasesS3Creds,
 } from "@infra/stack-constants";
-import { AvailableClientUpgrade, UpgradeProgress } from "@core/types/electron";
+import {
+  AvailableClientUpgrade,
+  ClientUpgradeProgress,
+} from "@core/types/electron";
 import * as R from "ramda";
 import {
-  downloadAndInstallCliTools,
   isLatestCliInstalled,
   isLatestEnvkeysourceInstalled,
 } from "./cli_tools";
+import mkdirp from "mkdirp";
+import os from "os";
+import { promises as fsp } from "fs";
+import path from "path";
 
 const CHECK_INTERVAL = 10 * 60 * 1000;
 const CHECK_UPGRADE_TIMEOUT = 5000;
@@ -25,10 +31,10 @@ const CHECK_UPGRADE_RETRIES = 3;
 let loopInitialized = false;
 
 let desktopVersionDownloaded: string | undefined;
-let upgradeAvailable: AvailableClientUpgrade | undefined;
+let cliVersionDownloaded: string | undefined;
+let envkeysourceVersionDownloaded: string | undefined;
 
-let desktopDownloadComplete = false;
-let cliToolsInstallComplete = false;
+let upgradeAvailable: AvailableClientUpgrade | undefined;
 
 autoUpdater.logger = {
   debug: (...args) => log("autoUpdater:debug", { data: args }),
@@ -42,8 +48,7 @@ autoUpdater.autoDownload = false;
 
 app.on("ready", () => {
   autoUpdater.on("download-progress", ({ transferred, total }) => {
-    const progress: UpgradeProgress = {
-      clientProject: "desktop",
+    const progress: ClientUpgradeProgress = {
       downloadedBytes: transferred,
       totalBytes: total,
     };
@@ -121,8 +126,8 @@ export const checkUpgrade = async (
           // error gets logged thanks to logger init at top
           checkDesktopError = true;
         }),
-      isLatestCliInstalled().catch((err) => <const>true),
-      isLatestEnvkeysourceInstalled().catch((err) => <const>true),
+      isLatestCliInstalled(),
+      isLatestEnvkeysourceInstalled(),
     ]);
 
   // the autoUpdater.on("error") handler will handle re-checking
@@ -135,19 +140,21 @@ export const checkUpgrade = async (
   }
 
   const nextCliVersion =
-    (cliLatestInstalledRes !== true && cliLatestInstalledRes[0]) || undefined;
+    (cliLatestInstalledRes !== true && cliLatestInstalledRes.nextVersion) ||
+    undefined;
 
   const currentCliVersion =
-    (cliLatestInstalledRes !== true && cliLatestInstalledRes[1]) || undefined;
+    (cliLatestInstalledRes !== true && cliLatestInstalledRes.currentVersion) ||
+    undefined;
 
   const nextEnvkeysourceVersion =
     (envkeysourceLatestInstalledRes !== true &&
-      envkeysourceLatestInstalledRes[0]) ||
+      envkeysourceLatestInstalledRes.nextVersion) ||
     undefined;
 
   const currentEnvkeysourceVersion =
     (envkeysourceLatestInstalledRes !== true &&
-      envkeysourceLatestInstalledRes[1]) ||
+      envkeysourceLatestInstalledRes.currentVersion) ||
     undefined;
 
   const hasCliUpgrade =
@@ -257,88 +264,66 @@ export const downloadAndInstallUpgrade = async () => {
     throw new Error("No client upgrade is available");
   }
 
-  stopCheckUpgradesLoop();
+  const hasAnyUpgrade = Object.values(upgradeAvailable).some(
+    (upgrade) => upgrade != null
+  );
 
-  // first ensure we are installing the latest upgrade
-  // otherwise inform user that a newer upgrade is available
-  const upgradeAvailableBeforeCheck = R.clone(upgradeAvailable);
-  await checkUpgrade(false, true).catch((err) => {
-    log("checkUpdate failed", { err });
-  });
-  if (!R.equals(upgradeAvailableBeforeCheck, upgradeAvailable)) {
-    getWin()!.webContents.send("newer-upgrade-available", upgradeAvailable);
-    resetUpgradesLoop();
-    return;
+  if (!hasAnyUpgrade) {
+    throw new Error("No client upgrade is available");
   }
 
+  stopCheckUpgradesLoop();
+
   let error = false;
+  try {
+    await autoUpdater.downloadUpdate();
 
-  await Promise.all([
-    upgradeAvailable.cli || upgradeAvailable.envkeysource
-      ? downloadAndInstallCliTools(
-          upgradeAvailable,
-          "upgrade",
-          (progress) =>
-            getWin()!.webContents.send("upgrade-progress", progress),
-          Boolean(upgradeAvailable.desktop)
-        )
-          .then(() => {
-            log("CLI tools upgraded ok");
-            cliToolsInstallComplete = true;
-          })
-          .catch((err) => {
-            error = true;
-            log("CLI tools upgrade failed", { err });
-          })
-      : undefined,
+    log("autoUpdater downloaded ok");
+    if (upgradeAvailable!.desktop) {
+      desktopVersionDownloaded = upgradeAvailable!.desktop.nextVersion;
+    }
+    if (upgradeAvailable!.cli) {
+      cliVersionDownloaded = upgradeAvailable!.cli.nextVersion;
+    }
 
-    upgradeAvailable.desktop
-      ? autoUpdater
-          .downloadUpdate()
-          .then(() => {
-            log("autoUpdater downloaded ok");
-            if (upgradeAvailable!.desktop) {
-              desktopVersionDownloaded = upgradeAvailable!.desktop.nextVersion;
-            }
-          })
-          .catch((err) => {
-            error = true;
-            log("autoUpdater download failed", { err });
-          })
-      : undefined,
-  ]);
+    if (upgradeAvailable!.envkeysource) {
+      envkeysourceVersionDownloaded =
+        upgradeAvailable!.envkeysource.nextVersion;
 
-  log("finished CLI tools install and/or autoUpdater download", { error });
+      // write file to mark enveysource upgrade required
+      const dir = path.join(os.homedir(), ".envkey");
+      mkdirp.sync(dir);
+
+      await fsp.writeFile(
+        path.join(dir, "envkeysource-upgrade-required"),
+        envkeysourceVersionDownloaded
+      );
+    }
+  } catch (err) {
+    error = true;
+    log("autoUpdater download failed", { err });
+  }
+
+  log("autoUpdater download", { error });
 
   if (error) {
-    log("Sending upgrade-error to webContents");
+    log("Sending upgrade-error to webContents", { win: !!getWin() });
     getWin()!.webContents.send("upgrade-error");
     checkUpgrade().catch((err) => {
       log("checkUpdate failed", { err });
     });
     resetUpgradesLoop();
-  } else if (!upgradeAvailable.desktop) {
-    log("Sending upgrade-complete to webContents");
-    getWin()!.webContents.send("upgrade-complete");
-    upgradeAvailable = undefined;
-    cliToolsInstallComplete = false;
-    resetUpgradesLoop();
-  } else if (
-    upgradeAvailable.desktop &&
-    desktopDownloadComplete &&
-    (upgradeAvailable.cli || upgradeAvailable.envkeysource)
-  ) {
-    log("CLI tools upgrade finished after autoUpdater, now restarting");
-    restartWithLatestVersion();
+    return;
   }
+
+  log("Sending upgrade-complete to webContents", { win: !!getWin() });
+  getWin()!.webContents.send("upgrade-complete");
 };
 
-const restartWithLatestVersion = () => {
+export const restartWithLatestVersion = () => {
   log("Restarting with new version", {
     versionDownloaded: desktopVersionDownloaded,
   });
-
-  enableAppWillAutoExitFlag();
 
   // quits the app and relaunches with latest version
   try {
@@ -347,18 +332,3 @@ const restartWithLatestVersion = () => {
     log("autoUpdater failed to quit and install", { err });
   }
 };
-autoUpdater.on("update-downloaded", () => {
-  log("autoUpdater:update-downloaded");
-
-  desktopDownloadComplete = true;
-
-  if (
-    upgradeAvailable &&
-    (!(upgradeAvailable.cli || upgradeAvailable.envkeysource) ||
-      cliToolsInstallComplete)
-  ) {
-    restartWithLatestVersion();
-  } else {
-    log("Waiting for CLI tools download to finish before restarting");
-  }
-});

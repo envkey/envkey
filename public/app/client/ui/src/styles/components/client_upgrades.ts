@@ -1,9 +1,14 @@
+import * as layout from "../layout";
 import { style } from "typestyle";
 import * as colors from "../colors";
 import { Modal } from "./modal";
 import { OrgContainer } from "./org_container";
+import { multi } from "../helpers";
+import { button } from "./../mixins/buttons";
+import { deepMergeStyles } from "./../helpers";
+import { color } from "csx";
 
-export const Upgrades =
+export const ClientUpgradesAvailable =
   OrgContainer +
   " " +
   Modal +
@@ -124,23 +129,63 @@ export const Upgrades =
         marginRight: "auto",
         width: 600,
       },
+    },
+  });
 
-      ".progress": {
-        backgroundColor: "rgba(0,0,0,0.05)",
-        height: 50,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "relative",
-        $nest: {
-          ".bar": {
-            height: 50,
-            backgroundColor: colors.ORANGE,
-            transition: "width .2s linear",
-            position: "absolute",
-            left: 0,
+export const ClientUpgradeStatus = style({
+  position: "fixed",
+  background: color(colors.DARKER_BLUE).darken(0.15).toHexString(),
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  padding: "0 30px",
+  bottom: 0,
+  overflow: "hidden",
+  height: layout.DEFAULT_PENDING_FOOTER_HEIGHT,
+  $nest: {
+    label: {
+      color: "#fff",
+      marginRight: 20,
+      fontSize: "18px",
+      fontWeight: 500,
+    },
+    button: deepMergeStyles(button(), {
+      fontSize: "17px",
+      padding: "5px 75px",
+      background: colors.DARK_BLUE,
+      color: "#fff",
+      $nest: {
+        "&:hover": {
+          background: color(colors.DARK_BLUE).lighten(0.05).toHexString(),
+          color: "#fff",
+        },
+      },
+    }),
+    ".progress": {
+      backgroundColor: "rgba(255,255,255,0.125)",
+      height: 30,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      width: "calc(100% - 200px)",
+      $nest: {
+        "svg.small-loader": {
+          zIndex: 1,
+          $nest: {
+            ...multi(["&", "rect", "path"], {
+              fill: "#fff",
+            }),
           },
+        },
+        ".bar": {
+          height: 30,
+          backgroundColor: "rgba(255,255,255,0.5)",
+          transition: "width .2s linear",
+          position: "absolute",
+          left: 0,
         },
       },
     },
-  });
+  },
+});

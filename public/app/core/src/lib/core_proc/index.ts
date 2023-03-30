@@ -4,15 +4,19 @@ import { toSearchParams } from "../utils/url";
 import { v4 as uuid } from "uuid";
 
 export const clientId = uuid(), // unique per client (ephemeral)
-  CORE_PROC_PORT = "19047",
+  CORE_PROC_MAIN_PORT = "19047",
+  CORE_PROC_STATUS_PORT = "19049",
   coreMethod = async (
     method: string,
     encryptedAuthToken?: string,
     args?: FetchRequestInit,
-    query?: Record<string, string | string[]>
+    query?: Record<string, string | string[]>,
+    isStatusMethod = false
   ) => {
+    const port = isStatusMethod ? CORE_PROC_STATUS_PORT : CORE_PROC_MAIN_PORT;
+
     return crossFetch(
-      `http://localhost:${CORE_PROC_PORT}/${method}${
+      `http://localhost:${port}/${method}${
         query ? "?" + toSearchParams(query) : ""
       }`,
       {
@@ -43,7 +47,13 @@ export const clientId = uuid(), // unique per client (ephemeral)
           .then((json) => ({ ...json, status: res.status })) as Promise<T>
     ),
   isAlive = (timeout?: number) =>
-    coreMethod("alive", undefined, { timeout: timeout ?? 5000 })
+    coreMethod(
+      "alive",
+      undefined,
+      { timeout: timeout ?? 10000 },
+      undefined,
+      true
+    )
       .then((res) => {
         if (!res.ok) {
           return false;
@@ -55,7 +65,13 @@ export const clientId = uuid(), // unique per client (ephemeral)
         return false;
       }),
   isInline = (timeout?: number) =>
-    coreMethod("inline", undefined, { timeout: timeout ?? 5000 })
+    coreMethod(
+      "inline",
+      undefined,
+      { timeout: timeout ?? 10000 },
+      undefined,
+      true
+    )
       .then((res) => {
         if (!res.ok) {
           return false;
@@ -77,7 +93,7 @@ export const clientId = uuid(), // unique per client (ephemeral)
       return false;
     }
 
-    while (await isAlive()) {
+    while (await isAlive(200)) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
 
