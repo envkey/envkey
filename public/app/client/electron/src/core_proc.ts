@@ -52,7 +52,7 @@ export const startCore = async (): Promise<boolean> => {
         }
       }
 
-      if (stopRes) {
+      if (stopRes || !(await isAlive())) {
         return startCore();
       } else {
         throw new Error(
@@ -126,7 +126,7 @@ const checkAliveLoop = async () => {
   const alive = await isAlive();
   if (alive) {
     setTimeout(checkAliveLoop, CHECK_ALIVE_INTERVAL);
-  } else if (process.env.NODE_ENV === "production") {
+  } else {
     log("Core process died while UI is running. Closing EnvKey UI...");
     await showErrorReportDialogSync(
       "The EnvKey core process exited unexpectedly.",

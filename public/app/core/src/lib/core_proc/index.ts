@@ -46,41 +46,23 @@ export const clientId = uuid(), // unique per client (ephemeral)
           .json()
           .then((json) => ({ ...json, status: res.status })) as Promise<T>
     ),
-  isAlive = (timeout?: number) =>
+  isAlive = (timeout?: number, useStatusPort = true): Promise<string | false> =>
     coreMethod(
       "alive",
       undefined,
       { timeout: timeout ?? 10000 },
       undefined,
-      true
+      useStatusPort
     )
       .then((res) => {
         if (!res.ok) {
-          return false;
+          return useStatusPort ? isAlive(timeout, false) : false;
         }
 
         return res.json().then((json) => json.cliVersion);
       })
       .catch((err) => {
-        return false;
-      }),
-  isInline = (timeout?: number) =>
-    coreMethod(
-      "inline",
-      undefined,
-      { timeout: timeout ?? 10000 },
-      undefined,
-      true
-    )
-      .then((res) => {
-        if (!res.ok) {
-          return false;
-        }
-
-        return res.json().then((json) => json.isInline);
-      })
-      .catch((err) => {
-        return false;
+        return useStatusPort ? isAlive(timeout, false) : false;
       }),
   stop = async () => {
     try {
