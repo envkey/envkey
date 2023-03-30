@@ -1,11 +1,11 @@
 version: 2.4.1
 files:
   - url: EnvKey-2.4.1-arm64-mac.zip
-    sha512: GIHBPRWIMibQBybLgd4FjX5XT9flr4u2SAAcERy304blWhM68A+xfNwTKOjC6fdN3RNRFLDTzahMOoixjXV/nA==
-    size: 114659971
+    sha512: jPPXV8bHtleeW1dRmVk0JmXvsWsSh0zluF9yOB3ArdkjJK5NIIia/bU9bPNTk8DEsTOwGVuWwrlIbPTiIzk9xA==
+    size: 114659964
   - url: EnvKey-2.4.1-arm64.dmg
-    sha512: 66mvGKO667+5T3haJpxgcuZ1YBS363E63W3Z6x3nhIHPYcUGtmKEG7+H4XA+FbnwSYFtUk2fAEjuhYSbqd81GA==
-    size: 119215102
+    sha512: mkI1Z7VVmdpeArvKyn+X7jV/C9rGpk9WjsFKXHGomOij3MXPcDUewezfsd5/iKKOKW+EJ8HsESS9mMmH9TnOIQ==
+    size: 119215090
 path: EnvKey-2.4.1-arm64-mac.zip
-sha512: GIHBPRWIMibQBybLgd4FjX5XT9flr4u2SAAcERy304blWhM68A+xfNwTKOjC6fdN3RNRFLDTzahMOoixjXV/nA==
-releaseDate: '2023-03-30T13:09:20.576Z'
+sha512: jPPXV8bHtleeW1dRmVk0JmXvsWsSh0zluF9yOB3ArdkjJK5NIIia/bU9bPNTk8DEsTOwGVuWwrlIbPTiIzk9xA==
+releaseDate: '2023-03-30T13:51:57.460Z'

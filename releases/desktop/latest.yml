@@ -1,8 +1,8 @@
 version: 2.4.1
 files:
   - url: EnvKey_Windows_Installer-2.4.1.exe
-    sha512: j1eSI5LCM82kmVQGdVndM62RJ+R0W1wOtfrVhsw3MnkmfCso1p68bU4RUc6JABpuDaGwujSlU0pExq6rUCMrUg==
-    size: 90947880
+    sha512: TwH3a0cFsww6wm1ZQQ373/4rceH4fDYHB3hbhqy2gJfDD2DJqW00AyYvGKaI9LeEnagQ5g7V0eLggg3UDcBWyw==
+    size: 90947832
 path: EnvKey_Windows_Installer-2.4.1.exe
-sha512: j1eSI5LCM82kmVQGdVndM62RJ+R0W1wOtfrVhsw3MnkmfCso1p68bU4RUc6JABpuDaGwujSlU0pExq6rUCMrUg==
-releaseDate: '2023-03-30T13:11:00.544Z'
+sha512: TwH3a0cFsww6wm1ZQQ373/4rceH4fDYHB3hbhqy2gJfDD2DJqW00AyYvGKaI9LeEnagQ5g7V0eLggg3UDcBWyw==
+releaseDate: '2023-03-30T13:53:36.368Z'
