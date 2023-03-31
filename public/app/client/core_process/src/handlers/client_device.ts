@@ -219,8 +219,3 @@ clientAction<Client.Action.ClientActions["AccountActive"]>({
   type: "clientAction",
   actionType: Client.ActionType.ACCOUNT_ACTIVE,
 });
-
-clientAction<Client.Action.ClientActions["ClientAlive"]>({
-  type: "clientAction",
-  actionType: Client.ActionType.CLIENT_ALIVE,
-});

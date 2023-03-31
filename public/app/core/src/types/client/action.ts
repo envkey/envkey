@@ -915,10 +915,6 @@ export namespace Action {
       type: ActionType.CRYPTO_STATUS_INCREMENT;
       payload: number;
     };
-
-    ClientAlive: {
-      type: ActionType.CLIENT_ALIVE;
-    };
   };
 
   export type EnvUpdateAction = EnvUpdateActions[keyof EnvUpdateActions];

@@ -1,4 +1,3 @@
-import { Client } from "@core/types";
 import { log } from "@core/lib/utils/logger";
 import { wait } from "@core/lib/utils/wait";
 
@@ -8,27 +7,23 @@ const IDLE_KILL_DELAY = 1000 * 60 * 5; // 5 minutes
 
 let killIdleTimeout: NodeJS.Timeout | undefined;
 
-export const killIfIdleLoop = async (
-  store: Client.ReduxStore,
-  execKillIfIdle = false
-) => {
-  let procState = store.getState();
-  if (procState.locked) {
-    return;
-  }
+let activeAt: number = Date.now();
 
+export const updateLastActiveAt = () => {
+  activeAt = Date.now();
+  // log("Updated last active at", { activeAt });
+};
+
+export const killIfIdleLoop = async (execKillIfIdle = false) => {
   if (execKillIfIdle) {
     try {
-      await killIfIdle(store);
+      await killIfIdle();
     } catch (err) {
       log("Error killing after idle limit:", { err });
     }
   }
 
-  killIdleTimeout = setTimeout(
-    () => killIfIdleLoop(store, true),
-    IDLE_KILL_INTERVAL
-  );
+  killIdleTimeout = setTimeout(() => killIfIdleLoop(true), IDLE_KILL_INTERVAL);
 };
 
 export const clearKillIfIdleTimeout = () => {
@@ -37,26 +32,26 @@ export const clearKillIfIdleTimeout = () => {
   }
 };
 
-const killIfIdle = async (store: Client.ReduxStore, afterDelay = false) => {
-  let procState = store.getState();
+const killIfIdle = async (afterDelay = false) => {
+  const idleTime = Date.now() - activeAt;
 
-  if (!procState.lastActiveAt) {
-    return;
-  }
+  // log("Checking if core process is idle", { idleTime, IDLE_KILL_LIMIT });
 
-  if (afterDelay) {
-    const idleTime = Date.now() - procState.lastActiveAt;
-
-    if (idleTime > IDLE_KILL_LIMIT) {
+  if (idleTime > IDLE_KILL_LIMIT) {
+    if (afterDelay) {
       log("Killing core process after idle limit", {
         idleTime,
         IDLE_KILL_LIMIT,
       });
 
       process.kill(process.pid, "SIGTERM");
+    } else {
+      log(
+        `Core process idle limit reached, will kill after ${IDLE_KILL_DELAY}ms if still idle`
+      );
+
+      await wait(IDLE_KILL_DELAY);
+      await killIfIdle(true);
     }
-  } else {
-    await wait(IDLE_KILL_DELAY);
-    await killIfIdle(store, true);
   }
 };

@@ -35,7 +35,11 @@ import {
 import { checkUpgradesAvailableLoop, clearUpgradesLoop } from "./upgrades";
 import { refreshSessions } from "./refresh_sessions";
 // import { clearCacheLoop, clearCacheLoopTimeout } from "./clear_cache";
-import { killIfIdleLoop, clearKillIfIdleTimeout } from "./idle_kill";
+import {
+  killIfIdleLoop,
+  clearKillIfIdleTimeout,
+  updateLastActiveAt as idleKillUpdateLastActiveAt,
+} from "./idle_kill";
 import { getContext } from "./default_context";
 import * as R from "ramda";
 import { createPatch, Patch } from "rfc6902";
@@ -118,14 +122,15 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
     startSocketServer(port, wsport);
 
     app.use(express.json({ limit: "50mb" }));
+
+    // Adding alive route to main server too for legacy alive check
+    addAliveRoute(app);
+
     app.use(loggerMiddleware);
 
     addStopRoute(app);
 
     app.use([authMiddleware, lockoutMiddleware]);
-
-    // Adding alive route to main server too for legacy alive check
-    addAliveRoute(app);
 
     addStateRoute(app);
     addActionRoute(app);
@@ -146,6 +151,9 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
 
     handleMainProcessErrorOrExit(app, server);
   },
+  clientAlive = () => {
+    idleKillUpdateLastActiveAt();
+  },
   workerToMainMessageHandler = async (
     message: Client.WorkerToMainProcessMessage
   ) => {
@@ -157,7 +165,7 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
     }
 
     if (message.type == "clientAlive") {
-      await dispatch({ type: Client.ActionType.CLIENT_ALIVE }, getContext());
+      clientAlive();
     } else if (message.type == "v1Alive") {
       await dispatch({ type: Client.ActionType.V1_CLIENT_ALIVE }, getContext());
     } else if (message.type == "v1FinishedUpgrade") {
@@ -246,7 +254,12 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
   },
   addAliveRoute = (app: Express) => {
     app.get("/alive", (req, res) => {
-      procStatusWorker.sendWorkerToMainMessage({ type: "clientAlive" });
+      if (cluster.isWorker) {
+        procStatusWorker.sendWorkerToMainMessage({ type: "clientAlive" });
+      } else {
+        clientAlive();
+      }
+
       res.status(200).json({ cliVersion });
     });
   },
@@ -325,6 +338,8 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
     app.get(
       "/state",
       asyncHandler(async (req, res) => {
+        clientAlive();
+
         if (isLocked()) {
           log("Responding with LOCKED state.");
           res.status(200).json(Client.lockedState);
@@ -400,6 +415,7 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
         }
 
         log("Received", { action: action.type });
+        clientAlive();
 
         // shortcut to speed this up
         if (action.type == Client.ActionType.OPEN_URL) {
@@ -737,7 +753,7 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
         skipJitter: true,
       });
       socketPingLoop();
-      killIfIdleLoop(reduxStore);
+      killIfIdleLoop();
       // clearCacheLoop(reduxStore, localSocketUpdate);
     }
   },

@@ -171,8 +171,6 @@ enum ActionType {
 
   SET_CRYPTO_STATUS = "envkey/client/SET_CRYPTO_STATUS",
   CRYPTO_STATUS_INCREMENT = "envkey/client/CRYPTO_STATUS_INCREMENT",
-
-  CLIENT_ALIVE = "envkey/client/CLIENT_ALIVE",
 }
 
 export default ActionType;
