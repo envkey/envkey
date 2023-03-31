@@ -6,7 +6,7 @@ var path = require('path'),
     execFileSync = childProcess.execFileSync
 
 var ENVKEY_SOURCE_VERSION = "2.3.0"
-var ENVKEY_VERSION = "2.3.1"
+var ENVKEY_VERSION = "2.3.2"
 
 function keyError(){
   return "ENVKEY invalid. Couldn't load vars."
@@ -145,7 +145,7 @@ function fetch(optsOrCb, maybeCb){
   if (cb){
     execFile(filePath, execArgs, { env: process.env }, function(err, stdoutStr, stderrStr){
       if (err){
-        cb(stderrStr.replaceAll("echo 'error: ", "").replaceAll("'; false", ""))
+        cb(stderrStr.replace(/echo 'error: /g, "").replace(/'; false/g, ""))
       } else if (stdoutStr.indexOf("error: ") == 0){
         cb(stdoutStr)
       } else {
@@ -171,7 +171,7 @@ function fetch(optsOrCb, maybeCb){
       return pickPermitted(json, opts)
     } catch (e){
       if (e.stderr){
-        const err = e.stdout.toString().replaceAll("echo 'error: ", "").replaceAll("'; false", "")
+        const err = e.stdout.toString().replace(/echo 'error: /g, "").replace(/'; false/g, "")
         console.error(err)
         throw(err)
       } else {
