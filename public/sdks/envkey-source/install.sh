@@ -76,7 +76,7 @@ fi
 
 welcome_envkey () {
   echo "envkey-source $VERSION Quick Install"
-  echo "Copyright (c) 2022 Envkey Inc. - MIT License"
+  echo "Copyright (c) 2023 Envkey Inc. - MIT License"
   echo ""
 }
 
@@ -124,14 +124,13 @@ download_envkey () {
     echo "envkey-source is installed in /usr/local/bin"
   fi  
 
-  # don't ovewrite existing es command
+  # create 'es' alias, but don't ovewrite existing es command
   if [ ! -x "$(command -v es)" ]; then
     echo "creating es alias"
     LOC=$(which envkey-source)
     BIN_DIR=$(dirname $LOC)
-    ln -s "$LOC" "$BIN_DIR/es"
-  fi  
-  
+    error_msg=$(ln -s "$LOC" "$BIN_DIR/es" 2>&1) || { echo "Failed to create 'es' alias for envkey-source. Error: $error_msg. Please create it manually if needed."; }
+  fi
 }
 
 welcome_envkey
