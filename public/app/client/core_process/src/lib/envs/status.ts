@@ -38,6 +38,8 @@ export const updateLocalSocketImportStatusIfNeeded = (
         "v1UpgradeError",
         "v1UpgradeLoaded",
         "v1ClientAliveAt",
+        "importOrgServerErrors",
+        "importOrgLocalKeyErrors",
       ],
       state
     ),

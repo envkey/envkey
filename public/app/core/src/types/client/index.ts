@@ -229,7 +229,7 @@ namespace Client {
     | Api.Net.ErrorResult
     | {
         type: "clientError";
-        error: Error;
+        error: { name: string; message: string };
       }
     | FetchError;
 
@@ -619,6 +619,8 @@ namespace Client {
       | "v1UpgradeError"
       | "v1UpgradeLoaded"
       | "v1ClientAliveAt"
+      | "importOrgServerErrors"
+      | "importOrgLocalKeyErrors"
     >
   >;
 

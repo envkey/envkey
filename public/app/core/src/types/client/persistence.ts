@@ -7,10 +7,17 @@ const defaultPersistable = R.omit(
     "clientStates",
     "networkUnreachable",
     "cloudProducts",
+    "cloudPrices",
     "isLoadingCloudProducts",
     "loadCloudProductsError",
     "v1UpgradeAcceptedInvite",
     "v1ClientAliveAt",
+    "v1IsUpgrading",
+    "v1UpgradeInviteToken",
+    "v1UpgradeEncryptionToken",
+    "v1UpgradeError",
+    "v1UpgradeStatus",
+    "v1UpgradeAccountId",
   ],
   defaultProcState
 );

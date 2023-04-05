@@ -178,14 +178,6 @@ clientAction<Client.Action.ClientActions["MergePersisted"]>({
       }
     }
   },
-  handler: async (state, { payload }) => {
-    if (payload.v1UpgradeStatus) {
-      sendMainToWorkerMessage({
-        type: "v1UpgradeStatus",
-        v1UpgradeStatus: payload.v1UpgradeStatus,
-      });
-    }
-  },
 });
 
 clientAction<Client.Action.ClientActions["FetchedClientState"]>({

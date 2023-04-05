@@ -52,7 +52,6 @@ export type ProcState = {
   v1IsUpgrading: boolean | undefined;
   v1UpgradeError: Client.ClientError | undefined;
   v1UpgradeAccountId: string | undefined;
-  v1UpgradeClientId: string | undefined;
   v1ActiveUpgrade:
     | Client.Action.ClientActions["StartV1Upgrade"]["payload"]
     | undefined;
@@ -135,6 +134,9 @@ export type PartialAccountState = {
   isImportingOrg: true | undefined;
   importOrgStatus: string | undefined;
   importOrgError: Client.ClientError | undefined;
+
+  importOrgServerErrors: Record<string, string> | undefined;
+  importOrgLocalKeyErrors: Record<string, string> | undefined;
 };
 
 export type PartialClientState = {
@@ -528,6 +530,8 @@ export const defaultAccountState: PartialAccountState = {
     isImportingOrg: undefined,
     importOrgError: undefined,
     importOrgStatus: undefined,
+    importOrgServerErrors: undefined,
+    importOrgLocalKeyErrors: undefined,
   },
   defaultClientState: PartialClientState = {
     authenticateCliKeyError: undefined,
@@ -811,7 +815,6 @@ export const defaultAccountState: PartialAccountState = {
     v1UpgradeError: undefined,
     v1ActiveUpgrade: undefined,
     v1UpgradeAccountId: undefined,
-    v1UpgradeClientId: undefined,
     v1UpgradeStatus: undefined,
     v1UpgradeInviteToken: undefined,
     v1UpgradeEncryptionToken: undefined,

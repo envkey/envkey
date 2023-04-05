@@ -51,7 +51,9 @@ export const queuePersistState = (
     }
   },
   getPersistedState = () =>
-    get(STATE_KEY) as Promise<Client.PersistedProcState>,
+    get(STATE_KEY).then((state: Client.PersistedProcState) =>
+      pick(Client.STATE_PERSISTENCE_KEYS, state)
+    ),
   deletePersistedState = () => del(STATE_KEY),
   enableLogging = () => {
     fileStoreEnableLogging();

@@ -161,7 +161,16 @@ clientAction<
       }
     } catch (error) {
       log("CREATE_SESSION_ERROR", { error });
-      return dispatchFailure({ type: "clientError", error }, context);
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: {
+            name: `CreateSessionError: ${error.name}}`,
+            message: error.message,
+          },
+        },
+        context
+      );
     }
 
     return dispatchSuccess({ timestamp }, context);
@@ -276,7 +285,10 @@ clientAction<
       return dispatchFailure(
         {
           type: "clientError",
-          error: new Error("Action requires authentication"),
+          error: {
+            name: "GetSessionError",
+            message: "Action requires authentication",
+          },
         },
         context
       );
@@ -364,7 +376,16 @@ clientAction<
         throw new Error("Error upgrading to latest crypto version");
       }
     } catch (error) {
-      return dispatchFailure({ type: "clientError", error }, context);
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: {
+            name: `GetSessionError: ${error.name}`,
+            message: error.message,
+          },
+        },
+        context
+      );
     }
 
     return dispatchSuccess({ timestamp }, context);

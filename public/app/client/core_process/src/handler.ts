@@ -342,7 +342,7 @@ export const clientAction = <
               error instanceof Error
                 ? {
                     type: <const>"clientError",
-                    error,
+                    error: { name: error.name, message: error.message },
                   }
                 : error;
 
@@ -1213,7 +1213,7 @@ const getHandleFailure =
         error instanceof Error
           ? {
               type: <const>"clientError",
-              error,
+              error: { name: error.name, message: error.message },
             }
           : error,
       failureAction = {

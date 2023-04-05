@@ -140,7 +140,7 @@ clientAction<
       return dispatchFailure(
         {
           type: "clientError",
-          error: err,
+          error: { name: err.name, message: err.message },
         },
         context
       );
@@ -343,7 +343,10 @@ clientAction<
       return dispatchFailure(
         {
           type: "clientError",
-          error: new Error("Invite integrity check failed"),
+          error: {
+            name: "InviteIntegrityError",
+            message: "Invite integrity check failed",
+          },
         },
         context
       );
@@ -440,7 +443,10 @@ clientAction<
       );
     } catch (err) {
       return dispatchFailure(
-        { type: "clientError", error: err },
+        {
+          type: "clientError",
+          error: { name: err.name, message: err.message },
+        },
         apiSuccessContext
       );
     }
@@ -539,7 +545,13 @@ clientAction<Client.Action.ClientActions["AcceptInvite"]>({
       state.loadInviteError
     ) {
       return dispatchFailure(
-        { type: "clientError", error: new Error("Invite not loaded") },
+        {
+          type: "clientError",
+          error: {
+            name: "InviteNotLoaded",
+            message: "Invite not loaded",
+          },
+        },
         context
       );
     }

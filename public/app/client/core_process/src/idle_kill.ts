@@ -8,6 +8,7 @@ const IDLE_KILL_DELAY = 1000 * 60 * 5; // 5 minutes
 let killIdleTimeout: NodeJS.Timeout | undefined;
 
 let activeAt: number = Date.now();
+let pendingIdleKillAt: number | undefined;
 
 export const updateLastActiveAt = () => {
   activeAt = Date.now();
@@ -39,6 +40,21 @@ const killIfIdle = async (afterDelay = false) => {
 
   if (idleTime > IDLE_KILL_LIMIT) {
     if (afterDelay) {
+      if (!pendingIdleKillAt) {
+        log(
+          "Core process idle limit reached, but pendingIdleKillAt undefined, not killing"
+        );
+        return;
+      }
+
+      if (Date.now() - pendingIdleKillAt > IDLE_KILL_DELAY + 1000) {
+        log(
+          "Core process idle limit reached, but pendingIdleKillAt too old, not killing"
+        );
+        pendingIdleKillAt = undefined;
+        return;
+      }
+
       log("Killing core process after idle limit", {
         idleTime,
         IDLE_KILL_LIMIT,
@@ -50,8 +66,15 @@ const killIfIdle = async (afterDelay = false) => {
         `Core process idle limit reached, will kill after ${IDLE_KILL_DELAY}ms if still idle`
       );
 
+      pendingIdleKillAt = Date.now();
       await wait(IDLE_KILL_DELAY);
       await killIfIdle(true);
     }
+  } else if (afterDelay) {
+    log("Core process no longer idle, not killing", {
+      idleTime,
+      IDLE_KILL_LIMIT,
+    });
+    pendingIdleKillAt = undefined;
   }
 };

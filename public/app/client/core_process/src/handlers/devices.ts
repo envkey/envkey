@@ -131,7 +131,7 @@ clientAction<
       return dispatchFailure(
         {
           type: "clientError",
-          error: err,
+          error: { name: err.name, message: err.message },
         },
         context
       );
@@ -298,7 +298,10 @@ clientAction<
       return dispatchFailure(
         {
           type: "clientError",
-          error: new Error("DeviceGrant integrity check failed"),
+          error: {
+            name: "IdentityHashMismatchError",
+            message: "DeviceGrant integrity check failed",
+          },
         },
         context
       );
@@ -394,7 +397,10 @@ clientAction<
       );
     } catch (err) {
       return dispatchFailure(
-        { type: "clientError", error: err },
+        {
+          type: "clientError",
+          error: { name: err.name, message: err.message },
+        },
         apiSuccessContext
       );
     }
@@ -476,7 +482,13 @@ clientAction<Client.Action.ClientActions["AcceptDeviceGrant"]>({
       state.loadDeviceGrantError
     ) {
       return dispatchFailure(
-        { type: "clientError", error: new Error("DeviceGrant not loaded") },
+        {
+          type: "clientError",
+          error: {
+            name: "DeviceGrantNotLoaded",
+            message: "DeviceGrant not loaded",
+          },
+        },
         context
       );
     }

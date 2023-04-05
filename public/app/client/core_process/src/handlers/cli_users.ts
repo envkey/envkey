@@ -110,7 +110,7 @@ clientAction<
       return dispatchFailure(
         {
           type: "clientError",
-          error: err,
+          error: { name: err.name, message: err.message },
         },
         context
       );
@@ -268,7 +268,13 @@ clientAction<
         context
       );
     } catch (err) {
-      return dispatchFailure({ type: "clientError", error: err }, context);
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: { name: err.name, message: err.message },
+        },
+        context
+      );
     }
   },
 });

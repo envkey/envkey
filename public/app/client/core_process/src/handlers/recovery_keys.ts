@@ -108,7 +108,7 @@ clientAction<
       return dispatchFailure(
         {
           type: "clientError",
-          error: err,
+          error: { name: err.name, message: err.message },
         },
         context
       );
@@ -335,7 +335,10 @@ clientAction<
       );
     } catch (err) {
       return dispatchFailure(
-        { type: "clientError", error: err },
+        {
+          type: "clientError",
+          error: { name: err.name, message: err.message },
+        },
         apiSuccessContext
       );
     }
@@ -392,7 +395,13 @@ clientAction<Client.Action.ClientActions["RedeemRecoveryKey"]>({
       state.loadRecoveryKeyError
     ) {
       return dispatchFailure(
-        { type: "clientError", error: new Error("RecoveryKey not loaded") },
+        {
+          type: "clientError",
+          error: {
+            name: "RecoveryKeyNotLoaded",
+            message: "RecoveryKey not loaded",
+          },
+        },
         context
       );
     }

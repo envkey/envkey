@@ -270,24 +270,38 @@ clientAction<
   },
 });
 
-clientAction<Client.Action.ClientActions["ImportOrg"]>({
+clientAction<
+  Client.Action.ClientActions["ImportOrg"],
+  Partial<
+    Pick<Client.State, "importOrgServerErrors" | "importOrgLocalKeyErrors">
+  >
+>({
   type: "asyncClientAction",
   actionType: Client.ActionType.IMPORT_ORG,
   stateProducer: (draft) => {
     draft.isImportingOrg = true;
+    delete draft.importOrgServerErrors;
+    delete draft.importOrgLocalKeyErrors;
   },
   failureStateProducer: (draft, { payload, meta }) => {
     draft.importOrgError = payload;
+    delete draft.unfilteredOrgArchive;
+    delete draft.filteredOrgArchive;
 
     if (meta.rootAction.payload.isV1Upgrade) {
       draft.v1UpgradeStatus = "error";
       draft.v1UpgradeError = payload;
+
+      delete draft.v1IsUpgrading;
+      delete draft.v1UpgradeAccountId;
     }
   },
   successStateProducer: (draft, { payload, meta }) => {
     if (meta.rootAction.payload.isV1Upgrade) {
       draft.v1UpgradeStatus = "finished";
     }
+    draft.importOrgServerErrors = payload.importOrgServerErrors;
+    draft.importOrgLocalKeyErrors = payload.importOrgLocalKeyErrors;
   },
   endStateProducer: (draft) => {
     delete draft.isImportingOrg;
@@ -363,6 +377,9 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
         context
       );
     }
+
+    let importOrgServerErrors: Client.State["importOrgServerErrors"];
+    let importOrgLocalKeyErrors: Client.State["importOrgLocalKeyErrors"];
 
     const now = Date.now();
 
@@ -1324,21 +1341,56 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
         if (res.success) {
           state = res.state;
-
-          await updateImportStatus(
-            `${
-              regenServerKeys && !filteredAgainArchive.isV1Upgrade
-                ? "Regenerated"
-                : "Imported"
-            } ${i + 1}/${filteredAgainArchive.servers.length} server${
-              filteredAgainArchive.servers.length > 1 ? "s" : ""
-            }`,
-            context,
-            i == filteredAgainArchive.servers.length - 1
-          );
         } else {
-          return dispatchFailure((res.resultAction as any)?.payload, context);
+          if (!importOrgServerErrors) {
+            importOrgServerErrors = {};
+          }
+          const appId = idMap[archiveServer.appId];
+          const environmentId = idMap[archiveServer.environmentId];
+          const app = state.graph[appId] as Model.App;
+          const label = `${app.name} > ${g.getObjectName(
+            state.graph,
+            environmentId
+          )} > ${archiveServer.name}`;
+          const err = (res.resultAction as any)?.payload;
+          let errorMessage = "Unknown error";
+
+          if (err instanceof Error) {
+            errorMessage = err.message;
+          } else if ("error" in err && err.error && "message" in err.error) {
+            errorMessage = err.error.message;
+          } else if ("errorReason" in err && err.errorReason) {
+            errorMessage = err.errorReason;
+          }
+
+          log(`Error importing server ${label}: ${errorMessage}`, {
+            err,
+            archiveServer: pick(
+              ["appId", "environmentId", "name"],
+              archiveServer
+            ),
+          });
+
+          importOrgServerErrors[label] = errorMessage;
         }
+
+        const numErrors = Object.keys(importOrgServerErrors ?? {}).length;
+
+        await updateImportStatus(
+          `${
+            regenServerKeys && !filteredAgainArchive.isV1Upgrade
+              ? "Regenerated"
+              : "Imported"
+          } ${i + 1 - numErrors}/${filteredAgainArchive.servers.length} server${
+            filteredAgainArchive.servers.length > 1 ? "s" : ""
+          }${
+            numErrors > 0
+              ? ` (${numErrors} error${numErrors > 1 ? "s" : ""})`
+              : ""
+          }`,
+          context,
+          i == filteredAgainArchive.servers.length - 1
+        );
       }
     }
 
@@ -1390,17 +1442,48 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
 
         if (res.success) {
           state = res.state;
-
-          await updateImportStatus(
-            `Imported ${i + 1}/${
-              filteredAgainArchive.localKeys.length
-            } local key${filteredAgainArchive.localKeys.length > 1 ? "s" : ""}`,
-            context,
-            i == filteredAgainArchive.localKeys.length - 1
-          );
         } else {
-          return dispatchFailure((res.resultAction as any)?.payload, context);
+          if (!importOrgLocalKeyErrors) {
+            importOrgLocalKeyErrors = {};
+          }
+          const appId = idMap[archiveLocalKey.appId];
+          const userId = idMap[archiveLocalKey.userId];
+          const app = state.graph[appId] as Model.App;
+          const label = `${app.name} > ${g.getUserName(
+            state.graph,
+            userId
+          )} > ${archiveLocalKey.name}`;
+          const err = (res.resultAction as any)?.payload;
+          let errorMessage = "Unknown error";
+
+          if (err instanceof Error) {
+            errorMessage = err.message;
+          } else if ("error" in err && err.error && "message" in err.error) {
+            errorMessage = err.error.message;
+          } else if ("errorReason" in err && err.errorReason) {
+            errorMessage = err.errorReason;
+          }
+
+          log(`Error importing local key ${label}: ${errorMessage}`, {
+            err,
+            archiveLocalKey: pick(["appId", "userId", "name"], archiveLocalKey),
+          });
+
+          importOrgLocalKeyErrors[label] = errorMessage;
         }
+
+        const numErrors = Object.keys(importOrgLocalKeyErrors ?? {}).length;
+        await updateImportStatus(
+          `Imported ${i + 1 - numErrors}/${
+            filteredAgainArchive.localKeys.length
+          } local key${filteredAgainArchive.localKeys.length > 1 ? "s" : ""}${
+            numErrors > 0
+              ? ` (${numErrors} error${numErrors > 1 ? "s" : ""})`
+              : ""
+          }`,
+          context,
+          i == filteredAgainArchive.localKeys.length - 1
+        );
       }
     }
 
@@ -1681,7 +1764,13 @@ clientAction<Client.Action.ClientActions["ImportOrg"]>({
       );
     }
 
-    return dispatchSuccess(null, context);
+    return dispatchSuccess(
+      {
+        importOrgServerErrors,
+        importOrgLocalKeyErrors,
+      },
+      context
+    );
   },
 });
 
@@ -1893,6 +1982,8 @@ clientAction<
   stateProducer: (draft, { payload }) => {
     draft.v1IsUpgrading = true;
     delete draft.v1UpgradeError;
+    delete draft.importOrgError;
+    delete draft.importOrgStatus;
 
     if (!payload.accountId) {
       draft.isRegistering = true;
@@ -1903,10 +1994,11 @@ clientAction<
   },
   failureStateProducer: (draft, action) => {
     draft.v1UpgradeError = action.payload;
+    draft.v1UpgradeStatus = "error";
+    delete draft.v1IsUpgrading;
   },
   successStateProducer: (draft, action) => {
     draft.v1UpgradeAccountId = action.payload.accountId;
-    draft.v1UpgradeClientId = action.meta.clientId;
   },
   endStateProducer: (draft) => {
     delete draft.isRegistering;
@@ -1917,6 +2009,19 @@ clientAction<
     { context, dispatchSuccess, dispatchFailure }
   ) => {
     let state = initialState;
+
+    if (state.v1UpgradeAccountId) {
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: {
+            name: "AlreadyUpgradingError",
+            message: "Already upgrading",
+          },
+        },
+        context
+      );
+    }
 
     sendMainToWorkerMessage({
       type: "v1UpgradeStatus",
@@ -1942,7 +2047,16 @@ clientAction<
     }
 
     if (!state.v1UpgradeLoaded) {
-      throw new Error("v1 upgrade not loaded");
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: {
+            name: "NoV1UpgradeDataError",
+            message: "No v1 upgrade data loaded",
+          },
+        },
+        context
+      );
     }
 
     let accountId: string | undefined;
@@ -1995,7 +2109,16 @@ clientAction<
     }
 
     if (!state.v1UpgradeLoaded) {
-      throw new Error("v1 upgrade not loaded");
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: {
+            name: "NoV1UpgradeDataError",
+            message: "v1 upgrade data not loaded",
+          },
+        },
+        context
+      );
     }
 
     const v1Upgrade = {
@@ -2123,7 +2246,6 @@ clientAction<Client.Action.ClientActions["ResetV1Upgrade"]>({
     delete draft.v1UpgradeInviteToken;
     delete draft.v1UpgradeEncryptionToken;
     delete draft.v1UpgradeAccountId;
-    delete draft.v1UpgradeClientId;
     delete draft.v1UpgradeStatus;
     delete draft.v1UpgradeAcceptedInvite;
     delete draft.v1UpgradeInviteToken;
@@ -2136,6 +2258,7 @@ clientAction<Client.Action.ClientActions["ResetV1Upgrade"]>({
     delete draft.isImportingOrg;
     delete draft.importOrgStatus;
     delete draft.importOrgError;
+
     delete draft.v1ActiveUpgrade;
     delete draft.v1ClientAliveAt;
 

@@ -26,7 +26,6 @@ export const V1Upgrade: Component = (props) => {
   const [startedUpgrade, setStartedUpgrade] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
   const [creatingOrg, setCreatingOrg] = useState(false);
-  const [startedImport, setStartedImport] = useState(false);
   const [importing, setImporting] = useState(false);
   const [upgradeComplete, setUpgradeComplete] = useState(false);
   const [awaitingV1Complete, setAwaitingV1Complete] = useState(false);
@@ -41,11 +40,43 @@ export const V1Upgrade: Component = (props) => {
     props.core.defaultDeviceName ?? ""
   );
 
+  const handleImportFinished = () => {
+    console.log("Import finished. Waiting for v1 to finish upgrade");
+
+    setUpgrading(false);
+    setImporting(false);
+    setAwaitingV1Complete(true);
+  };
+
+  const handleUpgradeComplete = async () => {
+    console.log("v1 upgrade complete.");
+
+    await props.refreshCoreState();
+
+    setAwaitingV1Complete(false);
+    setUpgradeComplete(true);
+  };
+
+  const handleUpgradeError = () => {
+    setUpgrading(false);
+    setImporting(false);
+    setCreatingOrg(false);
+    setUpgradeComplete(true);
+  };
+
+  const handleOrgRegistration = () => {
+    setCreatingOrg(false);
+    if (props.core.registrationError) {
+      setUpgrading(false);
+      setUpgradeComplete(true);
+    }
+  };
+
   useLayoutEffect(() => {
     if (!props.core.v1UpgradeLoaded && (!startedUpgrade || canceledUpgrade)) {
       props.history.push("/home");
     }
-  }, [props.core.v1UpgradeLoaded]);
+  }, [props.core.v1UpgradeLoaded, canceledUpgrade]);
 
   useLayoutEffect(() => {
     props.setUiState({ accountId: undefined, loadedAccountId: undefined });
@@ -59,7 +90,7 @@ export const V1Upgrade: Component = (props) => {
 
   useEffect(() => {
     (async () => {
-      if (
+      const importFinishedCondition =
         startedUpgrade &&
         upgrading &&
         importing &&
@@ -67,21 +98,18 @@ export const V1Upgrade: Component = (props) => {
           props.core.v1UpgradeError ||
           (props.ui.importStatus?.importOrgError ?? props.core.importOrgError)
         ) &&
-        props.ui.importStatus?.v1UpgradeStatus == "finished"
-      ) {
-        console.log("Import finished. Waiting for v1 to finish upgrade");
+        props.ui.importStatus?.v1UpgradeStatus == "finished";
 
-        setUpgrading(false);
-        setImporting(false);
-        setAwaitingV1Complete(true);
-      } else if (
+      const importStartedCondition =
         (props.ui.importStatus?.isImportingOrg ?? props.core.isImportingOrg) &&
         !importing &&
         !awaitingV1Complete &&
-        !upgradeComplete
-      ) {
+        !upgradeComplete;
+
+      if (importFinishedCondition) {
+        handleImportFinished();
+      } else if (importStartedCondition) {
         setImporting(true);
-        setStartedImport(true);
       }
     })();
   }, [
@@ -92,12 +120,7 @@ export const V1Upgrade: Component = (props) => {
   useEffect(() => {
     (async () => {
       if (awaitingV1Complete && !props.ui.importStatus?.v1UpgradeLoaded) {
-        console.log("v1 upgrade complete.");
-
-        await props.refreshCoreState();
-
-        setAwaitingV1Complete(false);
-        setUpgradeComplete(true);
+        await handleUpgradeComplete();
       }
     })();
   }, [props.ui.importStatus?.v1UpgradeLoaded, awaitingV1Complete]);
@@ -109,10 +132,7 @@ export const V1Upgrade: Component = (props) => {
       props.core.importOrgError ??
       props.core.loadCloudProductsError
     ) {
-      setUpgrading(false);
-      setImporting(false);
-      setCreatingOrg(false);
-      setUpgradeComplete(true);
+      handleUpgradeError();
     }
   }, [
     props.core.v1UpgradeError,
@@ -122,11 +142,7 @@ export const V1Upgrade: Component = (props) => {
 
   useEffect(() => {
     if (creatingOrg && (!props.core.isRegistering || props.ui.importStatus)) {
-      setCreatingOrg(false);
-      if (props.core.registrationError) {
-        setUpgrading(false);
-        setUpgradeComplete(true);
-      }
+      handleOrgRegistration();
     } else if (props.core.isRegistering && !creatingOrg) {
       setCreatingOrg(true);
     }
@@ -465,6 +481,7 @@ export const V1Upgrade: Component = (props) => {
       {resetUpgradeButton(cancelLabel)}
       <button
         className="primary"
+        disabled={canceledUpgrade}
         onClick={(e) => {
           e.preventDefault();
           dispatchUpgrade(
@@ -496,22 +513,86 @@ export const V1Upgrade: Component = (props) => {
     errorMessage = capitalize(errorMessage.replace("v1 upgrade - ", "")) + ".";
   }
 
+  if (err) {
+    console.log("v1 upgrade error: ", { err, errorMessage });
+  }
+
   const upgradeError = (
     <form>
       <p>
         There was a problem finishing the upgrade. Please contact{" "}
         <strong>support@envkey.com</strong> for help.
       </p>
-      {errorMessage ? <p className="error">{errorMessage}</p> : ""}
-      {finishButtons("Back To Home", "Retry")}
+      <div>
+        {errorMessage ? <p className="error">{errorMessage}</p> : ""}
+        {finishButtons("Back To Home", "Retry")}
+      </div>
     </form>
   );
+
+  const hasServerOrLocalKeyErrors =
+    props.ui.importStatus?.importOrgServerErrors ||
+    props.ui.importStatus?.importOrgLocalKeyErrors;
 
   const upgradeFinished = (
     <form>
       <div>
         <p className="org-import-status">Your upgrade has finished!</p>
       </div>
+
+      {props.ui.importStatus?.importOrgServerErrors ? (
+        <p className="error">
+          <h4>There were errors importing the following server ENVKEYs</h4>
+          <ul>
+            {Object.keys(props.ui.importStatus?.importOrgServerErrors).map(
+              (label) => (
+                <li key={label}>
+                  <br />
+                  <strong>{label}:</strong>
+                  <br />
+                  <span>
+                    {props.ui.importStatus?.importOrgServerErrors![label]}
+                  </span>
+                </li>
+              )
+            )}
+          </ul>
+        </p>
+      ) : (
+        ""
+      )}
+
+      {props.ui.importStatus?.importOrgLocalKeyErrors ? (
+        <p className="error">
+          <h4>There were errors importing the following local ENVKEYs</h4>
+          <ul>
+            {Object.keys(props.ui.importStatus?.importOrgLocalKeyErrors).map(
+              (label) => (
+                <li key={label}>
+                  <br />
+                  <strong>{label}:</strong>
+                  <br />
+                  <span>
+                    {props.ui.importStatus?.importOrgLocalKeyErrors![label]}
+                  </span>
+                </li>
+              )
+            )}
+          </ul>
+        </p>
+      ) : (
+        ""
+      )}
+
+      {hasServerOrLocalKeyErrors ? (
+        <p>
+          You can re-generate the missing ENVKEYs manually. You can also contact{" "}
+          <strong>support@envkey.com</strong> for help.
+        </p>
+      ) : (
+        ""
+      )}
+
       <div className="buttons">
         <button
           className="primary"
@@ -545,11 +626,7 @@ export const V1Upgrade: Component = (props) => {
       <div className="field no-margin">
         <label>SSO</label>
       </div>
-      <p>
-        Imported v1 users will use <strong>email authentication.</strong> If you
-        want to use <strong>SSO</strong> instead, check the box below and
-        re-invite users after the upgrade finishes and you've configured SSO.
-      </p>
+      {ssoCopy}
       <div
         className={"field checkbox" + (ssoEnabled ? " selected" : "")}
         onClick={() => setSSOEnabled(!ssoEnabled)}
@@ -605,24 +682,7 @@ export const V1Upgrade: Component = (props) => {
       <div className="field no-margin">
         <label>Local Development ENVKEYs</label>
       </div>
-      <p>
-        In EnvKey v2, managing local development ENVKEYs manually is no longer
-        necessary.
-        <br />
-        <br /> <strong>If you don't import</strong> your v1 local ENVKEYs,
-        you'll need to run <code>envkey init</code> in the root directory of
-        each of your apps, and then commit the resulting{" "}
-        <strong>.envkey</strong> file to version control. All users with access
-        to an app will then be able to load the local development environment
-        without generating a local key. After upgrading, each user should also{" "}
-        <strong>clear out any v1 local ENVKEYs set in .env files.</strong>
-        <br />
-        <br />
-        <strong>If you do import</strong> your v1 local ENVKEYs, all your
-        existing local ENVKEYs will continue working in v2 without requiring you
-        to run <code>envkey init</code> in your projects. You can also import
-        your local ENVKEYs now, then move away from them gradually later.
-      </p>
+      {localKeysCopy}
       <div
         className={"field checkbox" + (importLocalKeys ? " selected" : "")}
         onClick={() => setImportLocalKeys(!importLocalKeys)}
@@ -768,29 +828,6 @@ export const V1Upgrade: Component = (props) => {
     </div>
   );
 
-  const clientLibrariesSection = (
-    <div>
-      <div className="field no-margin">
-        <label>Client Libraries</label>
-      </div>
-      <p>
-        After your upgrade finishes, you'll also need to{" "}
-        <strong>upgrade up any EnvKey client libraries</strong> to their latest{" "}
-        <strong>2.x.x</strong> versions (this includes envkey-source in addition
-        to any language-specific libraries).
-        <br />
-        <br />
-        <strong>
-          1.x.x libraries will continue working with your v1 ENVKEYs in the
-          meantime,
-        </strong>{" "}
-        so you can do this gradually without worrying about downtime, but
-        changes you make in v2 won't be picked up until you upgrade client
-        libraries.
-      </p>
-    </div>
-  );
-
   const finishActionSection = (
     <div>
       <div className="field no-margin">
@@ -899,6 +936,55 @@ export const V1Upgrade: Component = (props) => {
     </HomeContainer>;
   }
 
+  let content: React.ReactNode;
+
+  // console.log({
+  //   upgrading,
+  //   awaitingV1Complete,
+  //   validAccountIds,
+  //   "props.core.cloudProducts": props.core.cloudProducts,
+  // });
+
+  if (
+    upgrading ||
+    awaitingV1Complete ||
+    !props.core.cloudProducts ||
+    !validAccountIds
+  ) {
+    content = upgradeStatus;
+  } else if (
+    upgradeComplete ||
+    (startedUpgrade && !props.core.v1UpgradeLoaded)
+  ) {
+    if (
+      props.core.v1UpgradeError ||
+      (props.ui.importStatus?.importOrgError ?? props.core.importOrgError) ||
+      props.core.loadCloudProductsError ||
+      canceledUpgrade
+    ) {
+      content = upgradeError;
+    } else {
+      content = upgradeFinished;
+    }
+  } else {
+    content = (
+      <form>
+        {props.core.v1ActiveUpgrade && props.core.v1UpgradeAccountId
+          ? [resumeSection]
+          : [
+              newOrExistingOrgSection,
+              ssoSection,
+              existingAccountId ? appSelectSection : "",
+              localKeysSection,
+              billingSection(),
+              existingAccountId ? "" : deviceNameSection,
+              clientLibrariesSection,
+              finishActionSection,
+            ]}
+      </form>
+    );
+  }
+
   return (
     <HomeContainer anchor="center">
       <div className={styles.V1Upgrade}>
@@ -906,38 +992,59 @@ export const V1Upgrade: Component = (props) => {
           <strong>Upgrade</strong> From V1
         </h3>
 
-        {upgrading ||
-        awaitingV1Complete ||
-        !props.core.cloudProducts ||
-        !validAccountIds ? (
-          upgradeStatus
-        ) : upgradeComplete ||
-          (startedUpgrade && !props.core.v1UpgradeLoaded) ? (
-          props.core.v1UpgradeError ||
-          (props.ui.importStatus?.importOrgError ??
-            props.core.importOrgError) ||
-          props.core.loadCloudProductsError ? (
-            upgradeError
-          ) : (
-            upgradeFinished
-          )
-        ) : (
-          <form>
-            {props.core.v1ActiveUpgrade && props.core.v1UpgradeAccountId
-              ? [resumeSection]
-              : [
-                  newOrExistingOrgSection,
-                  ssoSection,
-                  existingAccountId ? appSelectSection : "",
-                  localKeysSection,
-                  billingSection(),
-                  existingAccountId ? "" : deviceNameSection,
-                  clientLibrariesSection,
-                  finishActionSection,
-                ]}
-          </form>
-        )}
+        {content}
       </div>
     </HomeContainer>
   );
 };
+
+const clientLibrariesSection = (
+  <div>
+    <div className="field no-margin">
+      <label>Client Libraries</label>
+    </div>
+    <p>
+      After your upgrade finishes, you'll also need to{" "}
+      <strong>upgrade up any EnvKey client libraries</strong> to their latest{" "}
+      <strong>2.x.x</strong> versions (this includes envkey-source in addition
+      to any language-specific libraries).
+      <br />
+      <br />
+      <strong>
+        1.x.x libraries will continue working with your v1 ENVKEYs in the
+        meantime,
+      </strong>{" "}
+      so you can do this gradually without worrying about downtime, but changes
+      you make in v2 won't be picked up until you upgrade client libraries.
+    </p>
+  </div>
+);
+
+const localKeysCopy = (
+  <p>
+    In EnvKey v2, managing local development ENVKEYs manually is no longer
+    necessary.
+    <br />
+    <br /> <strong>If you don't import</strong> your v1 local ENVKEYs, you'll
+    need to run <code>envkey init</code> in the root directory of each of your
+    apps, and then commit the resulting <strong>.envkey</strong> file to version
+    control. All users with access to an app will then be able to load the local
+    development environment without generating a local key. After upgrading,
+    each user should also{" "}
+    <strong>clear out any v1 local ENVKEYs set in .env files.</strong>
+    <br />
+    <br />
+    <strong>If you do import</strong> your v1 local ENVKEYs, all your existing
+    local ENVKEYs will continue working in v2 without requiring you to run{" "}
+    <code>envkey init</code> in your projects. You can also import your local
+    ENVKEYs now, then move away from them gradually later.
+  </p>
+);
+
+const ssoCopy = (
+  <p>
+    Imported v1 users will use <strong>email authentication.</strong> If you
+    want to use <strong>SSO</strong> instead, check the box below and re-invite
+    users after the upgrade finishes and you've configured SSO.
+  </p>
+);

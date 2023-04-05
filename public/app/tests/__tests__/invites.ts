@@ -18,6 +18,7 @@ import { getUserEncryptedKeyOrBlobComposite } from "@core/lib/blob";
 import { graphTypes } from "@core/lib/graph";
 import { getEnvWithMeta } from "@core/lib/client";
 import { query } from "@api_shared/db";
+import { log } from "@core/lib/utils/logger";
 
 describe("invites", () => {
   let email: string,
@@ -315,6 +316,11 @@ describe("invites", () => {
       expect(state.isRemoving[inviteId]).toBeTrue();
 
       const res = await promise;
+
+      if (!res.success) {
+        log("revoke invite failed", res.resultAction);
+      }
+
       expect(res.success).toBeTrue();
 
       state = getState(ownerId);

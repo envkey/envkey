@@ -330,6 +330,7 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
   },
   addStopRoute = (app: Express) => {
     app.get("/stop", (req, res) => {
+      log("Received /stop request.");
       res.status(200).send("Stopping local server...");
       process.kill(process.pid, "SIGTERM"); // this is caught and handled for a proper shutdown
     });

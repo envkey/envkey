@@ -566,7 +566,13 @@ clientAction<Client.Action.ClientActions["CreateExternalAuthSessionForInvite"]>(
       const encodedHostUrl = emailToken.split("_")[2];
       if (!encodedHostUrl) {
         return dispatchFailure(
-          { type: "clientError", error: new Error("Invalid invite token") },
+          {
+            type: "clientError",
+            error: {
+              name: "InvalidInviteToken",
+              message: "Invalid invite token",
+            },
+          },
           context
         );
       }

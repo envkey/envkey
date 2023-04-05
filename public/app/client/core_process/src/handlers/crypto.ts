@@ -649,7 +649,7 @@ clientAction<
           return dispatchFailure(
             {
               type: "clientError",
-              error: err,
+              error: { name: "ReencryptEnvsError", message: err.message },
             },
             { ...context }
           );
@@ -668,9 +668,10 @@ clientAction<
       return dispatchFailure(
         {
           type: "clientError",
-          error: new Error(
-            `Could not fetch latest envs and changesets for re-encryption after ${numRetries} attempts`
-          ),
+          error: {
+            name: "ReencryptEnvsError",
+            message: `Could not fetch latest envs and changesets for re-encryption after ${numRetries} attempts`,
+          },
         },
         { ...context }
       );
