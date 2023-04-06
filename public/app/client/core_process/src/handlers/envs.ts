@@ -119,13 +119,15 @@ envUpdateAction<Client.Action.ClientActions["ImportEnvironment"]>({
           const inheritsMatch = val.match(
             /^inherits:([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i
           );
+
           if (inheritsMatch) {
             inheritsEnvironmentId = inheritsMatch[1];
 
-            const inheriting = getPendingInheritingEnvironmentIds(
-              state,
-              payload
-            );
+            const inheriting = getPendingInheritingEnvironmentIds(state, {
+              ...payload,
+              entryKey: k,
+            });
+
             if (inheriting.has(inheritsEnvironmentId)) {
               continue;
             }
