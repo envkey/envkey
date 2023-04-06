@@ -7,10 +7,10 @@ import { wait } from "@core/lib/utils/wait";
 // very unaggressive timeouts
 // we want to tolerate slow/weird network conditions, but also not hang too long if server is hopelessly unreachable
 const TIMEOUTS = {
-  lookup: 1500,
-  connect: 5000,
-  secureConnect: 5000,
-  request: 120 * 1000,
+  lookup: 3000,
+  connect: 10000,
+  secureConnect: 10000,
+  request: 180 * 1000,
 };
 
 export const postApiAction = async <

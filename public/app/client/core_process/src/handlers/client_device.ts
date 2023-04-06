@@ -71,9 +71,10 @@ clientAction<Client.Action.ClientActions["ClearDevicePassphrase"]>({
     ).filter(R.prop("requiresPassphrase"));
 
     if (accountsRequiringPassphrase.length > 0) {
-      throw new Error(
+      log(
         "Cannot remove passphrase because user belongs to orgs that require one."
       );
+      return;
     }
 
     delete draft.requiresPassphrase;
@@ -122,9 +123,8 @@ clientAction<Client.Action.ClientActions["SetDeviceLockout"]>({
       );
 
     if (lockoutMs > lowestMaxLockout) {
-      throw new Error(
-        "Cannot set a lockout higher than the lowest required by any org."
-      );
+      log("Cannot set a lockout higher than the lowest required by any org.");
+      return;
     }
 
     draft.lockoutMs = lockoutMs;
@@ -139,9 +139,10 @@ clientAction<Client.Action.ClientActions["ClearDeviceLockout"]>({
     ).filter(R.prop("requiresLockout"));
 
     if (accountsRequiringLockout.length > 0) {
-      throw new Error(
+      log(
         "Cannot remove lockout because user belongs to orgs that require one."
       );
+      return;
     }
 
     draft.lockoutMs = undefined;

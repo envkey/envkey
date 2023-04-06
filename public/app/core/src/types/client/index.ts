@@ -282,6 +282,16 @@ namespace Client {
     handler?: ActionHandler<ActionType, DispatchContextType>;
   };
 
+  export type ApiActionCreatorResult<DispatchContextType = any> = {
+    action: Omit<Action.DispatchAction<Api.Action.RequestAction>, "payload"> & {
+      payload: Omit<
+        Api.Action.RequestAction["payload"],
+        "envs" | "encryptedByTrustChain"
+      >;
+    };
+    dispatchContext?: DispatchContextType;
+  };
+
   export type AsyncClientActionParams<
     ActionType extends Action.EnvkeyAction = Action.EnvkeyAction,
     SuccessType = any,
@@ -309,18 +319,7 @@ namespace Client {
         : any,
       state: Client.State,
       context: Client.Context
-    ) => Promise<{
-      action: Omit<
-        Action.DispatchAction<Api.Action.RequestAction>,
-        "payload"
-      > & {
-        payload: Omit<
-          Api.Action.RequestAction["payload"],
-          "envs" | "encryptedByTrustChain"
-        >;
-      };
-      dispatchContext?: DispatchContextType;
-    }>;
+    ) => Promise<ApiActionCreatorResult<DispatchContextType>>;
     apiSuccessPayloadCreator?: (
       apiRes: DispatchResult,
       dispatchContext?: DispatchContextType

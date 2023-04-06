@@ -95,7 +95,8 @@ clientAction<
   stateProducer: (draft, { meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     draft.isRenaming[auth.orgId] = true;
     delete draft.renameErrors[auth.orgId];
@@ -103,7 +104,8 @@ clientAction<
   failureStateProducer: (draft, { payload, meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     draft.renameErrors[auth.orgId] = payload;
   },
@@ -121,7 +123,8 @@ clientAction<
   endStateProducer: (draft, { meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     delete draft.isRenaming[auth.orgId];
   },
@@ -140,7 +143,8 @@ clientAction<
   stateProducer: (draft, { meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     draft.isUpdatingSettings[auth.orgId] = true;
     delete draft.updateSettingsErrors[auth.orgId];
@@ -175,14 +179,16 @@ clientAction<
   failureStateProducer: (draft, { payload, meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     draft.updateSettingsErrors[auth.orgId] = payload;
   },
   endStateProducer: (draft, { meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     delete draft.isUpdatingSettings[auth.orgId];
   },
@@ -215,7 +221,8 @@ clientAction<
   stateProducer: (draft, { meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     draft.isUpdatingFirewall[auth.orgId] = true;
     delete draft.updateFirewallErrors[auth.orgId];
@@ -223,14 +230,16 @@ clientAction<
   failureStateProducer: (draft, { payload, meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     draft.updateFirewallErrors[auth.orgId] = payload;
   },
   endStateProducer: (draft, { meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     delete draft.isUpdatingFirewall[auth.orgId];
   },
@@ -260,7 +269,8 @@ clientAction<
   ) => {
     const auth = getAuth(draft, accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
 
     if (id in draft.orgUserAccounts) {
@@ -307,7 +317,8 @@ clientAction<
   stateProducer: (draft, { meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     draft.isRemoving[auth.orgId] = true;
     delete draft.removeErrors[auth.orgId];
@@ -321,7 +332,8 @@ clientAction<
   failureStateProducer: (draft, { payload, meta }) => {
     const auth = getAuth(draft, meta.accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
     draft.removeErrors[auth.orgId] = payload;
     delete draft.isRemoving[auth.orgId];

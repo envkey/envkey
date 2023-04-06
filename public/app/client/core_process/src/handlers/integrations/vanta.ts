@@ -320,7 +320,8 @@ clientAction<
   successStateProducer: (draft, { payload, meta: { accountIdOrCliKey } }) => {
     const auth = getAuth(draft, accountIdOrCliKey);
     if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
+      log("Action requires authentication");
+      return;
     }
 
     const { id } = payload;

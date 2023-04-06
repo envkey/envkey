@@ -460,7 +460,7 @@ clientAction<Client.Action.ClientActions["SignInPendingSelfHosted"]>({
     let orgId: string, userId: string, deviceId: string, token: string;
 
     const throwInvalidTokenErr = () => {
-      throw new Error("Invalid self-hosted init token");
+      log("Invalid self-hosted init token");
     };
 
     let parsed: [string, string, string, string];

@@ -175,76 +175,83 @@ export const clientAction = <
       if (actionParams.apiActionCreator) {
         if (actionParams.bulkApiDispatcher) {
           let error: Client.ClientError | Error | undefined;
+          let apiActions: Client.ApiActionCreatorResult["action"][] | undefined;
+          let stateWithFetched: Client.State | undefined;
+          const now = Date.now();
 
-          const now = Date.now(),
-            clientParams = (action as any).payload as any[],
+          try {
+            const clientParams = (action as any).payload as any[];
+
             apiActions = await Promise.all(
               clientParams.map((params) =>
                 actionParams.apiActionCreator!(params, accountState, context)
               )
-            ).then((a) => a.map(R.prop("action"))),
-            fullKeySet = apiActions
-              .map((apiAction) => {
-                const apiActionParams = actions[apiAction.type];
+            ).then((a) => a.map(R.prop("action")));
 
-                if (
-                  !apiActionParams ||
-                  !("graphProposer" in apiActionParams) ||
-                  !apiActionParams.graphProposer
-                ) {
-                  return { type: "keySet" } as Blob.KeySet;
-                }
+            const fullKeySet = apiActions!
+                .map((apiAction) => {
+                  const apiActionParams = actions[apiAction.type];
 
-                return keySetForGraphProposal(
-                  accountState.graph,
-                  now,
-                  (graphDraft) => {
-                    if (
-                      !apiActionParams ||
-                      !("graphProposer" in apiActionParams) ||
-                      !apiActionParams.graphProposer
-                    ) {
-                      return;
-                    }
-                    apiActionParams.graphProposer(
-                      apiAction as Api.Action.RequestAction,
-                      accountState,
-                      context
-                    )(graphDraft);
-                  },
-                  apiActionParams.encryptedKeysScopeFn?.(
+                  if (
+                    !apiActionParams ||
+                    !("graphProposer" in apiActionParams) ||
+                    !apiActionParams.graphProposer
+                  ) {
+                    return { type: "keySet" } as Blob.KeySet;
+                  }
+
+                  return keySetForGraphProposal(
                     accountState.graph,
-                    apiAction as Api.Action.RequestAction
-                  )
-                );
-              })
-              .reduce(R.mergeDeepRight, { type: "keySet" } as Blob.KeySet),
-            { requiredEnvs, requiredChangesets } = requiredEnvsForKeySet(
-              accountState.graph,
-              fullKeySet
-            ),
-            fetchRes = await fetchRequiredEnvs(
-              accountState,
-              requiredEnvs,
-              requiredChangesets,
-              context,
-              undefined,
-              true
-            );
+                    now,
+                    (graphDraft) => {
+                      if (
+                        !apiActionParams ||
+                        !("graphProposer" in apiActionParams) ||
+                        !apiActionParams.graphProposer
+                      ) {
+                        return;
+                      }
+                      apiActionParams.graphProposer(
+                        apiAction as Api.Action.RequestAction,
+                        accountState,
+                        context
+                      )(graphDraft);
+                    },
+                    apiActionParams.encryptedKeysScopeFn?.(
+                      accountState.graph,
+                      apiAction as Api.Action.RequestAction
+                    )
+                  );
+                })
+                .reduce(R.mergeDeepRight, { type: "keySet" } as Blob.KeySet),
+              { requiredEnvs, requiredChangesets } = requiredEnvsForKeySet(
+                accountState.graph,
+                fullKeySet
+              ),
+              fetchRes = await fetchRequiredEnvs(
+                accountState,
+                requiredEnvs,
+                requiredChangesets,
+                context,
+                undefined,
+                true
+              );
 
-          let stateWithFetched: Client.State | undefined;
-          if (fetchRes) {
-            if (fetchRes.success) {
-              stateWithFetched = fetchRes.state;
+            if (fetchRes) {
+              if (fetchRes.success) {
+                stateWithFetched = fetchRes.state;
+              } else {
+                error = (fetchRes.resultAction as Client.Action.FailureAction)
+                  .payload;
+              }
             } else {
-              error = (fetchRes.resultAction as Client.Action.FailureAction)
-                .payload;
+              stateWithFetched = accountState;
             }
-          } else {
-            stateWithFetched = accountState;
+          } catch (err) {
+            error = err;
           }
 
-          if (!error) {
+          if (!error && apiActions && stateWithFetched) {
             try {
               let promises: Promise<Api.Action.RequestAction>[] = [];
 
