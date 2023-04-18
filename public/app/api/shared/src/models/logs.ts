@@ -562,19 +562,12 @@ export const getLogTransactionStatement = ({
       ),
     };
   } else if (action.meta.loggableType == "billingWebhookAction") {
-    if (!handlerContext || !("orgId" in handlerContext)) {
-      throw new Api.ApiError(
-        "handlerContext required for logging billingWebhookAction",
-        500
-      );
-    }
-
     loggedAction = {
       ...loggedActionBase,
       actionType: action.type as Api.Action.BillingWebhookAction["type"],
       loggableType: <const>"billingWebhookAction",
       loggableType2: <const>"billingAction",
-      orgId: handlerContext.orgId,
+      orgId: (handlerContext as any | undefined)?.orgId ?? undefined,
       deviceId: undefined,
       actorId: undefined,
     };
@@ -1827,6 +1820,8 @@ const getSummary = (
       return `+verify+ promotion code`;
     case Api.ActionType.CLOUD_BILLING_LOAD_PRODUCTS:
       return `+load+ cloud plans`;
+    case Api.ActionType.CLOUD_BILLING_CHECK_V1_PENDING_UPGRADE:
+      return `+check+ for pending v1 upgrade`;
 
     case Api.ActionType.INTEGRATIONS_VANTA_OAUTH_CALLBACK:
       return `+process+ Vanta integration authentication callback`;

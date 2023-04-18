@@ -10,6 +10,7 @@ import { showErrorReportDialogSync } from "./report_error";
 import * as path from "path";
 import * as os from "os";
 import fkill from "fkill";
+import { getWin } from "./main";
 
 const platform = os.platform();
 const isWindows = platform === "win32";
@@ -60,6 +61,10 @@ export const startCore = async (): Promise<boolean> => {
         );
       }
     } else {
+      const win = getWin();
+      if (win) {
+        win.webContents.send("core-process-alive");
+      }
       log("Core process is already running");
       log("Starting core process alive check loop...");
       checkAliveLoop();
@@ -117,6 +122,12 @@ export const startCore = async (): Promise<boolean> => {
   log("Successfully started core process");
 
   log("Starting core process alive check loop...");
+
+  const win = getWin();
+  if (win) {
+    win.webContents.send("core-process-alive");
+  }
+
   checkAliveLoop();
 
   return true;
@@ -127,12 +138,18 @@ const checkAliveLoop = async () => {
   if (alive) {
     setTimeout(checkAliveLoop, CHECK_ALIVE_INTERVAL);
   } else {
-    log("Core process died while UI is running. Closing EnvKey UI...");
-    await showErrorReportDialogSync(
-      "The EnvKey core process exited unexpectedly.",
-      BUNDLED_CLI_PATH
-    );
-
-    app.quit();
+    const win = getWin();
+    if (win) {
+      log(
+        "Core process died while UI is running. Notifying UI window and restarting core process..."
+      );
+      win.webContents.send("lost-core-process");
+      await startCore();
+    } else {
+      log(
+        "Core process died while UI is running. Closing headless EnvKey UI..."
+      );
+      app.quit();
+    }
   }
 };

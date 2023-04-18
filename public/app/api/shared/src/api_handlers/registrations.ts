@@ -90,6 +90,24 @@ apiAction<
     if (payload.provider == "email") {
       if (payload.hostType == "cloud" && payload.v1Upgrade) {
         isV1Upgrade = true;
+
+        // if (
+        //   (action.meta.client.clientName == "app" &&
+        //     !semver.gte(action.meta.client.clientVersion, "2.4.8")) ||
+        //   ((action.meta.client.clientName == "cli" ||
+        //     action.meta.client.clientName == "core") &&
+        //     !semver.gte(action.meta.client.clientVersion, "2.4.6"))
+        // ) {
+        //   log("client upgrade required", {
+        //     clientVersion: action.meta.client.clientVersion ?? "",
+        //     requiresClientVersion: {
+        //       app: "2.4.8",
+        //       cli: "2.4.6",
+        //       core: "2.4.6",
+        //     },
+        //   });
+        //   throw new Api.ApiError("client upgrade required", 426);
+        // }
       } else if (payload.emailVerificationToken) {
         verifyTokenRes = await verifyEmailToken(
           email,

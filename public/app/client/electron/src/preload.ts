@@ -107,6 +107,14 @@ const exposeInterface: ElectronWindow["electron"] = {
   reportError: (msg: string, userId: string, email: string) => {
     ipcRenderer.send("report-error", { msg, userId, email });
   },
+
+  registerLostCoreHandler: (handler) => {
+    ipcRenderer.on("lost-core-process", handler);
+  },
+
+  registerStartedCoreHandler: (handler) => {
+    ipcRenderer.on("core-process-alive", handler);
+  },
 };
 
 contextBridge.exposeInMainWorld("electron", exposeInterface);

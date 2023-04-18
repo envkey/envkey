@@ -71,6 +71,10 @@ export type ProcState = {
   cloudPrices: Billing.Price[] | undefined;
   isLoadingCloudProducts: boolean | undefined;
   loadCloudProductsError: Client.ClientError | undefined;
+
+  hasV1PendingUpgrade: boolean | undefined;
+  isCheckingV1PendingUpgrade: boolean | undefined;
+  checkV1PendingUpgradeError: Client.ClientError | undefined;
 };
 
 export type PartialAccountState = {
@@ -820,6 +824,9 @@ export const defaultAccountState: PartialAccountState = {
     v1UpgradeEncryptionToken: undefined,
     v1UpgradeAcceptedInvite: undefined,
     v1ClientAliveAt: undefined,
+    hasV1PendingUpgrade: undefined,
+    isCheckingV1PendingUpgrade: undefined,
+    checkV1PendingUpgradeError: undefined,
   },
   lockedState = { ...defaultProcState, locked: true },
   ACCOUNT_STATE_KEYS = Object.keys(

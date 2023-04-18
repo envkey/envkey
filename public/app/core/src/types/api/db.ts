@@ -5,6 +5,7 @@ import { Blob } from "../blob";
 import { Logs } from "../logs";
 import * as Rbac from "../rbac";
 import * as Billing from "../billing";
+import { V1Upgrade } from "./v1_upgrade";
 import { PoolConnection, Pool } from "mysql2/promise";
 import { TimestampsSchema } from "../timestamps";
 import * as z from "zod";

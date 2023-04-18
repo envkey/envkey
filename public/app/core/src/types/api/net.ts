@@ -1445,6 +1445,7 @@ export namespace Net {
     [ActionType.CLOUD_BILLING_INVOICE_CREATED]: z
       .object({
         stripeSubscriptionId: z.string(),
+        stripeCustomerId: z.string(),
       })
       .merge(
         Billing.InvoiceSchema.pick({
@@ -1467,6 +1468,7 @@ export namespace Net {
     [ActionType.CLOUD_BILLING_PAYMENT_SUCCEEDED]: z
       .object({
         stripeSubscriptionId: z.string(),
+        stripeCustomerId: z.string(),
       })
       .merge(
         Billing.InvoiceSchema.pick({
@@ -1483,6 +1485,7 @@ export namespace Net {
     [ActionType.CLOUD_BILLING_PAYMENT_FAILED]: z
       .object({
         stripeSubscriptionId: z.string(),
+        stripeCustomerId: z.string(),
       })
       .merge(
         Billing.InvoiceSchema.pick({
@@ -1509,6 +1512,10 @@ export namespace Net {
     [ActionType.CLOUD_BILLING_FETCH_INVOICES]: z.object({}),
 
     [ActionType.CLOUD_BILLING_LOAD_PRODUCTS]: z.object({}),
+
+    [ActionType.CLOUD_BILLING_CHECK_V1_PENDING_UPGRADE]: z.object({
+      stripeCustomerId: z.string(),
+    }),
 
     [ActionType.INTEGRATIONS_VANTA_CREATE_EXTERNAL_AUTH_SESSION]: z.object({}),
     [ActionType.INTEGRATIONS_VANTA_GET_EXTERNAL_AUTH_SESSION]: z.object({
@@ -1887,6 +1894,9 @@ export namespace Net {
     CloudBillingLoadProducts: z.infer<
       typeof ApiParamSchemas[ActionType.CLOUD_BILLING_LOAD_PRODUCTS]
     >;
+    CloudBillingCheckV1PendingUpgrade: z.infer<
+      typeof ApiParamSchemas[ActionType.CLOUD_BILLING_CHECK_V1_PENDING_UPGRADE]
+    >;
 
     IntegrationsVantaCreateExternalAuthSession: z.infer<
       typeof ApiParamSchemas[ActionType.INTEGRATIONS_VANTA_CREATE_EXTERNAL_AUTH_SESSION]
@@ -2143,6 +2153,10 @@ export namespace Net {
     CloudBillingLoadProducts: {
       type: "cloudProducts";
       products: Billing.Product[];
+    };
+    CloudBillingCheckV1PendingUpgrade: {
+      type: "pendingV1Upgrade";
+      hasPendingUpgrade: boolean;
     };
 
     IntegrationsVantaCreateExternalAuthSession: {

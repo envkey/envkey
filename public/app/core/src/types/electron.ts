@@ -60,5 +60,9 @@ export interface ElectronWindow extends Window {
     uiLogger: (batch: { msg: string; obj?: any }[]) => void;
 
     reportError: (msg: string, userId: string, email: string) => void;
+
+    registerLostCoreHandler: (handler: () => void) => void;
+
+    registerStartedCoreHandler: (handler: () => void) => void;
   };
 }

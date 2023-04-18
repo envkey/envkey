@@ -2262,6 +2262,8 @@ clientAction<Client.Action.ClientActions["ResetV1Upgrade"]>({
     delete draft.v1ActiveUpgrade;
     delete draft.v1ClientAliveAt;
 
+    delete draft.hasV1PendingUpgrade;
+
     if (payload.cancelUpgrade) {
       draft.v1UpgradeStatus = "canceled";
     }

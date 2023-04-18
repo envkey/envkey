@@ -8,6 +8,7 @@ import { dispatch, getActionParams } from "./handler";
 import { getState } from "./lib/state";
 import { Client, Crypto } from "@core/types";
 import fkill from "fkill";
+import { isAlive, stop } from "@core/lib/core_proc";
 import {
   hasDeviceKey,
   initDeviceKey,
@@ -85,6 +86,7 @@ let reduxStore: Client.ReduxStore | undefined,
 const initMaster = async (port: number, wsport: number, statusPort: number) => {
     initFileLogger("core");
 
+    await stop();
     await Promise.all([
       fkill(`:${port}`, { force: true }).catch(() => {}),
       fkill(`:${wsport}`, { force: true }).catch(() => {}),

@@ -130,7 +130,8 @@ export const V1Upgrade: Component = (props) => {
       props.core.v1UpgradeError ??
       props.ui.importStatus?.importOrgError ??
       props.core.importOrgError ??
-      props.core.loadCloudProductsError
+      props.core.loadCloudProductsError ??
+      props.core.checkV1PendingUpgradeError
     ) {
       handleUpgradeError();
     }
@@ -138,6 +139,7 @@ export const V1Upgrade: Component = (props) => {
     props.core.v1UpgradeError,
     props.ui.importStatus?.importOrgError ?? props.core.importOrgError,
     props.core.loadCloudProductsError,
+    props.core.checkV1PendingUpgradeError,
   ]);
 
   useEffect(() => {
@@ -207,6 +209,17 @@ export const V1Upgrade: Component = (props) => {
       setValidAccountIds([]);
     }
   }, []);
+
+  useEffect(() => {
+    if (props.core.v1UpgradeLoaded?.stripeCustomerId) {
+      props.dispatch({
+        type: Api.ActionType.CLOUD_BILLING_CHECK_V1_PENDING_UPGRADE,
+        payload: {
+          stripeCustomerId: props.core.v1UpgradeLoaded.stripeCustomerId,
+        },
+      });
+    }
+  }, [props.core.v1UpgradeLoaded?.stripeCustomerId]);
 
   useLayoutEffect(() => {
     if (existingAccountId) {
@@ -309,15 +322,18 @@ export const V1Upgrade: Component = (props) => {
                 importServers: true,
                 importEnvParentIds: appIds,
                 ssoEnabled,
-                billingInterval: existingAccountId
-                  ? undefined
-                  : billingInterval,
-                newProductId: existingAccountId
-                  ? undefined
-                  : selectedProduct?.id,
-                freeTier: existingAccountId
-                  ? undefined
-                  : chosenProductId == "free",
+                billingInterval:
+                  existingAccountId || props.core.hasV1PendingUpgrade === true
+                    ? undefined
+                    : billingInterval,
+                newProductId:
+                  existingAccountId || props.core.hasV1PendingUpgrade === true
+                    ? undefined
+                    : selectedProduct?.id,
+                freeTier:
+                  existingAccountId || props.core.hasV1PendingUpgrade === true
+                    ? undefined
+                    : chosenProductId == "free",
               },
       },
       undefined,
@@ -496,6 +512,7 @@ export const V1Upgrade: Component = (props) => {
 
   const err =
     props.core.loadCloudProductsError ??
+    props.core.checkV1PendingUpgradeError ??
     props.core.v1UpgradeError ??
     props.ui.importStatus?.importOrgError ??
     props.core.importOrgError;
@@ -694,6 +711,10 @@ export const V1Upgrade: Component = (props) => {
   );
 
   const billingSection = () => {
+    if (props.core.hasV1PendingUpgrade === true) {
+      return "";
+    }
+
     if (props.core.v1UpgradeLoaded!.signedPresetBilling) {
       return "";
     }
@@ -949,6 +970,8 @@ export const V1Upgrade: Component = (props) => {
     upgrading ||
     awaitingV1Complete ||
     !props.core.cloudProducts ||
+    (typeof props.core.hasV1PendingUpgrade == "undefined" &&
+      !upgradeComplete) ||
     !validAccountIds
   ) {
     content = upgradeStatus;
@@ -960,6 +983,7 @@ export const V1Upgrade: Component = (props) => {
       props.core.v1UpgradeError ||
       (props.ui.importStatus?.importOrgError ?? props.core.importOrgError) ||
       props.core.loadCloudProductsError ||
+      props.core.checkV1PendingUpgradeError ||
       canceledUpgrade
     ) {
       content = upgradeError;

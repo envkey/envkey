@@ -422,9 +422,17 @@ const clientParams: Client.ClientParams<"app"> = {
         console.log(new Date().toISOString(), "Root - upgrade complete");
         setUpgradeDownloaded(true);
       });
+
+      window.electron.registerLostCoreHandler(() => {
+        setIsStartingCore(true);
+      });
+
+      window.electron.registerStartedCoreHandler(() => {
+        setIsStartingCore(false);
+      });
     }, []);
 
-    if (coreState) {
+    if (coreState && !isStartingCore) {
       const props: ComponentBaseProps = {
         core: coreState,
         ui: uiState,

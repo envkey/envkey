@@ -118,7 +118,7 @@ export const InvoiceSchema = z
     productId: z.string(),
     productName: z.string(),
     priceId: z.string(),
-    subscriptionId: z.string(),
+    subscriptionId: z.string().optional(),
     stripeId: z.string(),
     stripeChargeId: z.string().optional(),
     amountDue: z.number(),

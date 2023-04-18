@@ -5,6 +5,7 @@ import * as g from "@core/lib/graph";
 import { updatePaymentSource } from "@ui_lib/billing";
 import { logAndAlertError } from "@ui_lib/errors";
 import { SmallLoader } from "@images";
+import { capitalize } from "@core/lib/utils/string";
 
 export const PaymentMethod: OrgComponent = (props) => {
   const { graph, graphUpdatedAt } = props.core;
@@ -62,7 +63,9 @@ export const PaymentMethod: OrgComponent = (props) => {
       </h3>
 
       <p>
-        <strong>{paymentSource.brand ?? "Unknown"} </strong>
+        <strong>
+          {paymentSource.brand ? capitalize(paymentSource.brand) : "Unknown"}{" "}
+        </strong>
         <span>
           xxxx xxxx xxxx <strong>{paymentSource.last4 ?? "????"}</strong>
         </span>

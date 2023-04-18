@@ -155,3 +155,17 @@ clientAction<Api.Action.RequestActions["CloudBillingLoadProducts"]>({
     draft.cloudPrices = prices;
   },
 });
+
+clientAction<Api.Action.RequestActions["CloudBillingCheckV1PendingUpgrade"]>({
+  type: "apiRequestAction",
+  actionType: Api.ActionType.CLOUD_BILLING_CHECK_V1_PENDING_UPGRADE,
+  loggableType: "hostAction",
+  authenticated: undefined,
+  ...statusProducers(
+    "isCheckingV1PendingUpgrade",
+    "checkV1PendingUpgradeError"
+  ),
+  successStateProducer: (draft, { payload: { hasPendingUpgrade } }) => {
+    draft.hasV1PendingUpgrade = hasPendingUpgrade;
+  },
+});

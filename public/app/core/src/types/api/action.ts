@@ -104,6 +104,14 @@ export namespace Action {
       },
       Net.ApiParamTypes["CloudBillingLoadProducts"]
     >;
+
+    CloudBillingCheckV1PendingUpgrade: RequestActionType<
+      ActionType.CLOUD_BILLING_CHECK_V1_PENDING_UPGRADE,
+      {
+        loggableType: "hostAction";
+      },
+      Net.ApiParamTypes["CloudBillingCheckV1PendingUpgrade"]
+    >;
   };
 
   export type AuthActions = {
