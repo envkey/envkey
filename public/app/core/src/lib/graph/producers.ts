@@ -16,6 +16,7 @@ import {
   getDeleteEnvironmentAssociations,
   getDeleteKeyableParentAssociations,
   getEnvironmentsByEnvParentId,
+  getNumActiveOrInvitedUsers,
 } from ".";
 import * as R from "ramda";
 import { pickDefined } from "../utils/object";
@@ -144,6 +145,15 @@ export const getDeleteAppProducer =
         );
 
       getDeleteGraphObjectsProducer(toDeleteIds, now)(graphDraft);
+
+      if (toDeleteIds.length > 0) {
+        const org = getOrg(graphDraft) as Draft<Model.Org>;
+        org.activeUserOrInviteCount = getNumActiveOrInvitedUsers(
+          graphDraft,
+          now
+        );
+        org.updatedAt = now;
+      }
     },
   deleteExpiredAuthObjects = <T extends Graph.Graph>(graph: T, now: number) =>
     produce(graph, getDeleteExpiredAuthObjectsProducer<T>(graph, now)),

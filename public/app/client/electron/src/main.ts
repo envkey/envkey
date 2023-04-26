@@ -14,7 +14,7 @@ import {
 } from "./app_upgrades";
 import { startup } from "./startup";
 import { handleUILogger } from "./ui_logger";
-import { execErrorReport } from "./report_error";
+import { execErrorReport, showErrorReportDialogSync } from "./report_error";
 
 // allows for self-signed certs on TLS requests in development
 if (process.env.NODE_ENV != "production") {
@@ -69,6 +69,10 @@ app.on("ready", () => {
       execErrorReport(params);
     }
   );
+
+  ipcMain.on("report-error-dialog", (e, params: { msg: string }) => {
+    showErrorReportDialogSync(params.msg);
+  });
 
   createWindow();
 

@@ -100,7 +100,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         props.history.replace("/select-account");
       }
     }
-  }, [Boolean(auth), orgId, props.ui.accountId]);
+  }, [Boolean(auth), Boolean(auth?.token), orgId, props.ui.accountId]);
 
   // handle removed from org, org deleted, or token expired
   useLayoutEffect(() => {

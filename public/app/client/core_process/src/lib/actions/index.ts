@@ -39,13 +39,6 @@ export const postApiAction = async <
     );
   }
 
-  if (numRetry > 0) {
-    const retryBackoff = 2 ** (numRetry - 1);
-    if (retryBackoff > 0) {
-      await wait(retryBackoff);
-    }
-  }
-
   return got
     .post(actionUrl, {
       json: action,
@@ -77,17 +70,17 @@ export const postApiAction = async <
           (res.statusCode == 502 ||
             res.statusCode == 503 ||
             res.statusCode == 504) &&
-          numRetry < 6
+          numRetry < 2
         ) {
           if (process.env.LOG_REQUESTS) {
             log(
               `ERROR: ${action.type} (${hostUrl}) | ${res.statusCode} error | retrying`
             );
-
-            await wait((numRetry + 1) * 5000);
-
-            return postApiAction(action, hostUrlArg, ipOverride, numRetry + 1);
           }
+
+          await wait((numRetry + 1) * 1500);
+
+          return postApiAction(action, hostUrlArg, ipOverride, numRetry + 1);
         }
 
         try {

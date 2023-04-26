@@ -1,8 +1,8 @@
-version: 2.4.8
+version: 2.4.9
 files:
-  - url: EnvKey_Windows_Installer-2.4.8.exe
-    sha512: jaud3hViW2/gm+C1Pep80fC6+YNdSd65qYHtqH0OsQhQqGKsd1eLtYyszyTYb8Bxb5D2vEr1D/QrhugwFHEN+Q==
-    size: 91001992
-path: EnvKey_Windows_Installer-2.4.8.exe
-sha512: jaud3hViW2/gm+C1Pep80fC6+YNdSd65qYHtqH0OsQhQqGKsd1eLtYyszyTYb8Bxb5D2vEr1D/QrhugwFHEN+Q==
-releaseDate: '2023-04-18T17:53:35.991Z'
+  - url: EnvKey_Windows_Installer-2.4.9.exe
+    sha512: t7qP2it7vOsnpjyLQOUiLoY0bQ5mcojCcVzvyrWlUcV2YmZ3zghNZavswhjStQWcj8Y664Ruj674S4ZgXn7+fw==
+    size: 91003456
+path: EnvKey_Windows_Installer-2.4.9.exe
+sha512: t7qP2it7vOsnpjyLQOUiLoY0bQ5mcojCcVzvyrWlUcV2YmZ3zghNZavswhjStQWcj8Y664Ruj674S4ZgXn7+fw==
+releaseDate: '2023-04-26T00:52:23.495Z'

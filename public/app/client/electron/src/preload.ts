@@ -104,8 +104,12 @@ const exposeInterface: ElectronWindow["electron"] = {
     ipcRenderer.send("ui-logger", batch);
   },
 
-  reportError: (msg: string, userId: string, email: string) => {
+  reportError: (msg: string, userId?: string, email?: string) => {
     ipcRenderer.send("report-error", { msg, userId, email });
+  },
+
+  reportErrorDialog: (msg: string) => {
+    ipcRenderer.send("report-error-dialog", { msg });
   },
 
   registerLostCoreHandler: (handler) => {

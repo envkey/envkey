@@ -830,12 +830,12 @@ export const clientAction = <
           }
 
           if (params.type == "apiRequestAction") {
-            // store throttling error so we can notify user
             reducers.push(
               (
                 procState: Client.ProcState = Client.defaultProcState,
                 action: Client.ActionTypeWithContextMeta<Client.Action.EnvkeyAction>
               ) => {
+                // store throttling error so we can notify user
                 if (
                   action.meta?.clientId &&
                   procState.clientStates[action.meta.clientId] &&
@@ -855,6 +855,58 @@ export const clientAction = <
                         },
                       },
                     };
+                  }
+                }
+
+                // handle expired tokens
+                if (
+                  R.path(
+                    ["meta", "rootAction", "meta", "auth", "type"],
+                    action
+                  ) == "tokenAuthParams" &&
+                  action.type == params.actionType + "_FAILURE"
+                ) {
+                  const resAction = (<any>action) as {
+                    payload: Client.FetchError;
+                  };
+                  const payload = resAction.payload;
+
+                  if (
+                    typeof payload.error == "object" &&
+                    "code" in payload.error &&
+                    payload.error.code == 401
+                  ) {
+                    const accountId = action.meta!.accountIdOrCliKey!;
+
+                    log("reducer -- expired token", {
+                      "action.type": action.type,
+                      accountId,
+                    });
+
+                    return {
+                      ...procState,
+                      accountStates: {
+                        ...procState.accountStates,
+                        [accountId]: {
+                          ...(procState.accountStates[accountId] ?? {}),
+                          ...R.omit(
+                            [
+                              "pendingEnvUpdates",
+                              "pendingEnvsUpdatedAt",
+                              "pendingInvites",
+                            ],
+                            Client.defaultAccountState
+                          ),
+                        },
+                      },
+                      orgUserAccounts: {
+                        ...procState.orgUserAccounts,
+                        [accountId]: R.omit(
+                          ["token"],
+                          procState.orgUserAccounts[accountId] ?? {}
+                        ),
+                      },
+                    } as Client.ProcState;
                   }
                 }
 

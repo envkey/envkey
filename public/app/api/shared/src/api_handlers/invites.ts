@@ -39,7 +39,7 @@ apiAction<
   type: Api.ActionType.CREATE_INVITE,
   graphAction: true,
   authenticated: true,
-
+  shouldClearOrphanedLocals: true,
   graphAuthorizer: async (
     { payload },
     orgGraph,
@@ -281,7 +281,8 @@ apiAction<
       draft[user.id] = user;
 
       (draft[auth.org.id] as Api.Db.Org).deviceLikeCount += 1;
-      (draft[auth.org.id] as Api.Db.Org).activeUserOrInviteCount! += 1;
+      (draft[auth.org.id] as Api.Db.Org).activeUserOrInviteCount! +=
+        1 - activeOrgUsersWithEmail.length;
       (draft[auth.org.id] as Api.Db.Org).updatedAt = now;
 
       if (payload.appUserGrants) {

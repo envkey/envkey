@@ -557,27 +557,28 @@ clientAction<
       return;
     }
 
-    if (
-      typeof payload.error == "object" &&
-      "code" in payload.error &&
-      payload.error.code == 401
-    ) {
-      return {
-        ...draft,
-        ...R.omit(
-          ["pendingEnvUpdates", "pendingEnvsUpdatedAt", "pendingInvites"],
-          Client.defaultAccountState
-        ),
-        ...Client.defaultClientState,
-        orgUserAccounts: {
-          ...draft.orgUserAccounts,
-          [accountId]: R.omit(
-            ["token"],
-            draft.orgUserAccounts[accountId] ?? {}
-          ),
-        },
-      } as Client.State;
-    }
+    // Now dealt with in handler for all authenticated actions
+    // if (
+    //   typeof payload.error == "object" &&
+    //   "code" in payload.error &&
+    //   payload.error.code == 401
+    // ) {
+    //   return {
+    //     ...draft,
+    //     ...R.omit(
+    //       ["pendingEnvUpdates", "pendingEnvsUpdatedAt", "pendingInvites"],
+    //       Client.defaultAccountState
+    //     ),
+    //     ...Client.defaultClientState,
+    //     orgUserAccounts: {
+    //       ...draft.orgUserAccounts,
+    //       [accountId]: R.omit(
+    //         ["token"],
+    //         draft.orgUserAccounts[accountId] ?? {}
+    //       ),
+    //     },
+    //   } as Client.State;
+    // }
   },
   successStateProducer: (draft, { meta, payload }) => {
     if (payload.type == "notModified") {

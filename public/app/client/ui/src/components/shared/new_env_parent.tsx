@@ -219,11 +219,11 @@ export const getNewEnvParentComponent = (
           setCreatedId(created.id);
         }
       } else {
-        console.log(
-          `Error creating ${envParentType}`,
+        props.setUiState({ creatingEnvParent: false });
+        logAndAlertError(
+          `There was a problem creating the ${envParentType}.`,
           (res.resultAction as any)?.payload
         );
-        alert(`There was a problem creating the ${envParentType}.`);
       }
     };
 
