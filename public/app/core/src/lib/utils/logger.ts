@@ -110,8 +110,14 @@ const spaces = process.env.NODE_ENV === "production" ? 0 : 2;
 
 export type Logger = (msg: string, data?: object) => void;
 
-export const log: Logger = (msg: string, data?: object) =>
+export const log: Logger = (msg: string, data?: object) => {
+  if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    console.log(msg, data);
+    return;
+  }
+
   logWithLogger("stdout", spaces, msg, data);
+};
 
 export const logStderr: Logger = (msg: string, data?: object) =>
   logWithLogger("stderr", spaces, msg, data);

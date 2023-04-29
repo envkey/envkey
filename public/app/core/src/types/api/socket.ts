@@ -53,7 +53,7 @@ export type OrgSocketBroadcastFn = (
 
 export type EnvkeySocketBroadcastFn = (
   orgId: string,
-  generatedEnvkeyId: string
+  generatedEnvkeyIds: string[]
 ) => void;
 
 export interface SocketServer {

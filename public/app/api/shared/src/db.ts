@@ -1,50 +1,92 @@
 import { env } from "./env";
 import { Api } from "@core/types";
-import { createPool, PoolConnection } from "mysql2/promise";
+import {
+  createPool,
+  Pool,
+  PoolConnection,
+  ConnectionOptions,
+} from "mysql2/promise";
 import { log } from "@core/lib/utils/logger";
 import * as db_fns from "./db_fns";
 
 type SecondaryIndex = string;
 
-let dbCredentials:
-  | {
-      user: string;
-      password: string;
-    }
-  | undefined;
+let pool: Pool;
+let poolConfig: ConnectionOptions;
+let initalized = false;
 
-if (env.DATABASE_CREDENTIALS_JSON) {
-  try {
-    dbCredentials = JSON.parse(env.DATABASE_CREDENTIALS_JSON) as {
-      user: string;
-      password: string;
+export const getPoolConfig = () => poolConfig;
+
+export const initIfNeeded = (lambdaConfig?: ConnectionOptions) => {
+  log("Initializing DB pool");
+  if (initalized) {
+    log("DB pool already initialized");
+    return;
+  }
+  initalized = true;
+
+  if (lambdaConfig && env.AWS_LAMBDA_FUNCTION_NAME) {
+    log("Initializing DB pool for lambda");
+    poolConfig = {
+      ...lambdaConfig,
+      multipleStatements: true,
+      charset: "utf8mb4",
+      connectionLimit: 1,
     };
-  } catch (err) {
-    log("Failed reading DATABASE_CREDENTIALS_JSON from environment!", { err });
+    pool = createPool(poolConfig);
+    return;
+  }
+
+  let dbCredentials:
+    | {
+        user: string;
+        password: string;
+      }
+    | undefined;
+
+  if (env.DATABASE_CREDENTIALS_JSON) {
+    try {
+      dbCredentials = JSON.parse(env.DATABASE_CREDENTIALS_JSON) as {
+        user: string;
+        password: string;
+      };
+    } catch (err) {
+      log("Failed reading DATABASE_CREDENTIALS_JSON from environment!", {
+        err,
+      });
+      process.exit(1);
+    }
+  } else if (!env.DATABASE_URI) {
+    log("Either DATABASE_CREDENTIALS_JSON or DATABASE_URI required");
     process.exit(1);
   }
-} else if (!env.DATABASE_URI) {
-  log("Either DATABASE_CREDENTIALS_JSON or DATABASE_URI required");
-  process.exit(1);
-}
 
-export const poolConfig = {
-  ...(dbCredentials
-    ? {
-        ...dbCredentials,
-        host: env.DATABASE_HOST,
-        database: env.DATABASE_NAME,
-        port: env.DATABASE_PORT ? parseInt(env.DATABASE_PORT) : undefined,
-      }
-    : {
-        uri: env.DATABASE_URI!,
-      }),
-  multipleStatements: true,
-  charset: "utf8mb4",
-  connectionLimit: 100,
+  poolConfig = {
+    ...(dbCredentials
+      ? {
+          ...dbCredentials,
+          host: env.DATABASE_HOST,
+          database: env.DATABASE_NAME,
+          port: env.DATABASE_PORT ? parseInt(env.DATABASE_PORT) : undefined,
+        }
+      : {
+          uri: env.DATABASE_URI!,
+        }),
+    multipleStatements: true,
+    charset: "utf8mb4",
+    connectionLimit: 100,
+  };
+
+  pool = createPool(poolConfig);
 };
 
-export const pool = createPool(poolConfig);
+export const getPool = () => pool;
+
+// in AWS lambda, don't auto-init pool
+if (!env.AWS_LAMBDA_FUNCTION_NAME) {
+  initIfNeeded();
+  log("DB pool initialized");
+}
 
 export const getPoolConn = async () => db_fns.getPoolConn(pool),
   getNewTransactionConn = async () => db_fns.getNewTransactionConn(pool),

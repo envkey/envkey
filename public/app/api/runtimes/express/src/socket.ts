@@ -582,63 +582,67 @@ const start: Api.SocketServer["start"] = () => {
   },
   sendEnvkeyUpdate: Api.SocketServer["sendEnvkeyUpdate"] = async (
     orgId,
-    generatedEnvkeyId
+    generatedEnvkeyIds
   ) => {
-    const byConnectionId =
-      (envkeyConnections[orgId] ?? {})[generatedEnvkeyId] ?? {};
-    log("Dispatching envkey socket update", { generatedEnvkeyId });
     let connectionsPublishedTo = 0;
 
-    const getBatchInfoFn =
-      clusterFns?.getEnvkeyBatchInfo ?? getLocalEnvkeyBatchInfo;
-    const { totalConnections, indexByConnectionId } = await getBatchInfoFn(
-      orgId,
-      generatedEnvkeyId
-    );
+    for (let generatedEnvkeyId of generatedEnvkeyIds) {
+      const byConnectionId =
+        (envkeyConnections[orgId] ?? {})[generatedEnvkeyId] ?? {};
 
-    for (let connectionId in byConnectionId) {
-      const conn = byConnectionId[connectionId];
-      if (conn.readyState == WebSocket.OPEN) {
-        const msg = `${
-          indexByConnectionId[connectionId] ?? 0
-        }|${totalConnections}`;
+      const getBatchInfoFn =
+        clusterFns?.getEnvkeyBatchInfo ?? getLocalEnvkeyBatchInfo;
+      const { totalConnections, indexByConnectionId } = await getBatchInfoFn(
+        orgId,
+        generatedEnvkeyId
+      );
 
-        conn.send(msg, (err) => {
-          if (err) {
-            log("Error sending to socket. Closing...", {
-              orgId,
-              generatedEnvkeyId,
-              connectionId,
-              err,
-            });
-            clearEnvkeyConnectionSocket(
-              orgId,
-              generatedEnvkeyId,
-              connectionId,
-              true,
-              false
-            );
-          } else {
-            const connected = connectedByConnectionId[connectionId];
+      for (let connectionId in byConnectionId) {
+        const conn = byConnectionId[connectionId];
+        if (conn.readyState == WebSocket.OPEN) {
+          const msg = `${
+            indexByConnectionId[connectionId] ?? 0
+          }|${totalConnections}`;
 
-            if (connected) {
-              const { consumerIp } = connected;
+          log("Dispatching envkey socket update", { generatedEnvkeyId });
 
-              // bring to the front (for balancing logic)
-              connectedByConnectionId[connectionId] = {
+          conn.send(msg, (err) => {
+            if (err) {
+              log("Error sending to socket. Closing...", {
                 orgId,
                 generatedEnvkeyId,
-                socket: conn,
-                consumerIp,
-              };
+                connectionId,
+                err,
+              });
+              clearEnvkeyConnectionSocket(
+                orgId,
+                generatedEnvkeyId,
+                connectionId,
+                true,
+                false
+              );
+            } else {
+              const connected = connectedByConnectionId[connectionId];
+
+              if (connected) {
+                const { consumerIp } = connected;
+
+                // bring to the front (for balancing logic)
+                connectedByConnectionId[connectionId] = {
+                  orgId,
+                  generatedEnvkeyId,
+                  socket: conn,
+                  consumerIp,
+                };
+              }
             }
-          }
-        });
-        connectionsPublishedTo++;
+          });
+          connectionsPublishedTo++;
+        }
       }
     }
 
-    log("Dispatched client socket update", { orgId, connectionsPublishedTo });
+    log("Dispatched envkey socket update", { orgId, connectionsPublishedTo });
   },
   clearDeviceSocket: Api.SocketServer["clearDeviceSocket"] = async (
     orgId,

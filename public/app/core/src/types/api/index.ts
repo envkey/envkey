@@ -14,7 +14,6 @@ import * as Rbac from "../rbac";
 import mysql from "mysql2/promise";
 import { Billing } from "..";
 import { Model } from "..";
-
 import * as Socket from "./socket";
 import WebSocket from "ws";
 

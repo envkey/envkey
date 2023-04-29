@@ -206,12 +206,13 @@ apiAction<
 
     transactionItems.puts!.push(user, userIdByEmail, userIdByProviderUid);
 
-    const isV1UpgradeInvite = Boolean(
+    const isImporting = Boolean(
       auth.org.importedFromV1 &&
         auth.org.startedOrgImportAt &&
-        !auth.org.finishedOrgImportAt &&
-        payload.v1Token
+        !auth.org.finishedOrgImportAt
     );
+
+    const isV1UpgradeInvite = Boolean(isImporting && payload.v1Token);
 
     log("CREATE_INVITE", {
       orgId: auth.org.id,
@@ -336,7 +337,7 @@ apiAction<
       ));
 
     const resolveProductAndQuantityFn = getResolveProductAndQuantityFn();
-    if (resolveProductAndQuantityFn) {
+    if (resolveProductAndQuantityFn && !isImporting) {
       const productAndQuantityRes = await resolveProductAndQuantityFn(
         transactionConn,
         auth,

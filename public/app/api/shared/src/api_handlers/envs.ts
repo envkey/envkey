@@ -62,6 +62,7 @@ apiAction<
 
             const connectedGeneratedEnvkeys =
               getConnectedActiveGeneratedEnvkeys(orgGraph, environmentId);
+
             for (let { id } of connectedGeneratedEnvkeys) {
               updatedGeneratedEnvkeyIds.add(id);
             }

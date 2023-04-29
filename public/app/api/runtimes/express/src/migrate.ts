@@ -4,8 +4,8 @@ import { wait } from "@core/lib/utils/wait";
 require("knex/lib/dialects/mysql2");
 
 import { env } from "../../../shared/src/env";
-import Knex from "knex";
-import { poolConfig } from "../../../shared/src/db";
+import Knex, { StaticConnectionConfig } from "knex";
+import { getPoolConfig } from "../../../shared/src/db";
 import WebpackMigrationSource from "./webpack_migration_source";
 import DevMigrationSource from "./dev_migration_source";
 import { log, logStderr } from "@core/lib/utils/logger";
@@ -16,13 +16,19 @@ export const runMigrationsIfNeeded = async () => {
     return;
   }
 
+  const poolConfig = getPoolConfig();
+  log("DB migrations - got pool config - initializing knex");
+
   const knex = Knex({
     client: "mysql2",
-    connection: poolConfig,
+    connection: poolConfig as StaticConnectionConfig,
     acquireConnectionTimeout:
       // aurora mysql cluster can be paused, causing schema consistency issues
       process.env.NODE_ENV === "production" ? 120000 : 60000,
   });
+
+  log("DB migrations - initialized knex");
+
   try {
     let logs: string[];
     log("Waiting for DB...");

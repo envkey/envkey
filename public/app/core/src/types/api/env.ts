@@ -55,4 +55,7 @@ export type Env = {
   SMTP_TRANSPORT_JSON?: string;
 
   API_TARGET_RAM_UTILIZATION?: string;
+
+  // Set when running in AWS Lambda
+  AWS_LAMBDA_FUNCTION_NAME?: string;
 };

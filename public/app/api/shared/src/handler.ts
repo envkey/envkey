@@ -678,19 +678,13 @@ export const apiAction = <
           requestStart
         );
 
-        (async () => {
-          // give the database some time to release the transaction
-          // so that replication fetches committed results
-          await wait(1000);
-
-          replicationFn(
-            updatedOrgGraph[auth.org.id] as Api.Db.Org,
-            updatedOrgGraph,
-            actionStart
-          ).catch((err) => {
-            logStderr("Replication error", { err, orgId: auth.org.id });
-          });
-        })();
+        replicationFn(
+          updatedOrgGraph[auth.org.id] as Api.Db.Org,
+          updatedOrgGraph,
+          actionStart
+        ).catch((err) => {
+          logStderr("Replication error", { err, orgId: auth.org.id });
+        });
       }
 
       if (backgroundStatements.length > 0) {
@@ -1370,6 +1364,8 @@ const apiActions: {
       updatedOrgGraph = produce(updatedOrgGraph, (draft) => {
         for (let generatedEnvkeyId of updatedGeneratedEnvkeyIds!) {
           (draft[generatedEnvkeyId] as Api.Db.GeneratedEnvkey).blobsUpdatedAt =
+            actionStart;
+          (draft[generatedEnvkeyId] as Api.Db.GeneratedEnvkey).updatedAt =
             actionStart;
         }
       });
@@ -2198,8 +2194,9 @@ const apiActions: {
       handlerEnvkeyClearSockets.length > 0
     ) {
       setImmediate(() => {
-        handlerUpdatedGeneratedEnvkeyIds.forEach((generatedEnvkeyId) =>
-          socketServer!.sendEnvkeyUpdate(auth.org.id, generatedEnvkeyId)
+        socketServer!.sendEnvkeyUpdate(
+          auth.org.id,
+          handlerUpdatedGeneratedEnvkeyIds
         );
 
         handlerEnvkeyClearSockets.forEach(clearEnvkeySockets);
