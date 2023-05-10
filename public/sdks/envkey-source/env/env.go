@@ -177,7 +177,8 @@ func genLocalKey(orgId string, appId string, verboseOutput bool, localDevHost bo
 			err = json.Unmarshal(jsonBytes, &errorRes)
 
 			if err != nil {
-				return "", err
+
+				return "", errors.New("Error generating local key")
 			}
 
 			if strings.HasPrefix(errorRes.Error, "Authentication required") {

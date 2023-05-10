@@ -1,5 +1,5 @@
 import yargs from "yargs";
-import { setAutoMode } from "./lib/console_io";
+import { setAutoMode, isAutoMode } from "./lib/console_io";
 import { version } from "../package.json";
 
 export type Command = (y: yargs.Argv) => yargs.Argv;
@@ -71,6 +71,31 @@ export const init = () => {
     }
   }
 
+  const failFn = (msg?: string, err?: Error) => {
+    if (isAutoMode()) {
+      if (msg || err) {
+        console.log(JSON.stringify({ ok: false, message: msg || undefined }));
+      } else {
+        console.log(
+          JSON.stringify({
+            ok: false,
+            message: "Missing required arguments in auto mode",
+          })
+        );
+      }
+    } else {
+      yargs.showHelp();
+      if (msg) {
+        console.error(msg);
+      }
+      if (err) {
+        console.error(err);
+      }
+    }
+
+    process.exit(1);
+  };
+
   yargs
     .help()
     .alias({
@@ -78,10 +103,10 @@ export const init = () => {
     })
     .demandCommand()
     .recommendCommands()
-    .showHelpOnFail(true)
     .wrap(Math.min(yargs.terminalWidth(), 110))
     // prevents perpetual hang when partial commands like `accounts:notreal` are given,
     // instead will print "Unknown argument"
     .strict()
+    .fail(failFn)
     .parse();
 };

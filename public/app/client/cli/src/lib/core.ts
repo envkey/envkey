@@ -14,6 +14,7 @@ import { exit } from "./process";
 import { forceApplyPatch } from "@core/lib/utils/patch";
 import * as semver from "semver";
 import { version as cliVersion } from "../../package.json";
+import { isAutoMode } from "./console_io";
 
 const clientParams: Client.ClientParams<"cli"> = {
   clientName: "cli",
@@ -140,6 +141,12 @@ export const getState = () => state,
     if (lockOrUnlock) {
       return { state, auth: undefined as AuthType };
     } else if (state.locked) {
+      if (isAutoMode()) {
+        return exit(
+          1,
+          "EnvKey is locked. Please run `envkey unlock` then try again."
+        );
+      }
       state = await unlock();
     }
 

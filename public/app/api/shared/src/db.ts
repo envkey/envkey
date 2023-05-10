@@ -18,9 +18,13 @@ let initalized = false;
 export const getPoolConfig = () => poolConfig;
 
 export const initIfNeeded = (lambdaConfig?: ConnectionOptions) => {
-  log("Initializing DB pool");
+  if (process.env.NODE_ENV !== "test") {
+    log("Initializing DB pool");
+  }
   if (initalized) {
-    log("DB pool already initialized");
+    if (process.env.NODE_ENV !== "test") {
+      log("DB pool already initialized");
+    }
     return;
   }
   initalized = true;
@@ -85,7 +89,9 @@ export const getPool = () => pool;
 // in AWS lambda, don't auto-init pool
 if (!env.AWS_LAMBDA_FUNCTION_NAME) {
   initIfNeeded();
-  log("DB pool initialized");
+  if (process.env.NODE_ENV !== "test") {
+    log("DB pool initialized");
+  }
 }
 
 export const getPoolConn = async () => db_fns.getPoolConn(pool),

@@ -13,7 +13,6 @@ import {
   getDb,
   getNewTransactionConn,
   releaseTransaction,
-  pool,
 } from "@api_shared/db";
 import * as R from "ramda";
 import { getAuth, getEnvWithMeta } from "@core/lib/client";

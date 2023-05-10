@@ -733,6 +733,7 @@ const inviteUser = async (
       accessParams: Model.AccessParams = {
         orgRoleId: clientParams.user.orgRoleId,
         appUserGrants: clientParams.appUserGrants,
+        userGroupIds: clientParams.userGroupIds,
       },
       envParams = await encryptedKeyParamsForDeviceOrInvitee({
         state,
@@ -752,6 +753,7 @@ const inviteUser = async (
         user: clientParams.user,
         scim: clientParams.scim,
         appUserGrants: clientParams.appUserGrants,
+        userGroupIds: clientParams.userGroupIds,
         v1Token: clientParams.v1Token,
       },
       encryptionKey,

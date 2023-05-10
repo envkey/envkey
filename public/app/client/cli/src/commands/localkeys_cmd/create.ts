@@ -20,7 +20,7 @@ import {
   logAndExitIfActionFailed,
 } from "../../lib/args";
 import { Graph } from "@core/types/client/graph";
-import { autoModeOut, getPrompt } from "../../lib/console_io";
+import { autoModeOut, getPrompt, isAutoMode } from "../../lib/console_io";
 import {
   argIsEnvironment,
   tryApplyDetectedAppOverride,
@@ -68,6 +68,7 @@ export const handler = async (
     undefined,
     argv["app"]
   );
+
   let app: Model.App | undefined;
   let environmentNameArg: string | undefined = argv["environment"];
   let environmentName: string | undefined;
@@ -149,7 +150,9 @@ export const handler = async (
       state.graph,
       app.id,
       environmentNameArg,
-      argv["branch"]
+      argv["branch"],
+      true,
+      (graph, env) => authz.canCreateLocalKey(graph, auth.userId, env.id)
     );
   }
 
@@ -218,6 +221,13 @@ export const handler = async (
       R.propEq("environmentId", appEnv.id)
     ).length > 0;
   if (!keyName) {
+    if (isAutoMode()) {
+      return exit(
+        1,
+        "Must provide a key name in auto mode as the third positional argument after the app and environment."
+      );
+    }
+
     keyName = (
       await prompt<{ key_name: string }>({
         type: "input",

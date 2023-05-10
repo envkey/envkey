@@ -37,6 +37,7 @@ export const DeviceSettings: Component = (props) => {
       (requiresPassphrase && passphrase) ||
       (core.requiresPassphrase && !requiresPassphrase) ||
       (requiresLockout && !core.lockoutMs) ||
+      (core.lockoutMs && !requiresLockout) ||
       (requiresPassphrase &&
         requiresLockout &&
         lockoutMs &&

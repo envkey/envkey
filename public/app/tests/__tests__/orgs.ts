@@ -13,7 +13,7 @@ import {
   getDb,
   getNewTransactionConn,
   releaseTransaction,
-  pool,
+  getPool,
 } from "@api_shared/db";
 import * as R from "ramda";
 import { getAuth, getEnvWithMeta } from "@core/lib/client";
@@ -244,7 +244,7 @@ describe("orgs", () => {
           deviceId,
           blobType: "env",
         },
-        { transactionConnOrPool: pool }
+        { transactionConnOrPool: getPool() }
       ),
       getUserEncryptedKeys(
         {
@@ -253,7 +253,7 @@ describe("orgs", () => {
           deviceId: invitee1DeviceId,
           blobType: "env",
         },
-        { transactionConnOrPool: pool }
+        { transactionConnOrPool: getPool() }
       ),
       query({
         pkey: ["envkey", localGeneratedEnvkeyId].join("|"),
@@ -1123,7 +1123,7 @@ describe("orgs", () => {
     const pendingRecoveryKeyParams = state.generatedRecoveryKey!;
 
     let orgGraph = await getOrgGraph(orgId, {
-      transactionConnOrPool: pool,
+      transactionConnOrPool: getPool(),
     });
 
     const start = Date.now();
@@ -1235,7 +1235,7 @@ describe("orgs", () => {
 
     await envkeyFetch(serverEnvkeyIdPart, serverEncryptionKey);
 
-    orgGraph = await getOrgGraph(orgId, { transactionConnOrPool: pool });
+    orgGraph = await getOrgGraph(orgId, { transactionConnOrPool: getPool() });
     let generatedEnvkey = orgGraph[
       serverGeneratedEnvkeyId
     ] as Api.Db.GeneratedEnvkey;
@@ -1252,7 +1252,7 @@ describe("orgs", () => {
 
     await envkeyFetch(serverEnvkeyIdPart, serverEncryptionKey);
 
-    orgGraph = await getOrgGraph(orgId, { transactionConnOrPool: pool });
+    orgGraph = await getOrgGraph(orgId, { transactionConnOrPool: getPool() });
     generatedEnvkey = orgGraph[
       serverGeneratedEnvkeyId
     ] as Api.Db.GeneratedEnvkey;

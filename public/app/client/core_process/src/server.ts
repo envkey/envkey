@@ -8,7 +8,7 @@ import { dispatch, getActionParams } from "./handler";
 import { getState } from "./lib/state";
 import { Client, Crypto } from "@core/types";
 import fkill from "fkill";
-import { isAlive, stop } from "@core/lib/core_proc";
+import { stop } from "@core/lib/core_proc";
 import {
   hasDeviceKey,
   initDeviceKey,
@@ -61,6 +61,7 @@ let v1UpgradeInviteTokensById:
       }
     >
   | undefined;
+let mainStarted = false;
 
 export const start = async (
   port = 19047,
@@ -101,6 +102,16 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
     procStatusWorker.handleWorkerToMainMessage(workerToMainMessageHandler);
 
     await mainServer(port, wsport);
+    procStatusWorker.sendMainToWorkerMessage({ type: "mainStarted" });
+    if (reduxStore) {
+      await refreshSessions(
+        reduxStore.getState(),
+        localSocketUpdate,
+        undefined,
+        true
+      );
+      checkUpgradesAvailableLoop(reduxStore!, localSocketUpdate);
+    }
   },
   initWorker = (statusPort: number) => {
     initFileLogger("core");
@@ -251,13 +262,20 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
         }
       } else if (message.type == "resolveOrgSockets") {
         resolveOrgSockets(message.state, message.skipJitter);
+      } else if (message.type == "mainStarted") {
+        log("Worker received mainStarted msg. We're officially alive.");
+        mainStarted = true;
       }
     });
   },
   addAliveRoute = (app: Express) => {
     app.get("/alive", (req, res) => {
       if (cluster.isWorker) {
-        procStatusWorker.sendWorkerToMainMessage({ type: "clientAlive" });
+        if (mainStarted) {
+          procStatusWorker.sendWorkerToMainMessage({ type: "clientAlive" });
+        } else {
+          res.status(503).send("Service Unavailable");
+        }
       } else {
         clientAlive();
       }
@@ -724,15 +742,6 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
     await initKeyStore();
     await procHeartbeatLoop();
     await initSocketsAndTimers();
-    if (reduxStore) {
-      await refreshSessions(
-        reduxStore.getState(),
-        localSocketUpdate,
-        undefined,
-        true
-      );
-      checkUpgradesAvailableLoop(reduxStore!, localSocketUpdate);
-    }
   },
   clearTimers = () => {
     if (heartbeatTimeout) {
@@ -802,6 +811,21 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
     }
   },
   lockDevice = async () => {
+    const deviceKey = await getDeviceKey();
+    if (!deviceKey) {
+      throw new Error("Device key not found.");
+    }
+
+    if (!("key" in deviceKey)) {
+      log("Device already locked.");
+      return;
+    }
+
+    if (!("encryptedKey" in deviceKey)) {
+      log("server lockDevice - Can't lock device that has no passphrase set.");
+      return;
+    }
+
     clearStore();
     reduxStore = undefined;
     clearLockoutTimer();

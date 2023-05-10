@@ -686,6 +686,9 @@ namespace Client {
         type: "resolveOrgSockets";
         state: OrgSocketStateSlice;
         skipJitter?: boolean;
+      }
+    | {
+        type: "mainStarted";
       };
 
   export type WorkerToMainProcessMessage =

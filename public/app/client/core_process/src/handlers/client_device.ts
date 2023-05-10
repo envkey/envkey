@@ -78,6 +78,7 @@ clientAction<Client.Action.ClientActions["ClearDevicePassphrase"]>({
     }
 
     delete draft.requiresPassphrase;
+    delete draft.lockoutMs;
   },
   handler: async (state, action, context) => {
     const accountsRequiringPassphrase = (

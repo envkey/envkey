@@ -162,7 +162,7 @@ export const initKeyStore = async () => {
       locked = true;
       maybeLog("Device locked.");
     } else {
-      maybeLog("Can't lock device that has no passphrase set.");
+      maybeLog("keyStore - Can't lock device that has no passphrase set.");
     }
   },
   getCoreProcAuthToken = async () => {

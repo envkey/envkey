@@ -223,7 +223,7 @@ export const InviteForm: OrgComponent<{
           const fetchedCandidates = (
             (res.resultAction as any)
               .payload as Api.Net.ApiResultTypes["ListInvitableScimUsers"]
-          ).scimUserCandidates;
+          ).scimUserCandidates.filter((c) => c.active);
           if (fetchedCandidates.length > 0) {
             setScimCandidates(fetchedCandidates);
           }

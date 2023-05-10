@@ -31,14 +31,24 @@ import { BaseArgs } from "../types";
 export const findEnvironment = (
   graph: Graph.UserGraph,
   envParentId: string,
-  environmentArg: string
+  environmentArg: string,
+  checkRoleDefaultName?: boolean,
+  passingTest?: (graph: Graph.UserGraph, env: Model.Environment) => boolean
 ): Model.Environment | undefined => {
   const environments = getEnvironmentsByEnvParentId(graph)[envParentId] ?? [];
   return environments.find((env) => {
     const envName = getEnvironmentName(graph, env.id) as string;
     const role = graph[env.environmentRoleId] as Rbac.EnvironmentRole;
+
+    if (passingTest && !passingTest(graph, env)) {
+      return false;
+    }
+
     return (
       envName.toLowerCase() === environmentArg.toLowerCase() ||
+      (checkRoleDefaultName &&
+        !env.isSub &&
+        role.defaultName?.toLowerCase() == environmentArg.toLowerCase()) ||
       env.id === environmentArg ||
       role.id === environmentArg
     );

@@ -90,7 +90,6 @@ export const setAutoMode = (
   }
 
   if (_autoModeStatus) {
-    // changed to enabled
     disableConsole();
     overridePrompt(disablePromptsFunc);
   } else {

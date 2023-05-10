@@ -22,13 +22,19 @@ export const TeamAddMembers: OrgComponent<{ groupId: string }> = (props) => {
     );
     const { orgUsers } = g.graphTypes(graph);
 
-    const grantableUsers = orgUsers.filter(({ id, orgRoleId }) => {
-      if (memberIds.has(id)) {
-        return false;
+    const grantableUsers = orgUsers.filter(
+      ({ id, orgRoleId, deactivatedAt }) => {
+        if (deactivatedAt) {
+          return false;
+        }
+
+        if (memberIds.has(id)) {
+          return false;
+        }
+        const orgRole = graph[orgRoleId] as Rbac.OrgRole;
+        return !orgRole.autoAppRoleId;
       }
-      const orgRole = graph[orgRoleId] as Rbac.OrgRole;
-      return !orgRole.autoAppRoleId;
-    });
+    );
 
     return grantableUsers;
   }, [graphUpdatedAt, currentUserId, groupId]);

@@ -10,7 +10,7 @@ import Table from "cli-table3";
 import { spinner, stopSpinner } from "./spinner";
 import { wait } from "@core/lib/utils/wait";
 import util from "util";
-import { getPrompt } from "./console_io";
+import { getPrompt, isAutoMode } from "./console_io";
 import { detectApp } from "../app_detection";
 
 export const authenticate = async <
@@ -82,10 +82,20 @@ export const authenticate = async <
     } else if (accounts.length == 1) {
       auth = accounts[0];
     } else if (accounts.length > 1) {
+      if (isAutoMode()) {
+        return exit(
+          1,
+          "Multiple accounts found. Please specify an account with the --account flag."
+        );
+      }
+
       auth = await chooseAccount(state, false, false);
     }
 
-    if (!auth) {
+    if (
+      !auth ||
+      (auth.type == "clientUserAuth" && (!auth.token || !auth.privkey))
+    ) {
       return exit(
         1,
         chalk.bold("Authentication required."),

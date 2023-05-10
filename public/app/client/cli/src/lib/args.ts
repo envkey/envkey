@@ -24,6 +24,7 @@ import {
 } from "../app_detection";
 import { initCore } from "./core";
 import { BaseArgs } from "../types";
+import { truncateSync } from "fs";
 
 // enquirer doesn't export choice interface
 
@@ -559,11 +560,19 @@ export const findEnvironmentWithSubIfDefinedOrError = (
   graph: Graph.UserGraph,
   envParentId: string,
   envParentOrEnvName: string,
-  subEnvName: string | undefined
+  subEnvName: string | undefined,
+  checkRoleDefaultName?: boolean,
+  passingTest?: (graph: Graph.UserGraph, env: Model.Environment) => boolean
 ): string | undefined => {
   let environmentId: string | undefined;
   if (subEnvName) {
-    const parentEnv = findEnvironment(graph, envParentId, envParentOrEnvName);
+    const parentEnv = findEnvironment(
+      graph,
+      envParentId,
+      envParentOrEnvName,
+      checkRoleDefaultName,
+      passingTest
+    );
     if (!parentEnv) {
       return exit(1, chalk.red("Environment not found"));
     }
@@ -580,7 +589,13 @@ export const findEnvironmentWithSubIfDefinedOrError = (
     }
     environmentId = subEnv.id;
   } else {
-    const env = findEnvironment(graph, envParentId, envParentOrEnvName);
+    const env = findEnvironment(
+      graph,
+      envParentId,
+      envParentOrEnvName,
+      checkRoleDefaultName,
+      passingTest
+    );
     if (!env) {
       return exit(1, chalk.red("Environment not found"));
     }
