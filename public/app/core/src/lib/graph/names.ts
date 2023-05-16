@@ -12,7 +12,11 @@ export const getEnvironmentName = (
     return "subName" in environment ? environment.subName : role.name;
   } else {
     const [, localsUserId] = environmentId.split("|");
-    return getUserName(graph, localsUserId, true) + " Locals";
+    if (graph[localsUserId]) {
+      return getUserName(graph, localsUserId, true) + " Locals";
+    } else {
+      return "";
+    }
   }
 };
 

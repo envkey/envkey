@@ -100,6 +100,14 @@ export const getEnvironmentPendingConflicts = memoize(
       envParentIdsArg?: string[],
       environmentIdsArg?: string[]
     ) => {
+      const localsUserFilter = (localsUserId: string) => {
+        const localsUser = state.graph[localsUserId] as
+          | Model.OrgUser
+          | Model.CliUser
+          | undefined;
+        return localsUser && !localsUser.deactivatedAt;
+      };
+
       const allConflicts: {
         [envParentId: string]: {
           [environmentId: string]: Client.Env.PotentialConflict[];
@@ -138,7 +146,9 @@ export const getEnvironmentPendingConflicts = memoize(
                     state.graph,
                     [envParent.id, localsUserId].join("|")
                   ),
-                Object.keys(envParent.localsUpdatedAtByUserId)
+                Object.keys(envParent.localsUpdatedAtByUserId).filter(
+                  localsUserFilter
+                )
               );
             })
           )
@@ -163,7 +173,7 @@ export const getEnvironmentPendingConflicts = memoize(
                   state.graph,
                   [envParentId, localsUserId].join("|")
                 ),
-              Object.keys(localsUpdatedAtByUserId)
+              Object.keys(localsUpdatedAtByUserId).filter(localsUserFilter)
             )
           );
         }

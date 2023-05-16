@@ -393,6 +393,7 @@ export const getOrgGraph = async (
 
           // draft[pubkeyRevocationRequest.id] = pubkeyRevocationRequest;
         } else {
+          deletedUserOrInvite++;
           for (let orgUserDevice of orgUserDevices) {
             deletedDeviceLike++;
 
