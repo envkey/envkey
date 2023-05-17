@@ -14,37 +14,24 @@
 
 ## Easy integration
 
-```bash
-$ envkey-source -- any-shell-command
-# That's it! Your command runs with the latest environment variables.
-
-$ es -- any-shell-command
-# To type less, use the `es` alias.
-
-$ es -- ping '$DATABASE_URL'
-# You can reference EnvKey variables in your shell command by wrapping them in single quotes.
-
-$ es -w -- ./start-server
-# Your server automatically restarts when there's a change.
-
-$ es -w --rolling -- ./start-server
-# Avoid downtime with rolling reloads across all connected processes.
-
-$ es -r ./reload-env -- ./start-server
-# Run custom reload logic when there's a change.
-
-$ eval "$(es)"
-# Set environment variables in the current shell.
-
-$ echo $'\n\neval "$(es --hook bash)"\n' >> ~/.bash_profile
-# Auto-load the latest environment in any EnvKey-enabled directory.
-```
-
-Check out the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart) for more details.
+Check out the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart).
 
 The cross-platform [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) tool works with any language and offers the most integration options.
 
-That said, language-specific wrappers are also available for [Node.js](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/node), [Go](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/go), [Python](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/python), and [Ruby](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/ruby).
+Integrating with envkey-source is as easy as:
+
+```bash
+$ envkey-source -- any-shell-command
+# That's it! Your command runs with the latest environment variables.
+```
+
+Language-specific wrappers are also available for:
+
+- [Node.js](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/node)
+- [Python](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/python)
+- [Go](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/go)
+- [Ruby](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/ruby)
+- [PHP](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/php)
 
 ## Why EnvKey?
 
@@ -98,7 +85,7 @@ Please [post an issue](https://github.com/envkey/envkey/issues) if you encounter
 
 Email us: support@envkey.com
 
-Business plans include priority support.
+Paid plans include priority support.
 
 ## License
 
@@ -108,9 +95,7 @@ EnvKey's Cloud and Enterprise Self-Hosted products include commercially licensed
 
 ## Contributing
 
-Contributions to EnvKey are welcome, though we can't guarantee that we'll be able to accept or review every contribution.
-
-Before submitting a pull request, we suggest starting a discussion to get feedback and buy-in from the core team and community. This will greatly improve the chances that your PR will be reviewed and accepted.
+Contributions to EnvKey are welcome! Please feel free to start a discussion to share your ideas, and/or open a PR.
 
 ## Development
 

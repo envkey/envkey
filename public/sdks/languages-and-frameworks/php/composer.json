@@ -5,7 +5,14 @@
   "keywords": [
     "env",
     "dotenv",
-    "environment"
+    "environment variables",
+    "secrets",
+    "secrets management",
+    "configuration",
+    "configuration management",
+    "security", 
+    "encryption",
+    "end-to-end encryption"
   ],
   "license": "MIT",
   "authors": [
