@@ -69,7 +69,7 @@ def fetch_env(envkey_arg=None, cache_enabled=False, dot_env_path=None):
     res = subprocess.check_output(args, env=env).decode(encoding="utf-8").rstrip()
   except subprocess.CalledProcessError as err:
     print("envkey-source " + err.output.decode(encoding="utf-8"), file=sys.stderr)
-    raise ValueError("ENVKEY invalid. Couldn't load vars.")
+    raise ValueError("ENVKEY invalid. Couldn't load vars.") from None
 
   if res.startswith("error: "):
     raise ValueError("ENVKEY invalid. Couldn't load vars.")
