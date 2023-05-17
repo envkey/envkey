@@ -2,10 +2,6 @@
 
 Integrate [EnvKey](https://www.envkey.com) with your Node.js projects to keep api keys, credentials, and other configuration securely and automatically in sync for developers and servers.
 
-## envkey-source
-
-In EnvKey v2, using the [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) executable from the command line offers additional functionality, like automatic reloads, that aren't available to EnvKey's language-specific SDKs. It's also faster and a lot smaller in size. Consider using it instead of this library if it fits your use case.
-
 ## Installation
 
 ```bash
@@ -14,7 +10,7 @@ npm install 'envkey' --save
 
 ## Usage
 
-To load an EnvKey environment, follow the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart), but stop before integrating with envkey-source (which you won't be doing).
+If you haven't already, follow the the steps in the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart).
 
 Then at the entry point of your application:
 
@@ -122,13 +118,13 @@ If you're using **TypeScript**, typings for the `load` and `fetch` functionas ar
 
 Since EnvKey is for configuration in addition to secrets, it can be convenient to inject a portion of your EnvKey config into your client-side code. This should be done by allow-listing variables that are safe for the client (i.e. can be made public) and injecting them during your build process. EnvKey has a [webpack plugin](https://github.com/envkey/envkey/public/sdks/languages-and-framworks/webpack) to help you do it right.
 
-## envkey-source binaries
+## envkey-source
 
-If you look in the `ext` directory of this package, you'll find a number of `envkey-source` binaries for various platforms and architectures. These are output by the [envkey-source Go library](https://github.com/envkey/envkey/public/sdks/envkey-source). It contains EnvKey's core cross-platform fetching, decryption, verification, web of trust, redundancy, and caching logic, and can also be used directly.
+Using a language-specific library like this one is the easiest and fastest method of integrating with EnvKey. However, the [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) executable, which this library wraps, provides additional options and functionality when used directly from the command line. Features such as automatic reloads and change hooks are not available in EnvKey's language-specific SDKs. Furthermore, the envkey-source executable is considerably smaller in size. If you're comfortable with the command line, need additional flexibility, or want to maximize EnvKey's potential, consider using envkey-source directly.
 
 ## x509 error / ca-certificates
 
-On a stripped down OS like Alpine Linux, you may get an `x509: certificate signed by unknown authority` error when attempting to load your config. envkey-source tries to handle this by including its own set of trusted CAs via [gocertifi](https://github.com/certifi/gocertifi), but if you're getting this error anyway, you can fix it by ensuring that the `ca-certificates` dependency is installed. On Alpine you'll want to run:
+On a stripped down OS like Alpine Linux, you may get an `x509: certificate signed by unknown authority` error when attempting to load your config. You can fix it by ensuring that the `ca-certificates` dependency is installed. On Alpine you'll want to run:
 
 ```
 apk add --no-cache ca-certificates

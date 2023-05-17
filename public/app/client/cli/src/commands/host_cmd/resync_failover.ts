@@ -17,7 +17,7 @@ export const handler = async (
 
   if (!(auth.hostType == "self-hosted" && auth.deploymentTag)) {
     alwaysWriteError(
-      "This action is only available on EnvKey Business Self-Hosted hosts."
+      "This action is only available on EnvKey Enterprise Self-Hosted hosts."
     );
     return exit(1);
   }

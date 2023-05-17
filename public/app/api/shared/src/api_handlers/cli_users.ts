@@ -166,22 +166,6 @@ apiAction<
       now
     );
 
-    const resolveProductAndQuantityFn = getResolveProductAndQuantityFn();
-    if (resolveProductAndQuantityFn) {
-      const productAndQuantityRes = await resolveProductAndQuantityFn(
-        transactionConn,
-        auth,
-        updatedGraph,
-        "remove-user",
-        now
-      );
-      updatedGraph = productAndQuantityRes[0];
-      transactionItems = mergeObjectTransactionItems([
-        transactionItems,
-        productAndQuantityRes[1],
-      ]);
-    }
-
     const clearEnvkeySockets = (
       getLocalKeysByUserId(orgGraph)[userId] ?? []
     ).reduce((agg, { id: localKeyId }) => {

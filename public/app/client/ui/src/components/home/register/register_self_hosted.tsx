@@ -188,7 +188,7 @@ export const RegisterSelfHosted: Component = (props) => {
     <div>
       <p>
         Follow the steps below to create an AWS account and get it ready to host
-        EnvKey Business Self-Hosted:
+        EnvKey Enterprise Self-Hosted:
         <br />
         <br />
         <strong>
@@ -196,7 +196,7 @@ export const RegisterSelfHosted: Component = (props) => {
             {...props}
             to="https://docs-v2.envkey.com/docs/enterprise-self-hosted"
           >
-            Docs: Business Self-Hosted →
+            Docs: Enterprise Self-Hosted →
           </ExternalLink>
         </strong>
       </p>

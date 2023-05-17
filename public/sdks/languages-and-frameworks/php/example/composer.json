@@ -1,0 +1,21 @@
+{
+  "name": "envkey/envkey-example",
+  "description": "An example on how to use EnvKey with php.",
+  "license" : "MIT",
+  "authors" : [
+      {
+          "name": "EnvKey",
+          "email": "support@envkey.com",
+          "homepage": "https://envkey.com"
+      }
+  ],
+  "repositories": [
+    {
+        "type": "path",
+        "url": "../"
+    }
+  ],
+  "require": {
+    "envkey/envkey": "^2.3"
+  }
+}

@@ -1,0 +1,61 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "08bd0f9dc05d920291b34ab13df8b13b",
+    "packages": [
+        {
+            "name": "envkey/envkey",
+            "version": "2.3.0",
+            "dist": {
+                "type": "path",
+                "url": "..",
+                "reference": "a171fbcb2b9262740d76a70a49e1252bb14945ef"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^10.1"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/auto.php"
+                ]
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Envkey\\": "src/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "EnvKey",
+                    "email": "support@envkey.com",
+                    "homepage": "https://envkey.com"
+                }
+            ],
+            "description": "Keeps environment variables automatically in sync. Protects secrets with end-to-end encryption.",
+            "keywords": [
+                "dotenv",
+                "env",
+                "environment"
+            ],
+            "transport-options": {
+                "relative": true
+            }
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": [],
+    "plugin-api-version": "2.3.0"
+}

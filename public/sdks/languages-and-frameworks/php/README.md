@@ -1,46 +1,41 @@
-# envkey gem
+# envkey-php
 
-Integrate [EnvKey](https://www.envkey.com) with your Ruby or Ruby On Rails projects to keep api keys, credentials, and other configuration securely and automatically in sync for developers and servers.
+Integrate [EnvKey](https://www.envkey.com) with your PHP projects to keep API keys, credentials, and other configuration securely and automatically in sync for developers and servers.
+
+This repo is mirrored in two locations:
+
+- [A subdirectory of EnvKey's v2 monorepo](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/php).
+- [envkey-php package repo](https://github.com/envkey/envkey-php)
 
 ## Installation
 
-In your Gemfile:
-
-```ruby
-gem 'envkey'
+```bash
+$ composer require envkey/envkey-php
 ```
 
 ## Usage
 
 If you haven't already, follow the the steps in the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart).
 
-If you're using Rails, that's all you need to do. In plain Ruby, you need to require envkey at the entry point of your application.
+At the entry point of your application, be sure you're including the composer autoloader.
 
-```ruby
-require 'envkey'
+```php
+require_once 'vendor/autoload.php'; // Include the Composer autoloader
 ```
 
-Now all your EnvKey variables will be available on `ENV`.
+Now all your EnvKey variables will be available with `getenv('VARIABLE_NAME')`.
 
 ### Errors
 
-The gem will throw an error if an `ENVKEY` is missing or invalid.
+The package will throw an error if an `ENVKEY` is missing or invalid.
 
 ### Overriding Vars
 
-The envkey gem will not overwrite existing environment variables or additional variables set in the `.env` file you loaded your `ENVKEY` from. This can be convenient for customizing environments that otherwise share the same configuration. You can also use [branches or local overrides](https://docs-v2.envkey.com/docs/branches-and-local-overrides) for this purpose.
+This package will not overwrite existing environment variables or additional variables set in the `.env` file you loaded your `ENVKEY` from. This can be convenient for customizing environments that otherwise share the same configuration. You can also use [branches or local overrides](https://docs-v2.envkey.com/docs/branches-and-local-overrides) for this purpose.
 
 ### Working Offline
 
-The envkey gem caches your encrypted config in development so that you can still use it while offline. Your config will still be available (though possibly not up-to-date) the next time you lose your internet connection. If you do have a connection available, envkey will always load the latest config. Your cached encrypted config is stored in `$HOME/.envkey/cache`
-
-For caching purposes, the gem assumes you're in development mode if either `ENV["RAILS_ENV"]` or `ENV["RACK_ENV"]` is `"development"` or `"test"`.
-
-You can also turn on caching by setting a `ENVKEY_SHOULD_CACHE=1` environment variable when running your app (_not_ in your EnvKey config):
-
-```bash
-ENVKEY_SHOULD_CACHE=1 ruby your_app.rb
-```
+This package caches your encrypted config in RAM so that you can still use it while offline. Your config will still be available (though possibly not up-to-date) the next time you lose your internet connection. If you do have a connection available, envkey will always load the latest config.
 
 ## envkey-source
 

@@ -4,10 +4,6 @@ Integrate [EnvKey](https://www.envkey.com) with your Python projects to keep API
 
 Compatible with Python 2 and 3.
 
-## envkey-source
-
-In EnvKey v2, using the [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) executable from the command line offers additional functionality, like automatic reloads, that aren't available to EnvKey's language-specific SDKs. It's also faster and a lot smaller in size. Consider using it instead of this library if it fits your use case.
-
 ## Installation
 
 ```bash
@@ -16,7 +12,7 @@ $ pip install envkey
 
 ## Usage
 
-To load an EnvKey environment, follow the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart), but stop before integrating with envkey-source (which you won't be doing).
+If you haven't already, follow the the steps in the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart).
 
 Then at the entry point of your application:
 

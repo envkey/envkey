@@ -7,16 +7,6 @@ This repo is mirrored in two locations:
 - [A subdirectory of EnvKey's v2 monorepo](https://github.com/envkey/envkey/tree/main/public/sdks/languages-and-frameworks/go/envkeygo).
 - [envkeygo module repo](https://github.com/envkey/envkeygo)
 
-# v1
-
-For docs on the v1 version of this package, go to the [latest v1 tag of the module repo](https://github.com/envkey/envkeygo/tree/v1.2.5). Using v2 requires an EnvKey v2 organization (it won't work with ENVKEYs generated in a v1 org).
-
-[Here's a guide on migrating from v1 to v2.](https://docs-v2.envkey.com/docs/migrating-from-v1)
-
-## envkey-source
-
-In EnvKey v2, using the [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) executable from the command line offers additional functionality, like automatic reloads, that aren't available to EnvKey's language-specific SDKs. Consider using it instead of this library if it fits your use case.
-
 ## Installation
 
 ```bash
@@ -25,8 +15,7 @@ go get github.com/envkey/envkeygo/v2
 
 ## Usage
 
-To load an EnvKey environment, follow the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart), but stop before integrating with envkey-source (which you won't be doing).
-
+If you haven't already, follow the the steps in the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart).
 Now load your EnvKey configuration in `main.go`:
 
 ```go
@@ -54,9 +43,13 @@ To turn on caching, set a `ENVKEY_SHOULD_CACHE=1` environment variable when runn
 ENVKEY_SHOULD_CACHE=1 ./your-program
 ```
 
+## envkey-source
+
+Using a language-specific library like this one is the easiest and fastest method of integrating with EnvKey. However, the [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) executable, which this library wraps, provides additional options and functionality when used directly from the command line. Features such as automatic reloads and change hooks are not available in EnvKey's language-specific SDKs. If you're comfortable with the command line, need additional flexibility, or want to maximize EnvKey's potential, consider using envkey-source directly.
+
 ## x509 error / ca-certificates
 
-On a stripped down OS like Alpine Linux, you may get an `x509: certificate signed by unknown authority` error when envkeygo attempts to load your config. envkey-source (which envkeygo wraps) tries to handle this by including its own set of trusted CAs via [gocertifi](https://github.com/certifi/gocertifi), but if you're getting this error anyway, you can fix it by ensuring that the `ca-certificates` dependency is installed. On Alpine you'll want to run:
+On a stripped down OS like Alpine Linux, you may get an `x509: certificate signed by unknown authority` error when attempting to load your config. You can fix it by ensuring that the `ca-certificates` dependency is installed. On Alpine you'll want to run:
 
 ```
 apk add --no-cache ca-certificates
