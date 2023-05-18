@@ -25,6 +25,10 @@ require_once 'vendor/autoload.php'; // Include the Composer autoloader
 
 Now all your EnvKey variables will be available with `getenv('VARIABLE_NAME')`.
 
+```php
+$stripe = new \Stripe\StripeClient(getenv('STRIPE_SECRET_KEY'));
+```
+
 ### Errors
 
 The package will throw an error if an `ENVKEY` is missing or invalid.
@@ -33,9 +37,13 @@ The package will throw an error if an `ENVKEY` is missing or invalid.
 
 This package will not overwrite existing environment variables or additional variables set in the `.env` file you loaded your `ENVKEY` from. This can be convenient for customizing environments that otherwise share the same configuration. You can also use [branches or local overrides](https://docs-v2.envkey.com/docs/branches-and-local-overrides) for this purpose.
 
+### PHP Request Model / Latency
+
+Unlike other EnvKey language libraries that expect a long-running server process (as is the case in Node, Python, Rails, Go, etc.), this library is designed for PHP's model of short-lived per-request processes. Instead of loading config from an EnvKey host on every request, which would add signficant latency, this library caches your encrypted config in RAM in a background process and keeps it up to date. After the first load of EnvKey on a server, subsequent requests will load config from this cache, with effectively zero latency (less than 1 millisecond).
+
 ### Working Offline
 
-This package caches your encrypted config in RAM so that you can still use it while offline. Your config will still be available (though possibly not up-to-date) the next time you lose your internet connection. If you do have a connection available, envkey will always load the latest config.
+As mentioned in the previous seciton, this package caches your encrypted config in RAM. Your config will still be available (though possibly not up-to-date) if you lose your internet connection.
 
 ## envkey-source
 
