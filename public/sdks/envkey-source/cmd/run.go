@@ -37,7 +37,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	}
 
 	if daemonMode {
-		daemon.InlineStart(shouldCache)
+		daemon.InlineStart(shouldCache, memCache)
 		return
 	}
 
@@ -109,6 +109,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 		daemon.LaunchDetachedIfNeeded(daemon.DaemonOptions{
 			verboseOutput,
 			shouldCache,
+			memCache,
 		})
 		res, _, err = daemon.FetchMap(envkey, clientName, clientVersion, rollingReload, rollingPct, watchThrottle)
 
@@ -146,7 +147,7 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 
 	if !force {
 		for k, v := range overrides {
-			if k != "ENVKEY" {
+			if k != "ENVKEY" && os.Getenv(k) == "" {
 				res[k] = v
 			}
 		}

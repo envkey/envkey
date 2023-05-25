@@ -4,6 +4,7 @@ import { Model, Rbac } from "@core/types";
 import * as styles from "@styles";
 import * as g from "@core/lib/graph";
 import { SvgImage } from "@images";
+import { ExternalLink } from "../shared";
 
 export const AppLocalKeysOnboard: OrgComponent<{}, { appId: string }> = (
   props
@@ -40,6 +41,14 @@ export const AppLocalKeysOnboard: OrgComponent<{}, { appId: string }> = (
       <p>
         Local keys are tied to the <strong>device</strong> they're generated on.
         If a device is revoked, all its local keys will also be revoked.
+      </p>
+      <p>
+        <ExternalLink
+          {...props}
+          to="https://docs-v2.envkey.com/docs/connecting-with-local-development-envkeys"
+        >
+          Read more about when to use local keys →
+        </ExternalLink>
       </p>
     </div>
   );

@@ -29,66 +29,118 @@ type LocalKeyRes struct {
 	LocalKey string `json:"localKey"`
 }
 
-func GetEnvkey(verboseOutput bool, envFileOverride string, toStderr bool, localDevHost bool) (string, AppConfig, parser.EnvMap) {
+func GetEnvkey(verboseOutput bool, envFilePath string, toStderr bool, localDevHost bool) (string, AppConfig, parser.EnvMap) {
 	/*
-	* ENVKEY lookup order:
-	*		1 - ENVKEY environment variable is set
-	*		2 - .env file in current directory (or --env-file override)
-	*		3 - .envkey config file in current directory {appId: string, orgId: string}
-	*				+ file at ~/.envkey/apps/[appId].env (for local keys mainly)
-	*	  4 - .env file at ~/.env
-	 */
+			* ENVKEY lookup order:
+			*		1 - ENVKEY environment variable is set
+			*   2 - --env-file override is set
+			*		3 - A - .env file in current or parent directory
+			*
+		  *				-- OR --
+			*
+			*				B - .envkey config file in current or parent directory {appId: string, orgId: string}
+			*						+ file at ~/.envkey/apps/[appId].env (for local keys mainly)
+			*
+			*				Whichever is closer to current directory wins -- .env file takes precendence if both are
+			*		    same depth.
+			*	  4 - .env file at ~/.env
+	*/
+
+	// If .env file is found in current or parent directory but contains no ENVKEY,
+	// overrides will still be applied.
+	// Exception 1: environment variables set directly in the shell will still take precedence.
+	// Exception 2: if a .envkey file is found, won't look any higher that that in the directory tree for a .env file.
 
 	var envkey string
 	var appConfig AppConfig
-	var overrides parser.EnvMap
+	var envFileOverrides parser.EnvMap
+	var configDirOverrides parser.EnvMap
+	var envFileDepth uint8
+	var envkeyFileDepth uint8
+	var envkeyFileJsonBytes []byte
+	var err error
 
-	envkey = os.Getenv("ENVKEY")
+	preloadEnvkey := os.Getenv("ENVKEY")
 
-	if envkey != "" {
-		return envkey, appConfig, overrides
+	if envFilePath == "" {
+		envFileOverrides, envFileDepth, _ = ReadEnvFileFromCwdUpwards(verboseOutput)
+	} else {
+		envFileOverrides, err = godotenv.Read(envFilePath)
+		if err != nil {
+			utils.CheckError(errors.New("--env-file not found"), toStderr)
+		}
+
+		if preloadEnvkey != "" {
+			if verboseOutput {
+				fmt.Fprintln(os.Stderr, "using ENVKEY environment var")
+			}
+			return preloadEnvkey, appConfig, envFileOverrides
+		}
 	}
 
-	envFile := ".env"
-	if envFileOverride != "" {
-		envFile = envFileOverride
-	}
-	overrides, _ = godotenv.Read(envFile)
-	envkey = overrides["ENVKEY"]
+	overridesEnvkey := envFileOverrides["ENVKEY"]
 
-	if envkey == "" {
+	envkeyFileJsonBytes, envkeyFileDepth, _ = ReadFileFromCwdUpwards(".envkey", verboseOutput)
+	json.Unmarshal(envkeyFileJsonBytes, &appConfig)
+
+	useEnvOverridesForENVKEY := false
+	applyEnvOverrides := false
+
+	if envFilePath != "" || (envFileDepth < envkeyFileDepth && overridesEnvkey != "") {
+		useEnvOverridesForENVKEY = true
+		applyEnvOverrides = true
+	} else if envFileDepth > envkeyFileDepth || overridesEnvkey == "" {
+		useEnvOverridesForENVKEY = false
+		applyEnvOverrides = envFileDepth <= envkeyFileDepth
+	} else if envFileDepth == envkeyFileDepth {
+		useEnvOverridesForENVKEY = overridesEnvkey != ""
+		applyEnvOverrides = true
+	}
+
+	if useEnvOverridesForENVKEY {
 		if verboseOutput {
-			fmt.Fprintln(os.Stderr, "loading .envkey")
+			fmt.Fprintln(os.Stderr, "using ENVKEY from", strings.Repeat("../", int(envFileDepth))+".env")
 		}
 
-		jsonBytes, err := os.ReadFile(".envkey")
-
-		if err == nil {
-			if verboseOutput {
-				fmt.Fprintln(os.Stderr, string(jsonBytes))
-			}
-
-			err = json.Unmarshal(jsonBytes, &appConfig)
-			utils.CheckError(err, toStderr)
-
-			if verboseOutput {
-				fmt.Fprintln(os.Stderr, "loaded app config")
-			}
-
-			envkey, overrides, err = EnvkeyFromAppId(appConfig.OrgId, appConfig.AppId, verboseOutput, localDevHost)
-			utils.CheckError(err, toStderr)
+		envkey = overridesEnvkey
+	} else if preloadEnvkey != "" {
+		if verboseOutput {
+			fmt.Fprintln(os.Stderr, "using ENVKEY environment var")
 		}
+		envkey = preloadEnvkey
+	} else if appConfig != (AppConfig{}) {
+		if verboseOutput {
+			fmt.Fprintln(os.Stderr, "using app config file", strings.Repeat("../", int(envkeyFileDepth))+".envkey")
+		}
+
+		envkey, configDirOverrides, err = EnvkeyFromAppId(appConfig.OrgId, appConfig.AppId, verboseOutput, localDevHost)
+		utils.CheckError(err, toStderr)
 	}
 
-	if envkey == "" && envFileOverride == "" {
+	if envkey == "" && envFilePath == "" {
 		home, err := os.UserHomeDir()
 		if err == nil {
-			overrides, _ = godotenv.Read(filepath.Join(home, ".env"))
-			envkey = overrides["ENVKEY"]
+			if verboseOutput {
+				fmt.Fprintln(os.Stderr, "checking for $HOME/.env")
+			}
+			envFileOverrides, _ = godotenv.Read(filepath.Join(home, ".env"))
+			envkey = envFileOverrides["ENVKEY"]
+			applyEnvOverrides = true
 		}
 	}
 
-	return envkey, appConfig, overrides
+	// merge overrides
+	combinedOverrides := parser.EnvMap{}
+	for k, v := range configDirOverrides {
+		combinedOverrides[k] = v
+	}
+	if applyEnvOverrides {
+		for k, v := range envFileOverrides {
+			combinedOverrides[k] = v
+		}
+	}
+
+	return envkey, appConfig, combinedOverrides
 }
 
 func EnvkeyFromAppId(orgId string, appId string, verboseOutput bool, localDevHost bool) (string, parser.EnvMap, error) {
@@ -98,14 +150,25 @@ func EnvkeyFromAppId(orgId string, appId string, verboseOutput bool, localDevHos
 	}
 
 	if verboseOutput {
-		fmt.Fprintln(os.Stderr, "got app ENVKEY path:", path)
+		fmt.Fprintln(os.Stderr, "got app env path:", path)
 	}
 
-	overrides, _ := godotenv.Read(path)
+	overrides, err := godotenv.Read(path)
+
+	if err != nil {
+		if verboseOutput {
+			fmt.Fprintln(os.Stderr, "failed to load "+path+":", err)
+		}
+	}
+
+	if verboseOutput {
+		fmt.Fprintln(os.Stderr, "loaded "+path)
+	}
+
 	envkey := overrides["ENVKEY"]
 
 	if verboseOutput {
-		fmt.Fprintln(os.Stderr, "loaded ENVKEY: ", envkey)
+		fmt.Fprintln(os.Stderr, "loaded ENVKEY from "+path)
 	}
 
 	if envkey != "" {
@@ -269,4 +332,73 @@ func writeLocalKey(appId, envkey string) error {
 	body := []byte("ENVKEY=" + envkey)
 
 	return ioutil.WriteFile(path, body, 0600)
+}
+
+func ReadFileFromCwdUpwards(filename string, verboseOutput bool) ([]byte, uint8, error) {
+	cwd, err := os.Getwd()
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var depth uint8 = 0
+	for {
+		path := filepath.Join(cwd, filename)
+		fileInfo, err := os.Stat(path)
+
+		if err != nil && !os.IsNotExist(err) {
+			return nil, 0, err
+		}
+
+		if err == nil && !fileInfo.IsDir() {
+			file, err := os.Open(path)
+
+			if err == nil {
+				defer file.Close()
+
+				if verboseOutput {
+					fmt.Fprintln(os.Stderr, "found file "+filename+" at "+path)
+				}
+
+				res, err := ioutil.ReadAll(file)
+				return res, depth, err
+			}
+		}
+
+		if cwd == "/" {
+			return nil, 0, errors.New("File not found")
+		}
+
+		depth++
+		cwd = filepath.Dir(cwd)
+	}
+}
+
+func ReadEnvFileFromCwdUpwards(verboseOutput bool) (parser.EnvMap, uint8, error) {
+	cwd, err := os.Getwd()
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var depth uint8 = 0
+	for {
+		path := filepath.Join(cwd, ".env")
+		envMap, err := godotenv.Read(path)
+
+		if err == nil {
+			if verboseOutput {
+				fmt.Fprintln(os.Stderr, "found .env file at "+path)
+			}
+
+			return envMap, depth, nil
+		}
+
+		if cwd == "/" {
+			return nil, 0, errors.New("File not found")
+		}
+
+		depth++
+		cwd = filepath.Dir(cwd)
+	}
 }

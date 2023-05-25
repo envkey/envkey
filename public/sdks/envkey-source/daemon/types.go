@@ -24,6 +24,7 @@ type ListenChangeProps struct {
 type DaemonOptions struct {
 	VerboseOutput bool
 	ShouldCache   bool
+	MemCache      bool
 }
 
 type SocketAuth struct {

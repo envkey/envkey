@@ -335,7 +335,13 @@ func writeTCP(envkey string, message []byte) error {
 	mutex.Unlock()
 
 	if tcpServerConns == nil {
-		return errors.New("no TCP connections")
+		// if we are using --mem-cache / -m, we want to keep listening to the websocket for changes even if there are no TCP connections, so don't error
+		// otherwise we're in --watch mode, so return an error which will close the websocket and stop the daemon if no clients are connected
+		if memCache {
+			return nil
+		} else {
+			return errors.New("no TCP connections")
+		}
 	} else {
 		log.Printf("Sending message %s to %d TCP connections for %s", message, len(tcpServerConns), utils.IdPart(envkey))
 

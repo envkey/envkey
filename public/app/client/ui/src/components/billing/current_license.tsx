@@ -106,9 +106,7 @@ export const CurrentLicense: OrgComponent = (props) => {
       <div className="field">
         <label>
           {(subscription && currentProduct) ||
-          (license.hostType == "cloud" &&
-            !license.provisional &&
-            !org.customLicense)
+          (license.hostType == "cloud" && !org.customLicense)
             ? "Plan"
             : "Type"}
         </label>
@@ -118,11 +116,29 @@ export const CurrentLicense: OrgComponent = (props) => {
             : license.hostType == "cloud" && license.plan == "free"
             ? "Community Cloud"
             : [
-                capitalize(license.plan),
-                license.provisional ? " (provisional)" : "",
+                license.provisional
+                  ? (license.hostType == "cloud"
+                      ? "Business Cloud"
+                      : "Business Self-Hosted") + " - Free Trial"
+                  : capitalize(license.plan),
               ]}
         </span>
       </div>
+      {license.provisional ? (
+        <div className="field">
+          <label>Trial Days Remaining</label>
+          <span>
+            {Math.max(
+              0,
+              Math.ceil(
+                (license.expiresAt - props.ui.now) / (1000 * 60 * 60 * 24)
+              )
+            )}
+          </span>
+        </div>
+      ) : (
+        ""
+      )}
       {subscription && currentPrice ? (
         <div className="field">
           <label>Billing Period</label>

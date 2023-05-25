@@ -14,3 +14,6 @@ echo "Running envkey-python tests..."
 
 echo "Running envkey-ruby tests..."
 (cd ruby/pkg && rake)
+
+echo "Running envkey-php tests..."
+(cd php && ENVKEY_DISABLE_AUTOLOAD=1 vendor/bin/phpunit tests/EnvkeyTest.php)

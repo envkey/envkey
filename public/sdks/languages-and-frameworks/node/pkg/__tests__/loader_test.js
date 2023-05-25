@@ -196,6 +196,7 @@ test('it should raise an error with an invalid envkey from dotEnvFile - synchron
 });
 
 test('it should call callback with an err from dotEnvFile - async', (done) => {
+
   var loader = require("../loader.js");
   loader.load({ dotEnvFile: dotEnvTestInvalid }, (err, res) => {
     expect(err).not.toBeUndefined();
@@ -215,6 +216,7 @@ test('it should load and decrypt environment via fetch - synchronously with dotE
 });
 
 test('it should load and decrypt environment via fetch - asynchronously with dotEnvFile', (done) => {
+
   var loader = require("../loader.js");
   loader.fetch({ dotEnvFile: dotEnvTestValid }, (err, res) => {
     expect(err).toBeFalsy();

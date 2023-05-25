@@ -9,6 +9,7 @@ import humanize from "humanize-string";
 import * as ui from "@ui";
 import { SmallLoader, SvgImage } from "@images";
 import { logAndAlertError } from "@ui_lib/errors";
+import { ExternalLink } from "../shared";
 
 const getAppEnvkeysComponent = (
   keyableParentType: Model.KeyableParent["type"]
@@ -196,7 +197,13 @@ const getAppEnvkeysComponent = (
               <strong>.envkey</strong> file in its root directory. If your app
               is missing a <strong>.envkey</strong> file, you can add it by
               running the <code>envkey init</code> command in your app's root
-              directory.
+              directory.{" "}
+              <ExternalLink
+                {...props}
+                to="https://docs-v2.envkey.com/docs/connecting-with-local-development-envkeys"
+              >
+                Read more about when to use local keys →
+              </ExternalLink>
             </p>
           ) : (
             ""

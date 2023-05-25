@@ -50,6 +50,10 @@ func LaunchDetachedIfNeeded(opts DaemonOptions) error {
 			cmdArgs = append(cmdArgs, "--cache")
 		}
 
+		if opts.MemCache {
+			cmdArgs = append(cmdArgs, "--mem-cache")
+		}
+
 		if opts.VerboseOutput {
 			stderrLogger.Println(utils.FormatTerminal(" | executing "+name, nil))
 		}

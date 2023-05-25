@@ -249,13 +249,9 @@ apiAction<
     ] as Api.Db.RecoveryKey;
 
     if (
-      (auth.user.provider == "email" &&
-        (!payload.emailToken ||
-          !activeRecoveryKey.emailToken ||
-          sha256(payload.emailToken) !==
-            sha256(activeRecoveryKey.emailToken))) ||
-      (auth.user.provider != "email" &&
-        !activeRecoveryKey.externalAuthSessionVerifiedAt)
+      !payload.emailToken ||
+      !activeRecoveryKey.emailToken ||
+      sha256(payload.emailToken) !== sha256(activeRecoveryKey.emailToken)
     ) {
       throw new Api.ApiError("Not found", 404);
     }

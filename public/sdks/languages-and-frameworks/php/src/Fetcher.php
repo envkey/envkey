@@ -58,8 +58,9 @@ class Fetcher {
     $version = $composerData['version']; // Access the 'version' property
 
     $cmd = self::libPath().' --json --mem-cache --client-name envkey-php --client-version '.$version;
+    $res = rtrim(shell_exec($cmd));
 
-    return rtrim(shell_exec($cmd));
+    return $res;
   }
 }
 ?>

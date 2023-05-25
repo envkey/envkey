@@ -15,8 +15,9 @@ import (
 
 var mutex sync.Mutex
 var shouldCache bool
+var memCache bool
 
-func InlineStart(shouldCacheArg bool) {
+func InlineStart(shouldCacheArg bool, memCacheArg bool) {
 	shouldCache = shouldCacheArg
 
 	home, err := os.UserHomeDir()

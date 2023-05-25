@@ -1,24 +1,14 @@
 import { wait } from "@core/lib/utils/wait";
-import { ELECTRON_BIN_DIR } from "./cli_tools";
 import { log } from "@core/lib/utils/logger";
 import { isAlive, stop } from "@core/lib/core_proc";
 import { version as cliVersion } from "../../cli/package.json";
 import * as semver from "semver";
 import { spawn } from "child_process";
 import { app } from "electron";
-import { showErrorReportDialogSync } from "./report_error";
-import * as path from "path";
-import * as os from "os";
+import { BUNDLED_CLI_PATH } from "./platform";
 import fkill from "fkill";
 import { getWin } from "./main";
 
-const platform = os.platform();
-const isWindows = platform === "win32";
-
-const BUNDLED_CLI_PATH = path.resolve(
-  ELECTRON_BIN_DIR,
-  "envkey" + (isWindows ? ".exe" : "")
-);
 const CORE_START_TIMEOUT = 60000;
 const CHECK_ALIVE_INTERVAL = 2000;
 

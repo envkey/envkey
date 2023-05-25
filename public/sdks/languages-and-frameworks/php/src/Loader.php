@@ -12,7 +12,6 @@ class Loader {
   public static function load() {    
     try {
       $res = Fetcher::fetch();
-
       if (trim($res) === "") {
         self::throwKeyError();
       }

@@ -15,7 +15,8 @@ go get github.com/envkey/envkeygo/v2
 
 ## Usage
 
-If you haven't already, follow the the steps in the [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart).
+If you haven't already, download and install EnvKey from our [website](https://envkey.com), then create a new org. Next, follow the ~1 minute [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart) to init an app with a `.envkey` file (for connecting development) or generate a server `ENVKEY` (for connecting a server).
+
 Now load your EnvKey configuration in `main.go`:
 
 ```go

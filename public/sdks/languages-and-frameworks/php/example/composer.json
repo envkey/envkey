@@ -12,10 +12,10 @@
   "repositories": [
     {
         "type": "path",
-        "url": "../"
+        "url": "~/projects/envkey/v2/public/sdks/languages-and-frameworks/php"
     }
   ],
   "require": {
-    "envkey/envkey": "^2.3"
+    "envkey/envkey-php": "^2.3"
   }
 }

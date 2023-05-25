@@ -5,8 +5,8 @@ var path = require('path'),
     execFile = childProcess.execFile,
     execFileSync = childProcess.execFileSync
 
-var ENVKEY_SOURCE_VERSION = "2.3.0"
-var ENVKEY_VERSION = "2.3.2"
+var ENVKEY_SOURCE_VERSION = "2.4.0"
+var ENVKEY_VERSION = "2.4.0"
 
 function keyError(){
   return "ENVKEY invalid. Couldn't load vars."
@@ -141,6 +141,8 @@ function fetch(optsOrCb, maybeCb){
     execArgs.push("--env-file")
     execArgs.push(opts.dotEnvFile)
   }
+
+  // console.log("ENVKEY: Fetching vars from " + filePath + " with args: " + execArgs.join(" "));
 
   if (cb){
     execFile(filePath, execArgs, { env: process.env }, function(err, stdoutStr, stderrStr){

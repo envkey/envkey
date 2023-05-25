@@ -231,7 +231,13 @@ export const checkUpgrade = async (
         : undefined,
 
     cli:
-      hasCliUpgrade && currentCliVersion && nextCliVersion && cliNotes
+      // we no longer allow independent CLI upgrades as CLI is now bundled with UI,
+      // so CLI upgrade is only available if desktop upgrade is also available
+      hasDesktopUpgrade &&
+      hasCliUpgrade &&
+      currentCliVersion &&
+      nextCliVersion &&
+      cliNotes
         ? {
             nextVersion: nextCliVersion,
             currentVersion: currentCliVersion,
@@ -240,6 +246,9 @@ export const checkUpgrade = async (
         : undefined,
 
     envkeysource:
+      // we no longer allow independent envkey-source upgrades as envkey-source is now bundled with UI,
+      // so envkey-source upgrade is only available if desktop upgrade is also available
+      hasDesktopUpgrade &&
       hasEnvkeysourceUpgrade &&
       currentEnvkeysourceVersion &&
       nextEnvkeysourceVersion &&

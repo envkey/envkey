@@ -4,7 +4,7 @@ module Envkey::Fetch
 
   def self.fetch_env
     fetch_env_path = Envkey::Platform.fetch_env_path
-    `#{fetch_env_path} --json#{should_cache ? ' --cache' : ''} --client-name envkey-ruby --client-version #{Envkey::VERSION} 2>&1`
+    `#{fetch_env_path} --force --json#{should_cache ? ' --cache' : ''} --client-name envkey-ruby --client-version #{Envkey::VERSION} 2>&1`
   end
 
   def self.should_cache

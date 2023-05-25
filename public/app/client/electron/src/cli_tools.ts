@@ -12,45 +12,29 @@ import { dialog } from "electron";
 import * as sudoPrompt from "@vscode/sudo-prompt";
 import * as R from "ramda";
 import { version as cliVersion } from "../../cli/package.json";
-import * as semver from "semver";
-
-const arch = os.arch() == "arm64" ? "arm64" : "amd64";
-const platform = os.platform() as "win32" | "darwin" | "linux";
-const ext = platform == "win32" ? ".exe" : "";
-
-let platformIdentifier: string = platform;
-if (platform === "win32") {
-  platformIdentifier = "windows";
-}
-
-export const ELECTRON_BIN_DIR = path.join(
-  ...[
-    ...(process.env.BIN_PATH_FROM_ELECTRON_RESOURCES
-      ? [process.resourcesPath, process.env.BIN_PATH_FROM_ELECTRON_RESOURCES]
-      : [process.env.BIN_PATH!]),
-    ...({
-      win32: ["windows"],
-      darwin: ["mac", arch],
-      linux: ["linux"],
-    }[platform] ?? []),
-  ]
-);
+import {
+  ELECTRON_BIN_DIR,
+  BUNDLED_ENVKEYSOURCE_PATH,
+  platform,
+  ext,
+  platformIdentifier,
+} from "./platform";
 
 export const installMissingOrOutdatedCliTools = async () => {
   const [
     bundledCliInstalled,
     cliLatestInstalledRes,
     envkeySourceLatestInstalledRes,
+    bundledEnvkeysourceInstalled,
   ] = await Promise.all([
     isBundledCliInstalled(),
     isLatestCliInstalled(),
     isLatestEnvkeysourceInstalled(),
+    isBundledEnvkeysourceInstalled(),
   ]);
 
   // Installs the CLI and envkey-source on app start if
   // either is missing from the system or is outdated
-  // (or if only envkey-source v1 is there)
-  // Otherwise will be handled by upgrades
 
   let isUpgradingCli = false;
 
@@ -62,28 +46,7 @@ export const installMissingOrOutdatedCliTools = async () => {
   }
 
   const shouldInstallCli = !bundledCliInstalled;
-
-  const envkeySourceUpgradeRequiredPath = path.join(
-    os.homedir(),
-    ".envkey",
-    "envkey-source-upgrade-required"
-  );
-  const envkeySourceUpgradeRequiredVersion = await fsp
-    .readFile(envkeySourceUpgradeRequiredPath)
-    .catch(() => undefined)
-    .then((v) => v?.toString().trim());
-
-  const shouldInstallEnvkeysource =
-    envkeySourceLatestInstalledRes !== true &&
-    (envkeySourceLatestInstalledRes.currentVersion == false ||
-      envkeySourceLatestInstalledRes.currentVersion.startsWith("1.") ||
-      Boolean(
-        envkeySourceUpgradeRequiredVersion &&
-          semver.gt(
-            envkeySourceUpgradeRequiredVersion,
-            envkeySourceLatestInstalledRes.currentVersion
-          )
-      ));
+  const shouldInstallEnvkeysource = !bundledEnvkeysourceInstalled;
 
   log("installMissingOrOutdatedCliTools", {
     bundledCliInstalled,
@@ -91,6 +54,7 @@ export const installMissingOrOutdatedCliTools = async () => {
     cliVersion,
     isUpgradingCli,
     shouldInstallCli,
+    bundledEnvkeysourceInstalled,
     envkeySourceLatestInstalledRes,
     shouldInstallEnvkeysource,
   });
@@ -101,7 +65,7 @@ export const installMissingOrOutdatedCliTools = async () => {
     getWin()!.webContents.send("started-cli-tools-install");
 
     log(
-      "CLI or envkey-source not installed. Installation will be attempted in background now."
+      "CLI and/or envkey-source either not installed or not on latest version. Installation/update will be attempted in background now."
     );
 
     await installCliTools(
@@ -130,19 +94,6 @@ export const installMissingOrOutdatedCliTools = async () => {
             .catch((err) =>
               log("CLI failed to install shell autocompletion", { err })
             );
-        }
-
-        if (envkeySourceUpgradeRequiredVersion) {
-          fsp
-            .unlink(envkeySourceUpgradeRequiredPath)
-            .then(() => {
-              log("Removed envkey-source-upgrade-required file");
-            })
-            .catch((err) => {
-              log("Failed to remove envkey-source-upgrade-required file", {
-                err,
-              });
-            });
         }
       })
       .catch((err) => {
@@ -185,6 +136,29 @@ export const installCliTools = async (
 export const isBundledCliInstalled = async () => {
   const currentVersionRes = await getCurrentVersion("cli");
   return currentVersionRes === cliVersion;
+};
+
+export const isBundledEnvkeysourceInstalled = async () => {
+  const currentVersionRes = await getCurrentVersion("envkeysource");
+  const bundledEnvkeysourceVersion = await new Promise((resolve, reject) => {
+    exec(`"${BUNDLED_ENVKEYSOURCE_PATH}" --version`, (err, res) => {
+      if (err) {
+        log("Error getting bundled envkey-source version", { err });
+        resolve(false);
+      } else {
+        resolve(res?.trim() || false);
+      }
+    });
+  });
+
+  if (bundledEnvkeysourceVersion === false) {
+    return true;
+  }
+
+  return (
+    currentVersionRes !== false &&
+    currentVersionRes === bundledEnvkeysourceVersion
+  );
 };
 
 export const isLatestCliInstalled = () => isLatestInstalled("cli");
