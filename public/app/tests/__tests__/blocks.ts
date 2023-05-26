@@ -1756,4 +1756,84 @@ describe("blocks", () => {
       APP_SUB: "app-sub-val-updated",
     });
   });
+
+  // test("basic user set own block locals", async () => {
+  //   const [{ id: appId }, { id: blockId }] = [
+  //     await createApp(ownerId),
+  //     await createBlock(ownerId),
+  //   ];
+
+  //   let state = getState(ownerId);
+
+  //   const { orgRoles, appRoles } = graphTypes(state.graph);
+  //   const basicUserRole = R.indexBy(R.prop("name"), orgRoles)["Basic User"];
+  //   const appDevRole = R.indexBy(R.prop("name"), appRoles)["Developer"];
+
+  //   await dispatch<Client.Action.ClientActions["InviteUsers"]>(
+  //     {
+  //       type: Client.ActionType.INVITE_USERS,
+  //       payload: [
+  //         {
+  //           user: {
+  //             firstName: "Dev",
+  //             lastName: "User",
+  //             email: `success+dev-user-${getTestId()}@simulator.amazonses.com`,
+  //             provider: <const>"email",
+  //             uid: `success+dev-user-${getTestId()}@simulator.amazonses.com`,
+  //             orgRoleId: basicUserRole.id,
+  //           },
+  //           appUserGrants: [
+  //             {
+  //               appId,
+  //               appRoleId: appDevRole.id,
+  //             },
+  //           ],
+  //         },
+  //       ],
+  //     },
+  //     ownerId
+  //   );
+  //   state = getState(ownerId);
+  //   const devUserInviteParams = state.generatedInvites[0];
+
+  //   await connectBlocks(ownerId, [
+  //     {
+  //       appId,
+  //       blockId,
+  //       orderIndex: 0,
+  //     },
+  //   ]);
+
+  //   await acceptInvite(devUserInviteParams);
+
+  //   await dispatch(
+  //     {
+  //       type: Client.ActionType.GET_SESSION,
+  //     },
+  //     devUserInviteParams.user.id
+  //   );
+
+  //   dispatch(
+  //     {
+  //       type: Client.ActionType.CREATE_ENTRY,
+  //       payload: {
+  //         envParentId: blockId,
+  //         environmentId: [blockId, devUserInviteParams.user.id].join("|"),
+  //         entryKey: "BLOCK_1_LOCALS",
+  //         val: { val: "block-1-locals" },
+  //       },
+  //     },
+  //     devUserInviteParams.user.id
+  //   );
+
+  //   const res = await dispatch(
+  //     {
+  //       type: Client.ActionType.COMMIT_ENVS,
+  //       payload: { message: "commit message" },
+  //     },
+  //     devUserInviteParams.user.id
+  //   );
+
+  //   expect(res.success).toBeTrue();
+  // });
 });

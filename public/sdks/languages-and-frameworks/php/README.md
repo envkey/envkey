@@ -53,7 +53,7 @@ Using a language-specific library like this one is the easiest and fastest metho
 
 1. `ENVKEY` environment variable has highest precedence.
 
-2. If neither `ENVKEY` environment variable isn't set, the library searches for either a `.env`(with an `ENVKEY` set) or a `.envkey` file (JSON with `orgId` and `appId` set), starting in the current directory then checking recursively upwards. The file found at the lowest depth (i.e., closest to the current directory) is chosen. If both files are found at the same depth, the `.env` file takes precedence.
+2. If `ENVKEY` environment variable isn't set, check for either a `.env`(with an `ENVKEY` set) or a `.envkey` file (JSON with `orgId` and `appId` set), starting in the current directory then checking recursively upwards. The file found at the lowest depth (i.e., closest to the current directory) is chosen. If both files are found at the same depth, the `.env` file takes precedence.
 
 3. If an `.envkey` or `.env` file with an `ENVKEY` set in it still hasn't been found, check for`.env` with `ENVKEY` present at `~/.env`.
 
