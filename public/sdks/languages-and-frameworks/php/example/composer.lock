@@ -4,15 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "08bd0f9dc05d920291b34ab13df8b13b",
+    "content-hash": "36e7dba2b789d2d1394a03194c0cb136",
     "packages": [
         {
-            "name": "envkey/envkey",
-            "version": "2.3.0",
+            "name": "envkey/envkey-php",
+            "version": "2.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/envkey/envkey-php.git",
+                "reference": "9a840d75857f506440a70be98683c6c49f130080"
+            },
             "dist": {
-                "type": "path",
-                "url": "..",
-                "reference": "a171fbcb2b9262740d76a70a49e1252bb14945ef"
+                "type": "zip",
+                "url": "https://api.github.com/repos/envkey/envkey-php/zipball/9a840d75857f506440a70be98683c6c49f130080",
+                "reference": "9a840d75857f506440a70be98683c6c49f130080",
+                "shasum": ""
             },
             "require-dev": {
                 "phpunit/phpunit": "^10.1"
@@ -23,11 +29,7 @@
                     "src/auto.php"
                 ]
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "Envkey\\": "src/"
-                }
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -40,13 +42,22 @@
             ],
             "description": "Keeps environment variables automatically in sync. Protects secrets with end-to-end encryption.",
             "keywords": [
+                "configuration",
+                "configuration management",
                 "dotenv",
+                "encryption",
+                "end-to-end encryption",
                 "env",
-                "environment"
+                "environment variables",
+                "secrets",
+                "secrets management",
+                "security"
             ],
-            "transport-options": {
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/envkey/envkey-php/issues",
+                "source": "https://github.com/envkey/envkey-php/tree/2.4.0"
+            },
+            "time": "2023-05-26T00:07:11+00:00"
         }
     ],
     "packages-dev": [],
