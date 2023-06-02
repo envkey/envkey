@@ -24,6 +24,8 @@ var watchThrottle uint32
 var rollingReload bool
 var rollingPct uint8
 
+var resolveEnvkey bool
+
 var shellHook string
 var ignoreMissing bool
 var unset bool
@@ -87,6 +89,9 @@ func init() {
 
 	RootCmd.Flags().StringVar(&clientNameArg, "client-name", "", "Client name for logging when wrapped by another SDK")
 	RootCmd.Flags().StringVar(&clientVersionArg, "client-version", "", "Client version for logging when wrapped by another SDK")
+
+	RootCmd.Flags().BoolVar(&resolveEnvkey, "resolve-envkey", false, "resolve envkey to its value")
+	RootCmd.Flags().MarkHidden(("resolve-envkey"))
 
 	RootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "prints the version")
 }

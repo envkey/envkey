@@ -1,11 +1,11 @@
 var path = require('path'),
     os = require('os'),
-    fs = require('fs'),
     childProcess = require('child_process'),
     execFile = childProcess.execFile,
-    execFileSync = childProcess.execFileSync
+    execFileSync = childProcess.execFileSync,
+    net = require('net');
 
-var ENVKEY_SOURCE_VERSION = "2.4.0"
+var ENVKEY_SOURCE_VERSION = "2.4.1"
 var ENVKEY_VERSION = "2.4.0"
 
 function keyError(){
@@ -142,23 +142,100 @@ function fetch(optsOrCb, maybeCb){
     execArgs.push(opts.dotEnvFile)
   }
 
-  // console.log("ENVKEY: Fetching vars from " + filePath + " with args: " + execArgs.join(" "));
+  if (opts.memCache || opts.onChange){
+    execArgs.push("--mem-cache")
+  }
+
+  function connectAndListenTCP (envkey, initialEnv) {
+    // Create a unique ID for the connection -- just used for differentiating clients so
+    // doesn't need to be cryptographically secure
+    const connId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0,
+            v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+    const composite = [envkey, connId].join("|");
+
+    // Establish a TCP connection to the daemon
+    const client = new net.Socket();
+    client.connect(19410, '127.0.0.1', function() {
+      // Write the composite to the socket
+      client.write(composite + "\n");
+    });
+
+    // Listen for messages from the daemon
+    currentEnv = initialEnv;
+    client.on('data', function(data) {
+      const msg = data.toString().trim();
+
+      if (msg == "env_update"){
+        execFile(filePath, execArgs, { env: process.env }, function(err, stdoutStr, stderrStr){          
+          if (!err && stdoutStr.indexOf("error: ") != 0){
+            var json = JSON.parse(stdoutStr)
+            var previousEnv = currentEnv;
+            currentEnv = pickPermitted(json, opts)
+
+            var changedKeys = [];
+            for (var k in currentEnv){
+              if (currentEnv[k] != previousEnv[k]){
+                changedKeys.push(k);
+              }
+            }
+            for (var k in previousEnv){
+              if (typeof currentEnv[k] == "undefined"){
+                changedKeys.push(k);
+              }
+            }
+
+            opts.onChange(currentEnv, previousEnv, changedKeys);
+          }
+        }) 
+      }
+    });
+
+    // Handle errors
+    client.on('error', function(err) {
+      console.error("EnvKey: onChange watcher error--lost TCP connection to envkey-source daemon:" + err);
+    });
+
+  }
+  
+  function setupWatcherIfNeeded (initialEnv){
+    if (!opts.onChange){
+      return;
+    }
+    // resolve ENVKEY from envkey-source, then connect to envkey-source daemon via TCP and listen for updates      
+    execFile(filePath, ["--resolve-envkey"], { env: process.env, cwd: opts.cwd }, function(err, stdoutStr, stderrStr){
+      if (!err && stdoutStr){
+        const envkey = stdoutStr;
+        connectAndListenTCP(envkey, initialEnv)
+      } else {
+        console.error("EnvKey: error setting up onChange watcher--couldn't resolve ENVKEY: " + err)
+      }
+    })    
+  }
+  
 
   if (cb){
-    execFile(filePath, execArgs, { env: process.env }, function(err, stdoutStr, stderrStr){
+    execFile(filePath, execArgs, { env: process.env, cwd: opts.cwd }, function(err, stdoutStr, stderrStr){
+      
       if (err){
         cb(stderrStr.replace(/echo 'error: /g, "").replace(/'; false/g, ""))
       } else if (stdoutStr.indexOf("error: ") == 0){
         cb(stdoutStr)
       } else {
         var json = JSON.parse(stdoutStr)
-        cb(null, pickPermitted(json, opts))
+        var permitted = pickPermitted(json, opts)
+
+        cb(null, permitted)
+        setupWatcherIfNeeded(permitted)        
       }
+      
     })
 
   } else {
     try {
-      var res = execFileSync(filePath, execArgs, { env: process.env}).toString()
+      var res = execFileSync(filePath, execArgs, { env: process.env, cwd: opts.cwd}).toString()
 
       if(!res || !res.trim()){
         throwKeyError()
@@ -170,7 +247,11 @@ function fetch(optsOrCb, maybeCb){
         throwKeyError()
       }
 
-      return pickPermitted(json, opts)
+      var permitted = pickPermitted(json, opts)
+
+      setupWatcherIfNeeded(permitted)
+
+      return permitted
     } catch (e){
       if (e.stderr){
         const err = e.stdout.toString().replace(/echo 'error: /g, "").replace(/'; false/g, "")

@@ -6,6 +6,13 @@ export type Options = {
   permitted?: string[];
   shouldCache?: boolean;
   dotEnvFile?: string;
+  memCache?: boolean;
+  cwd?: string;
+  onChange?: (
+    updatedEnv: Record<string, string>,
+    previousEnv: Record<string, string>,
+    keysUpdated: string[]
+  ) => void;
 };
 
 export type Callback = (error: string, env: Record<string, string>) => void;

@@ -115,6 +115,8 @@ namespace Client {
     "go",
     "dotnet",
     "webpack",
+    "php",
+    "vscode",
   ];
 
   export const ClientParamsSchema = z.object({

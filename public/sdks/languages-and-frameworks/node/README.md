@@ -122,6 +122,16 @@ Since EnvKey is for configuration in addition to secrets, it can be convenient t
 
 Using a language-specific library like this one is the easiest and fastest method of integrating with EnvKey. That said, the [envkey-source](https://docs-v2.envkey.com/docs/envkey-source) executable, which this library wraps, provides additional options and functionality when used directly from the command line. If you need additional flexibility and it works for your use case, consider using envkey-source directly.
 
+## ENVKEY / .env file / .envkey file resolution order and precedence
+
+1. `ENVKEY` environment variable has highest precedence.
+
+2. If `ENVKEY` environment variable isn't set, check for either a `.env`(with an `ENVKEY` set) or a `.envkey` file (JSON with `orgId` and `appId` set), starting in the current directory then checking recursively upwards. The file found at the lowest depth (i.e., closest to the current directory) is chosen. If both files are found at the same depth, the `.env` file takes precedence.
+
+3. If an `.envkey` or `.env` file with an `ENVKEY` set in it still hasn't been found, check for`.env` with `ENVKEY` present at `~/.env`.
+
+4. If `.env` _without_ `ENVKEY` is found, overrides are still applied, unless an existing environment variable is already set, in which case that takes precedence. If an `.envkey` is found, no further lookup for `.env` above this location occurs.
+
 ## x509 error / ca-certificates
 
 On a stripped down OS like Alpine Linux, you may get an `x509: certificate signed by unknown authority` error when attempting to load your config. You can fix it by ensuring that the `ca-certificates` dependency is installed. On Alpine you'll want to run:

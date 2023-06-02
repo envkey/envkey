@@ -67,16 +67,27 @@ func run(cmd *cobra.Command, args []string, firstAttempt bool) {
 	var overrides parser.EnvMap
 	var err error
 	/*
-	* ENVKEY lookup order:
-	* 	1 - Argument passed via command line
-	*		2 - ENVKEY environment variable is set
-	*		3 - .env file in current directory
-	*		4 - .envkey config file in current directory {appId: string, orgId: string}
-	*				+ file at ~/.envkey/apps/[appId].env (for local keys mainly)
-	*	  5 - .env file at ~/.env
-	 */
+			* ENVKEY lookup order:
+			*		1 - ENVKEY environment variable is set
+			*   2 - --env-file override is set
+			*		3 - A - .env file in current or parent directory
+			*
+		  *				-- OR --
+			*
+			*				B - .envkey config file in current or parent directory {appId: string, orgId: string}
+			*						+ file at ~/.envkey/apps/[appId].env (for local keys mainly)
+			*
+			*				Whichever is closer to current directory wins -- .env file takes precendence if both are
+			*		    same depth.
+			*	  4 - .env file at ~/.env
+	*/
 
 	envkey, appConfig, overrides = env.GetEnvkey(verboseOutput, envFileOverride, execCmdArg != "", localDevHost)
+
+	if resolveEnvkey {
+		fmt.Print(envkey)
+		return
+	}
 
 	if envkey == "" {
 		if ignoreMissing {
