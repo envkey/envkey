@@ -4,7 +4,7 @@
 
 Instead of a typeless, error-prone mystery blob, make the environment a **first-class citizen of your IDE.**
 
-![envkey-vscode in action](envkey-vscode-quick.gif)
+![envkey-vscode in action](https://github.com/envkey/envkey/blob/main/public/sdks/tools-and-platforms/vscode/envkey-vscode/envkey-vscode-quick.gif)
 
 ## 🛡️ Simple, secure configuration and secrets management
 
@@ -16,7 +16,7 @@ envkey-vscode is a VS Code extension for [EnvKey](https://www.envkey.com), an **
 
 - Follow the ~1 minute [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart) to integrate your first app's development environment.
 
-- Install the envkey-vscode extension from the VSCode marketplace.
+- Install the [envkey-vscode extension](https://marketplace.visualstudio.com/items?itemName=EnvKey.envkey-vscode) from the VSCode marketplace.
 
 ## 🌟 Features
 
