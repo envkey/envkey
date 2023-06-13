@@ -3,6 +3,22 @@
   "displayName": "envkey-vscode",
   "description": "Autocomplete and type checking for environment variables across every language you work in.",
   "version": "2.5.0",
+  "publisher": "EnvKey",
+  "license": "MIT",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#fff",
+    "theme": "light"
+  },
+  "homepage": "https://envkey.com/integrations/vscode",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/envkey/envkey.git"
+  },
+  "bugs": {
+    "url": "https://github.com/envkey/envkey/issues",
+    "email": "support@envkey.com"
+  },
   "engines": {
     "vscode": "^1.78.0"
   },
@@ -10,6 +26,13 @@
     "Programming Languages",
     "Snippets",
     "Other"
+  ],
+  "keywords": [
+    "environment variables",
+    "secrets management",
+    "security",
+    "dotenv",
+    "encryption"
   ],
   "activationEvents": [
     "*"
