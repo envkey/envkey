@@ -1,8 +1,8 @@
 {
   "name": "envkey-vscode",
   "displayName": "envkey-vscode",
-  "description": "Auto-complete and type checking for environment variables across many languages when using EnvKey for end-to-end encrypted configuration and secrets management.",
-  "version": "2.4.0",
+  "description": "Autocomplete and type checking for environment variables across every language you work in.",
+  "version": "2.5.0",
   "engines": {
     "vscode": "^1.78.0"
   },
@@ -39,6 +39,6 @@
     "webpack-cli": "^5.0.2"
   },
   "dependencies": {
-    "envkey": "file:../../../languages-and-frameworks/node/pkg"
+    "envkey": "^2.5.0"
   }
 }

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { envsByFsPath } from "./lib/fetch";
-import { languages, LanguageConfig } from "./languages";
+import { regexes, RegexConfig } from "./lib/languages";
 import { getCompletionItemsProvider } from "./lib/completion";
 import { updateDiagnostics } from "./lib/diagnostics";
 
@@ -13,7 +13,7 @@ export const activate = (context: vscode.ExtensionContext) => {
 
   function registerProviderIfNeeded(
     language: string,
-    languageConfigs: LanguageConfig[]
+    languageConfigs: RegexConfig[]
   ) {
     if (languageToProvider[language]) {
       return;
@@ -36,6 +36,7 @@ export const activate = (context: vscode.ExtensionContext) => {
     if (!envsByFsPath[fsPath]) {
       envsByFsPath[fsPath] = {};
     }
+
     envsByFsPath[fsPath].onChange ??= () => {
       updateDiagnostics(diagnostics, editor);
     };
@@ -43,7 +44,7 @@ export const activate = (context: vscode.ExtensionContext) => {
 
   vscode.window.visibleTextEditors.forEach((editor) => {
     const document = editor.document;
-    const languageConfigs = languages[document.languageId];
+    const languageConfigs = regexes[document.languageId];
     if (languageConfigs) {
       registerProviderIfNeeded(document.languageId, languageConfigs);
       updateDiagnostics(diagnostics, editor);
@@ -56,7 +57,7 @@ export const activate = (context: vscode.ExtensionContext) => {
       return;
     }
     const document = editor.document;
-    const languageConfigs = languages[document.languageId];
+    const languageConfigs = regexes[document.languageId];
     if (languageConfigs) {
       registerProviderIfNeeded(document.languageId, languageConfigs);
       updateDiagnostics(diagnostics, editor);

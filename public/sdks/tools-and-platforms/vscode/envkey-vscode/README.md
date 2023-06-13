@@ -1,71 +1,61 @@
-# envkey README
+# envkey-vscode
 
-This is the README for your extension "envkey". After writing up a brief description, we recommend including the following sections.
+## ⚡️ Autocomplete and type checking for **environment variables** in 46 languages.
 
-## Features
+Instead of a typeless, error-prone mystery blob, make the environment a **first-class citizen of your IDE.**
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+![envkey-vscode in action](envkey-vscode-quick.gif)
 
-For example if there is an image subfolder under your extension project workspace:
+## 🛡️ Simple, secure configuration and secrets management
 
-\!\[feature X\]\(images/feature-x.png\)
+envkey-vscode is a VS Code extension for [EnvKey](https://www.envkey.com), an **open source**, **end-to-end encrypted** configuration and secrets manager. It keeps API keys, credentials, and other configuration securely and automatically in sync for developers and servers.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## 🚀 Get Started
 
-## Requirements
+- Download and install EnvKey from our [website](https://envkey.com), then create a new org.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Follow the ~1 minute [integration quickstart](https://docs-v2.envkey.com/docs/integration-quickstart) to integrate your first app's development environment.
 
-## Extension Settings
+- Install the envkey-vscode extension from the VSCode marketplace.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+## 🌟 Features
 
-For example:
+- 📝 **Autocomplete**: when you access environment variables in any one of 46 supported languages, all your EnvKey variables will be available to filter and select.
 
-This extension contributes the following settings:
+- 🔍 **Peek-on-hover**: a quick hover tells you the development value of a variable. No need to go check another file.
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- ✅ **Type checking**: if you reference an environment variable that hasn't been set, VSCode will warn you with an orange squiggly, helping you catch typos and prevent bugs.
 
-## Known Issues
+- 🔄 **Real-time updates**: when you or anyone on your team updates a development environment variable in EnvKey, that change will be reflected immediately in VSCode.
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- 🌐 **Support for 46 languages**: simplify and unify configuration management across languages, teams, and systems.
 
-## Release Notes
+- 🔒 **Secure and private**: real, no-nonsense, client-side end-to-end encryption with OS keychain integration. Avoid trusting secrets to servers, third parties, and web browsers.
 
-Users appreciate release notes as you update your extension.
+## 💻 Supported Languages
 
-### 1.0.0
+- Python, JavaScript, TypeScript, Ruby, PHP, Perl
 
-Initial release of ...
+- Java, Go, Rust, C, C++, C#, Lua, Zig, D
 
-### 1.0.1
+- Shell, Dockerfile, Docker Compose, Makefile, Powershell, AppleScript
 
-Fixed issue #.
+- R, Julia, SAS
 
-### 1.1.0
+- Scala, Clojure, Kotlin, Groovy, Swift, Dart, VB.NET
 
-Added features X, Y, and Z.
+- Elixir, Erlang, Haskell, Ocaml, F#, Prolog, Racket, Common Lisp, Scheme
 
----
+- Nim, Crystal, Ada, Delphi, Pascal, Fortran, VBA
 
-## Following extension guidelines
+## 📘 Further Reading
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+For more on EnvKey in general:
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+Read the [docs](https://docs-v2.envkey.com).
 
-## Working with Markdown
+Read the [security and cryptography overview](https://docs-v2.envkey.com/docs/security).
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+## ❓ Need help? Have questions, feedback, or ideas?
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Post an [issue](https://github.com/envkey/envkey/issues), start a [discussion](https://github.com/envkey/envkey/discussions), or email us: [support@envkey.com](mailto:support@envkey.com).

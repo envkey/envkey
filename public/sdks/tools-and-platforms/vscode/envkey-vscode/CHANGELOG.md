@@ -1,9 +1,7 @@
 # Change Log
 
-All notable changes to the "envkey" extension will be documented in this file.
+All notable changes to the **envkey-vscode** extension will be documented here.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
+## [2.5.0]
 
 - Initial release

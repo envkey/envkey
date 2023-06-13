@@ -6,7 +6,7 @@ var path = require('path'),
     net = require('net');
 
 var ENVKEY_SOURCE_VERSION = "2.4.1"
-var ENVKEY_VERSION = "2.4.0"
+var ENVKEY_VERSION = "2.5.0"
 
 function keyError(){
   return "ENVKEY invalid. Couldn't load vars."
@@ -169,7 +169,7 @@ function fetch(optsOrCb, maybeCb){
       const msg = data.toString().trim();
 
       if (msg == "env_update"){
-        execFile(filePath, execArgs, { env: process.env }, function(err, stdoutStr, stderrStr){          
+        execFile(filePath, execArgs, { env: process.env, cwd: opts.cwd }, function(err, stdoutStr, stderrStr){       
           if (!err && stdoutStr.indexOf("error: ") != 0){
             var json = JSON.parse(stdoutStr)
             var previousEnv = currentEnv;

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { getEnv } from "./fetch";
-import { languages } from "../languages";
+import { regexes } from "./languages";
 
 export const updateDiagnostics = async (
   diagnostics: vscode.DiagnosticCollection,
@@ -16,7 +16,7 @@ export const updateDiagnostics = async (
   const text = editor.document.getText();
   const languageId = editor.document.languageId;
 
-  const languageConfigs = languages[languageId];
+  const languageConfigs = regexes[languageId];
   if (!languageConfigs) {
     return;
   }
