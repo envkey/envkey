@@ -1,14 +1,16 @@
 # envkey-vscode
 
+Transform how you work with environment variables in code.
+
 ## ⚡️ Autocomplete and type checking for **environment variables** in 46 languages.
 
 Instead of a typeless, error-prone mystery blob, make the environment a **first-class citizen of your IDE.**
 
-![envkey-vscode in action](https://github.com/envkey/envkey/blob/main/public/sdks/tools-and-platforms/vscode/envkey-vscode/envkey-vscode-quick.gif)
+![envkey-vscode in action](https://raw.githubusercontent.com/envkey/envkey/main/public/sdks/tools-and-platforms/vscode/envkey-vscode/envkey-vscode-quick.gif)
 
 ## 🛡️ Simple, secure configuration and secrets management
 
-envkey-vscode is a VS Code extension for [EnvKey](https://www.envkey.com), an **open source**, **end-to-end encrypted** configuration and secrets manager. It keeps API keys, credentials, and other configuration securely and automatically in sync for developers and servers.
+envkey-vscode is a VS Code extension for [EnvKey](https://www.envkey.com), an **easy-to-use**, **open source**, **end-to-end encrypted** configuration and secrets manager. It keeps API keys, credentials, and other configuration securely and automatically in sync for developers and servers.
 
 ## 🚀 Get Started
 
