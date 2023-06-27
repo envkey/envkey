@@ -4,6 +4,7 @@ import "./init";
 import "./aliases";
 import "./accounts";
 import "./apps";
+import "./archives";
 import "./blocks";
 import "./envs";
 import "./branch";
