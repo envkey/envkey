@@ -157,19 +157,24 @@ export const checkUpgrade = async (
       envkeysourceLatestInstalledRes.currentVersion) ||
     undefined;
 
-  const hasCliUpgrade =
-    currentCliVersion && nextCliVersion && currentCliVersion != nextCliVersion;
-
-  const hasEnvkeysourceUpgrade =
-    currentEnvkeysourceVersion &&
-    nextEnvkeysourceVersion &&
-    currentEnvkeysourceVersion != nextEnvkeysourceVersion;
   const hasDesktopUpgrade =
     desktopRes?.updateInfo?.version &&
     desktopRes.updateInfo.version !== currentDesktopVersion;
 
   const nextDesktopVersion =
     hasDesktopUpgrade && desktopRes ? desktopRes.updateInfo.version : undefined;
+
+  const hasCliUpgrade =
+    hasDesktopUpgrade &&
+    currentCliVersion &&
+    nextCliVersion &&
+    currentCliVersion != nextCliVersion;
+
+  const hasEnvkeysourceUpgrade =
+    hasDesktopUpgrade &&
+    currentEnvkeysourceVersion &&
+    nextEnvkeysourceVersion &&
+    currentEnvkeysourceVersion != nextEnvkeysourceVersion;
 
   const hasAnyUpgrade =
     hasDesktopUpgrade || hasCliUpgrade || hasEnvkeysourceUpgrade;

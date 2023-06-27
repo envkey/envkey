@@ -1,8 +1,8 @@
-version: 2.4.11
+version: 2.4.12
 files:
-  - url: EnvKey_Windows_Installer-2.4.11.exe
-    sha512: t3+vsEPzEoT6E/YTZuQ00WD40WJfoiP+fXBN/b7T9btT+vPGUyCpwLoZOh1QKs8EnFbHH/F/zuLTxoPrlejGkw==
-    size: 91013064
-path: EnvKey_Windows_Installer-2.4.11.exe
-sha512: t3+vsEPzEoT6E/YTZuQ00WD40WJfoiP+fXBN/b7T9btT+vPGUyCpwLoZOh1QKs8EnFbHH/F/zuLTxoPrlejGkw==
-releaseDate: '2023-05-25T23:21:02.032Z'
+  - url: EnvKey_Windows_Installer-2.4.12.exe
+    sha512: Z6puTPNBCqUzYxs4eL5obaKtY1v5x+2M2ACgch0JZMI+5NFq4VzsoSrOfPWpXdpkL4erkGP0CSbezV4qFjudSg==
+    size: 90860720
+path: EnvKey_Windows_Installer-2.4.12.exe
+sha512: Z6puTPNBCqUzYxs4eL5obaKtY1v5x+2M2ACgch0JZMI+5NFq4VzsoSrOfPWpXdpkL4erkGP0CSbezV4qFjudSg==
+releaseDate: '2023-06-27T15:58:56.533Z'
