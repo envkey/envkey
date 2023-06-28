@@ -1,8 +1,17 @@
 export type RegexConfig = {
-  autoCompleteRegex: RegExp;
   diagnosticRegex: RegExp;
   triggerCharacters: string[];
-};
+  multiline?: boolean;
+  splitDiagnosticMatch?: RegExp;
+} & (
+  | {
+      autoCompleteRegex: RegExp;
+    }
+  | {
+      autoCompletePreRegex: RegExp;
+      autoCompletePostRegex: RegExp;
+    }
+);
 
 const jsTsConfig: RegexConfig[] = [
   {
@@ -14,6 +23,14 @@ const jsTsConfig: RegexConfig[] = [
     autoCompleteRegex: /process\.env\[['"]/g,
     diagnosticRegex: /process\.env\[['"](\w+?)['"]/g,
     triggerCharacters: ['"', "'"],
+  },
+  {
+    multiline: true,
+    autoCompletePreRegex: /({|{\s*\w+?\s*,)\s*/g,
+    autoCompletePostRegex: /}\s*=\s*process\.env/g,
+    diagnosticRegex: /{(.+?)}\s*=\s*process\.env/gs,
+    splitDiagnosticMatch: /,\s*/g,
+    triggerCharacters: ["{", ",", " ", "\n"],
   },
 ];
 

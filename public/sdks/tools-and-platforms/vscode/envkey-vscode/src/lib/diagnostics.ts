@@ -21,41 +21,48 @@ export const updateDiagnostics = async (
     return;
   }
 
-  for (const { diagnosticRegex } of languageConfigs) {
+  for (const { diagnosticRegex, splitDiagnosticMatch } of languageConfigs) {
     const matches = text.matchAll(diagnosticRegex);
 
     for (const match of matches) {
       if (typeof match.index !== "number") {
         continue;
       }
+
       const fullMatch = match[0];
-      const matchedVar = match[1];
+      const captured = match[1];
 
-      const startIndex = match.index + fullMatch.indexOf(matchedVar);
-      const endIndex = startIndex + matchedVar.length;
+      const vars = (
+        splitDiagnosticMatch ? captured.split(splitDiagnosticMatch) : [captured]
+      )
+        .map((s) => s.trim())
+        .filter(Boolean);
 
-      const startPos = editor.document.positionAt(startIndex);
-      const endPos = editor.document.positionAt(endIndex);
+      for (let s of vars) {
+        const startIndex = match.index + fullMatch.indexOf(s);
+        const endIndex = startIndex + s.length;
 
-      // Only create the diagnostic if the environment variable exists
-      if (typeof envVars[matchedVar] == "string") {
-        const diagnostic = new vscode.Diagnostic(
-          new vscode.Range(startPos, endPos),
-          `EnvKey variable | ${
-            envVars[matchedVar]
-              ? "string" + `\n\n${envVars[matchedVar]}`
-              : "empty string"
-          }`,
-          vscode.DiagnosticSeverity.Information
-        );
-        matched.push(diagnostic);
-      } else {
-        const diagnostic = new vscode.Diagnostic(
-          new vscode.Range(startPos, endPos),
-          `EnvKey: ${matchedVar} not set in current environment.`,
-          vscode.DiagnosticSeverity.Warning
-        );
-        missing.push(diagnostic);
+        const startPos = editor.document.positionAt(startIndex);
+        const endPos = editor.document.positionAt(endIndex);
+
+        // Only create the diagnostic if the environment variable exists
+        if (typeof envVars[s] == "string") {
+          const diagnostic = new vscode.Diagnostic(
+            new vscode.Range(startPos, endPos),
+            `EnvKey variable | ${
+              envVars[s] ? "string" + `\n\n${envVars[s]}` : "empty string"
+            }`,
+            vscode.DiagnosticSeverity.Information
+          );
+          matched.push(diagnostic);
+        } else {
+          const diagnostic = new vscode.Diagnostic(
+            new vscode.Range(startPos, endPos),
+            `EnvKey: ${s} not set in current environment.`,
+            vscode.DiagnosticSeverity.Warning
+          );
+          missing.push(diagnostic);
+        }
       }
     }
   }

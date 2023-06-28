@@ -98,10 +98,18 @@ function run() {
         // check that regexes exist and match program
         if (
           !regexConfigs.some((regexConfig) => {
-            const autoCompleteRegex = regexConfig.autoCompleteRegex;
+            const autoCompletePreRegex =
+              "autoCompleteRegex" in regexConfig
+                ? regexConfig.autoCompleteRegex
+                : regexConfig.autoCompletePreRegex;
+            const autoCompletePostRegex =
+              "autoCompletePostRegex" in regexConfig
+                ? regexConfig.autoCompletePostRegex
+                : null;
             const diagnosticRegex = regexConfig.diagnosticRegex;
             return (
-              autoCompleteRegex?.test(programConfig.program) ||
+              (autoCompletePreRegex?.test(programConfig.program) ||
+                autoCompletePostRegex?.test(programConfig.program)) &&
               diagnosticRegex?.test(programConfig.program)
             );
           })
