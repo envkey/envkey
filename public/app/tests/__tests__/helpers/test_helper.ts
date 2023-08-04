@@ -30,6 +30,8 @@ if (!hostUrl) {
 
 setApiHost(hostUrl);
 
+console.log("Running tests against hostUrl", hostUrl);
+
 // sanity check
 crossFetch("https://" + hostUrl).catch((err) => {
   console.error("Failed to fetch from hostUrl on test startup", hostUrl);

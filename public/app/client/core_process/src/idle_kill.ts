@@ -2,7 +2,7 @@ import { log } from "@core/lib/utils/logger";
 import { wait } from "@core/lib/utils/wait";
 
 const IDLE_KILL_INTERVAL = 1000 * 60 * 1; // 1 minute
-const IDLE_KILL_LIMIT = 1000 * 60 * 55; // 55 minutes
+const IDLE_KILL_LIMIT = 1000 * 60 * 60 * 24; // 24 hours
 const IDLE_KILL_DELAY = 1000 * 60 * 5; // 5 minutes
 
 let killIdleTimeout: NodeJS.Timeout | undefined;

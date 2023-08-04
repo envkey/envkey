@@ -358,48 +358,83 @@ clientAction<
       accountIdOrCliKey: apiPayload.invite.inviteeId,
     };
 
+    let invitePrivkey: Crypto.Privkey;
     try {
-      const invitePrivkey = await decryptPrivateKey({
+      invitePrivkey = await decryptPrivateKey({
         encryptedPrivkey: apiPayload.invite.encryptedPrivkey,
         encryptionKey,
       });
+    } catch (err) {
+      log("Invite decryption error", { err });
 
-      const [_, verifyTrustedRes] = await Promise.all([
-        verifyKeypair(apiPayload.invite.pubkey, invitePrivkey),
-        verifySignedTrustedRootPubkey(
-          apiRes.state,
-          apiPayload.invite.pubkey,
-          apiSuccessContext
-        ),
-      ]);
-      state = verifyTrustedRes.state;
-
-      const replacementsRes = await processRootPubkeyReplacementsIfNeeded(
-        state,
-        apiSuccessContext
-      );
-
-      if (replacementsRes && !replacementsRes.success) {
-        throw new Error("couldn't process root pubkey replacements");
-      } else if (replacementsRes) {
-        state = replacementsRes.state;
-      }
-
-      await dispatch(
+      return dispatchFailure(
         {
-          type: Client.ActionType.SET_CRYPTO_STATUS,
-          payload: {
-            processed: 0,
-            total:
-              Object.keys(apiPayload.envs.keys ?? {}).length +
-              Object.keys(apiPayload.changesets.keys ?? {}).length,
-            op: "decrypt",
-            dataType: "keys",
+          type: "clientError",
+          error: {
+            name: "InviteDecryptionError",
+            message: "Invite keypair decryption failed",
           },
         },
         context
       );
+    }
 
+    try {
+      const [_, verifyTrustedRes] = await Promise.all([
+        verifyKeypair(apiPayload.invite.pubkey, invitePrivkey).catch((err) => {
+          log("Error verifying keypair", { err });
+          throw err;
+        }),
+        verifySignedTrustedRootPubkey(
+          apiRes.state,
+          apiPayload.invite.pubkey,
+          apiSuccessContext
+        ).catch((err) => {
+          log("Error verifying signed trusted root pubkey", { err });
+          throw err;
+        }),
+      ]);
+      state = verifyTrustedRes.state;
+    } catch (err) {
+      return dispatchFailure(
+        {
+          type: "clientError",
+          error: {
+            name: "InviteVerificationError",
+            message: "Invite verification failed",
+          },
+        },
+        context
+      );
+    }
+
+    const replacementsRes = await processRootPubkeyReplacementsIfNeeded(
+      state,
+      apiSuccessContext
+    );
+
+    if (replacementsRes && !replacementsRes.success) {
+      throw new Error("couldn't process root pubkey replacements");
+    } else if (replacementsRes) {
+      state = replacementsRes.state;
+    }
+
+    await dispatch(
+      {
+        type: Client.ActionType.SET_CRYPTO_STATUS,
+        payload: {
+          processed: 0,
+          total:
+            Object.keys(apiPayload.envs.keys ?? {}).length +
+            Object.keys(apiPayload.changesets.keys ?? {}).length,
+          op: "decrypt",
+          dataType: "keys",
+        },
+      },
+      context
+    );
+
+    try {
       const [decryptedEnvs, decryptedChangesets] = await Promise.all([
         decryptEnvs(
           state,
@@ -408,7 +443,10 @@ clientAction<
           invitePrivkey,
           apiSuccessContext,
           true
-        ),
+        ).catch((err) => {
+          log("Error decrypting envs", { err });
+          throw err;
+        }),
         decryptChangesets(
           state,
           apiPayload.changesets.keys ?? {},
@@ -416,7 +454,10 @@ clientAction<
           invitePrivkey,
           apiSuccessContext,
           true
-        ),
+        ).catch((err) => {
+          log("Error decrypting changesets", { err });
+          throw err;
+        }),
       ]);
 
       await dispatch(
@@ -442,12 +483,16 @@ clientAction<
         apiSuccessContext
       );
     } catch (err) {
+      log("Error decrypting envs/changesets", { err });
       return dispatchFailure(
         {
           type: "clientError",
-          error: { name: err.name, message: err.message },
+          error: {
+            name: "InviteEnvsDecryptionError",
+            message: "Invite envs decryption failed",
+          },
         },
-        apiSuccessContext
+        context
       );
     }
   },
