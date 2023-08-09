@@ -77,11 +77,11 @@ apiAction<
     }
     if (
       env.NODE_ENV == "production" &&
-      !semver.gte(action.meta.client.clientVersion, "2.2.0")
+      !semver.gte(action.meta.client.clientVersion, "2.4.0")
     ) {
       log("client upgrade required", {
         clientVersion: action.meta.client.clientVersion ?? "",
-        requiresClientVersion: "2.2.0",
+        requiresClientVersion: "2.4.0",
       });
       throw new Api.ApiError("client upgrade required", 426);
     }
@@ -399,7 +399,7 @@ apiAction<
             : undefined,
         ...(env.IS_CLOUD ? { lifecycleEmailsEnabled: true } : {}),
 
-        envUpdateRequiresClientVersion: "2.2.0",
+        envUpdateRequiresClientVersion: "2.4.0",
         "upgradedCrypto-2.1.0": true,
         optimizeEmptyEnvs: true,
         importedFromV1: isV1Upgrade,
