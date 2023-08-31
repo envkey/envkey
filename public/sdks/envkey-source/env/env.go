@@ -365,7 +365,8 @@ func ReadFileFromCwdUpwards(filename string, verboseOutput bool) ([]byte, uint8,
 			}
 		}
 
-		if cwd == "/" {
+		parentDir := filepath.Dir(cwd)
+		if cwd == parentDir {
 			return nil, 0, errors.New("File not found")
 		}
 
@@ -394,11 +395,12 @@ func ReadEnvFileFromCwdUpwards(verboseOutput bool) (parser.EnvMap, uint8, error)
 			return envMap, depth, nil
 		}
 
-		if cwd == "/" {
+		parentDir := filepath.Dir(cwd)
+		if cwd == parentDir {
 			return nil, 0, errors.New("File not found")
 		}
 
 		depth++
-		cwd = filepath.Dir(cwd)
+		cwd = parentDir
 	}
 }

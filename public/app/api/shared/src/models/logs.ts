@@ -52,6 +52,7 @@ type LogActionParams = {
   ip: string;
   responseBytes: number;
   now: number;
+  failover?: boolean;
 };
 
 let limitLogsFn: Api.LimitLogsFn | undefined;
@@ -453,6 +454,7 @@ export const getLogTransactionStatement = ({
   transactionId,
   ip,
   responseBytes,
+  failover,
   now,
 }: LogActionParams): {
   logTransactionStatement?: Api.Db.SqlStatement;
@@ -478,6 +480,8 @@ export const getLogTransactionStatement = ({
     errorStatus: "errorStatus" in response ? response.errorStatus : undefined,
     errorReason: "errorReason" in response ? response.errorReason : undefined,
     clientName: action.meta.client?.clientName,
+    clientVersion: action.meta.client?.clientVersion,
+    failover,
     loggableType: action.meta.loggableType,
     createdAt: now,
     updatedAt: now,

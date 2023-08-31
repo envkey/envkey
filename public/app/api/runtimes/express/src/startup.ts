@@ -12,6 +12,7 @@ require("../../../shared/src/fetch_handlers");
 
 const app = express();
 const port = env.EXPRESS_PORT ? parseInt(env.EXPRESS_PORT) : 3000;
+const ip = process.env.EXPRESS_IP || "0.0.0.0";
 
 app.use(
   express.json({
@@ -43,7 +44,7 @@ const startup = async (
         await afterDbCallback(port);
       }
 
-      const server = app.listen(port, () => {
+      const server = app.listen(port, ip, () => {
         log(`EnvKey Api running via express runtime on port ${port}!`);
       });
 

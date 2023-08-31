@@ -1,7 +1,7 @@
 import { clientAction } from "../handler";
 import { Client } from "@core/types";
 import { dispatch } from "../handler";
-import { version } from "../../package.json";
+import { version as cliVersion } from "../../../cli/package.json";
 import { log } from "@core/lib/utils/logger";
 
 const FETCH_MIN_DELAY = 400, // gentle throttling of graph refresh requests
@@ -42,7 +42,7 @@ clientAction<Client.Action.ClientActions["ReceivedOrgSocketMessage"]>({
           {
             client: {
               clientName: "core",
-              clientVersion: version,
+              clientVersion: cliVersion,
             },
             clientId: "core",
             accountIdOrCliKey: account.userId,

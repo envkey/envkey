@@ -184,12 +184,13 @@ export namespace Logs {
         actionType: z.string(),
         ip: z.string(),
         clientName: z.union([z.string(), z.undefined()]),
+        clientVersion: z.string().optional(),
         responseBytes: z.number(),
         responseType: z.string(),
         error: z.literal(true).optional(),
         errorReason: z.string().optional(),
         errorStatus: z.number().optional(),
-
+        failover: z.boolean().optional(),
         summary: z.string().optional(),
       })
       .merge(TimestampsSchema),

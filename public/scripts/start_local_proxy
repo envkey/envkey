@@ -26,4 +26,4 @@ docker run \
   -v $CERT_DIR:/etc/nginx/certs \
   -v $CONF_DIR:/etc/nginx/conf.d \
   -v /var/run/docker.sock:/tmp/docker.sock:ro \
-  jwilder/nginx-proxy >/dev/null
+  jwilder/nginx-proxy:0.9.0 >/dev/null
