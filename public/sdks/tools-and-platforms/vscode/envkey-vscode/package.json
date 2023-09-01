@@ -2,7 +2,7 @@
   "name": "envkey-vscode",
   "displayName": "envkey-vscode",
   "description": "Autocomplete and type checking for environment variables across every language you work in.",
-  "version": "2.5.3",
+  "version": "2.5.4",
   "publisher": "EnvKey",
   "license": "MIT",
   "icon": "icon.png",
@@ -62,6 +62,6 @@
     "webpack-cli": "^5.0.2"
   },
   "dependencies": {
-    "envkey": "^2.5.0"
+    "envkey": "^2.5.1"
   }
 }

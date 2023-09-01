@@ -1,6 +1,6 @@
 {
   "name": "envkey/envkey-php",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "Keeps environment variables automatically in sync. Protects secrets with end-to-end encryption.",
   "keywords": [
     "env",
