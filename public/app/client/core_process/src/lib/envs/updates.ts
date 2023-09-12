@@ -311,6 +311,16 @@ export const envUpdateAction = <
     currentUserId: string,
     context: Client.Context
   ) => {
+    // Abort if we're already fetching/updating envs or changesets
+    // to avoid state condition deadlock
+    if (
+      Object.keys(state.isFetchingEnvs).length > 0 ||
+      Object.keys(state.isFetchingChangesets).length > 0 ||
+      Object.keys(state.isUpdatingEnvs).length > 0
+    ) {
+      return;
+    }
+
     const envParentIds = [
       ...graphTypes(state.graph).apps,
       ...graphTypes(state.graph).blocks,
@@ -348,7 +358,12 @@ export const envUpdateAction = <
       )
       .map(R.prop("id"));
 
-    if (localIds.length > 0) {
+    if (localIds.length > 0 || environmentIds.length > 0) {
+      log("Init Environments", {
+        localIds,
+        environmentIds,
+      });
+
       await dispatch<Client.Action.ClientActions["CommitEnvs"]>(
         {
           type: Client.ActionType.COMMIT_ENVS,

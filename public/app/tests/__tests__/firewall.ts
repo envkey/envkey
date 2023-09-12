@@ -179,7 +179,7 @@ describe("firewall", () => {
           type: Api.ActionType.SET_ORG_ALLOWED_IPS,
           payload: {
             environmentRoleIpsAllowed: {
-              [development.environmentRoleId]: ["::ffff:127.0.0.1"],
+              [development.environmentRoleId]: ["127.0.0.1"],
               [staging.environmentRoleId]: ["192.168.202.9"],
               [production.environmentRoleId]: ["192.168.200.4/30"],
             },
@@ -265,7 +265,7 @@ describe("firewall", () => {
 
       expect(
         generatedEnvkeysByEnvironmentId[development.id].allowedIps
-      ).toEqual(expect.arrayContaining(["::ffff:127.0.0.1"]));
+      ).toEqual(expect.arrayContaining(["127.0.0.1"]));
 
       expect(generatedEnvkeysByEnvironmentId[staging.id].allowedIps).toEqual(
         expect.arrayContaining(["192.168.202.9", "192.168.202.1"])
@@ -312,9 +312,9 @@ describe("firewall", () => {
           type: Api.ActionType.SET_ORG_ALLOWED_IPS,
           payload: {
             environmentRoleIpsAllowed: {
-              [development.environmentRoleId]: ["::ffff:127.0.0.9"],
-              [staging.environmentRoleId]: ["::ffff:127.0.0.1"],
-              [production.environmentRoleId]: ["::ffff:127.0.0.1"],
+              [development.environmentRoleId]: ["127.0.0.9"],
+              [staging.environmentRoleId]: ["127.0.0.1"],
+              [production.environmentRoleId]: ["127.0.0.1"],
             },
           },
         },
@@ -344,9 +344,9 @@ describe("firewall", () => {
             },
 
             environmentRoleIpsAllowed: {
-              [development.environmentRoleId]: ["::ffff:127.0.0.1"],
+              [development.environmentRoleId]: ["127.0.0.1"],
               [staging.environmentRoleId]: ["192.168.202.1"],
-              [production.environmentRoleId]: ["::ffff:127.0.0.0/30"],
+              [production.environmentRoleId]: ["127.0.0.0/30"],
             },
           },
         },
