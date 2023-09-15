@@ -120,7 +120,19 @@ download_envkey () {
     mv envkey-source.exe "$HOME/bin/"
     echo "envkey-source is installed in '$HOME/bin'"
   else
-    sudo mv envkey-source /usr/local/bin/
+    if [ $UID -eq 0 ]
+    then
+      # we are root
+      mv envkey-source /usr/local/bin/  
+    elif hash sudo 2>/dev/null;
+    then
+      # not root, but can sudo
+      sudo mv envkey-source /usr/local/bin/
+    else
+      echo "ERROR: This script must be run as root or be able to sudo to complete the installation."
+      exit 1
+    fi
+    
     echo "envkey-source is installed in /usr/local/bin"
   fi  
 
