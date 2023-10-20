@@ -165,7 +165,7 @@ export const getState = () => state,
     if (auth && auth.privkey && !state.graphUpdatedAt) {
       if (auth.type == "clientUserAuth") {
         const res = await dispatch({
-          type: Client.ActionType.GET_SESSION,
+          type: Client.ActionType.REFRESH_SESSION,
         });
 
         if (!res.success) {

@@ -96,7 +96,7 @@ const resolveSelfHostedUpgrade = async (
     const [sessionRes] = await Promise.all([
       dispatch(
         {
-          type: Client.ActionType.GET_SESSION,
+          type: Client.ActionType.REFRESH_SESSION,
         },
         accountId
       ),

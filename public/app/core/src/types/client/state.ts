@@ -124,6 +124,12 @@ export type PartialAccountState = {
   isFetchingChangesets: FlagById;
   fetchChangesetsErrors: ErrorsById;
 
+  isFetchingSession: true | undefined;
+  isRefreshingSession: true | undefined;
+  refreshSessionQueued:
+    | Client.Action.ClientActions["RefreshSession"]
+    | undefined;
+
   isDispatchingSerialAction: true | undefined;
 
   accountLastActiveAt: number | undefined;
@@ -304,7 +310,6 @@ export type PartialClientState = {
 
   isCreatingSession: true | undefined;
   createSessionError: Client.ClientError | undefined;
-  isFetchingSession: true | undefined;
 
   isCreatingApp: true | undefined;
   createAppError: Client.ClientError | undefined;
@@ -523,6 +528,10 @@ export const defaultAccountState: PartialAccountState = {
 
     isDispatchingSerialAction: undefined,
 
+    isFetchingSession: undefined,
+    isRefreshingSession: undefined,
+    refreshSessionQueued: undefined,
+
     accountLastActiveAt: undefined,
 
     orgStats: undefined,
@@ -607,7 +616,6 @@ export const defaultAccountState: PartialAccountState = {
     didAcceptDeviceGrant: undefined,
     isRegistering: undefined,
     isCreatingSession: undefined,
-    isFetchingSession: undefined,
     isCreatingApp: undefined,
     isCreatingBlock: undefined,
     isCreatingRbacOrgRole: undefined,

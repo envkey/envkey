@@ -222,6 +222,90 @@ clientAction<
   },
 });
 
+clientAction<Client.Action.ClientActions["QueueRefreshSession"]>({
+  type: "clientAction",
+  actionType: Client.ActionType.QUEUE_REFRESH_SESSION,
+  stateProducer: (draft, action) => {
+    draft.refreshSessionQueued = action.payload;
+  },
+});
+
+clientAction<
+  Client.Action.ClientActions["RefreshSession"],
+  {
+    timestamp?: number;
+    notModified?: true;
+  }
+>({
+  type: "asyncClientAction",
+  actionType: Client.ActionType.REFRESH_SESSION,
+  stateProducer: (draft) => {
+    draft.isRefreshingSession = true;
+    delete draft.refreshSessionQueued;
+  },
+  endStateProducer: (draft) => {
+    delete draft.isRefreshingSession;
+  },
+  handler: async (
+    initialState,
+    action,
+    { context, dispatchSuccess, dispatchFailure }
+  ) => {
+    let state = initialState;
+
+    const res = await dispatch(
+      {
+        type: Client.ActionType.GET_SESSION,
+        payload: {
+          omitGraphUpdatedAt: action.payload?.omitGraphUpdatedAt,
+        },
+      },
+      context
+    );
+
+    if (!res.success) {
+      return dispatchFailure((res.resultAction as any).payload, context);
+    }
+
+    if (
+      (
+        (res.resultAction as any)
+          .payload as Api.Net.ApiResultTypes["GetSession"]
+      ).type == "notModified"
+    ) {
+      return dispatchSuccess({ notModified: true }, context);
+    }
+
+    await dispatch(
+      {
+        type: Client.ActionType.CLEAR_ORPHANED_BLOBS,
+      },
+      context
+    );
+
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+    // this will init / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
+    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    if (state.refreshSessionQueued) {
+      const queued = state.refreshSessionQueued;
+      setTimeout(() => {
+        dispatch(queued, context);
+      }, 500);
+    }
+
+    return dispatchSuccess(
+      { timestamp: (res.resultAction as any).payload.timestamp },
+      context
+    );
+  },
+});
+
 clientAction<
   Client.Action.ClientActions["GetSession"],
   {
@@ -244,27 +328,6 @@ clientAction<
   successStateProducer: (draft, action) => {
     delete draft.fetchSessionError;
     draft.fetchSessionNotModified = action.payload.notModified ?? false;
-  },
-  successHandler: async (state, action, res, context) => {
-    if (res.notModified) {
-      return;
-    }
-
-    dispatch(
-      {
-        type: Client.ActionType.CLEAR_ORPHANED_BLOBS,
-      },
-      context
-    );
-
-    const auth = getAuth(state, context.accountIdOrCliKey);
-    if (!auth || ("token" in auth && !auth.token)) {
-      throw new Error("Action requires authentication");
-    }
-    // this will init / re-init locals if needed to fix rare changesets key mismatch bug from July 2022
-    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
-      log("Error initializing locals", { err });
-    });
   },
   handler: async (
     initialState,

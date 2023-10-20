@@ -37,7 +37,7 @@ clientAction<Client.Action.ClientActions["ReceivedOrgSocketMessage"]>({
 
         const res = await dispatch(
           {
-            type: Client.ActionType.GET_SESSION,
+            type: Client.ActionType.REFRESH_SESSION,
           },
           {
             client: {

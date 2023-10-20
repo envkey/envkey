@@ -245,7 +245,7 @@ export const testRemoveUser = async (
       } else {
         const shouldFailRes = await dispatch(
           {
-            type: Client.ActionType.GET_SESSION,
+            type: Client.ActionType.REFRESH_SESSION,
           },
           targetId
         );
@@ -295,7 +295,7 @@ export const testRemoveUser = async (
       // }
       // await dispatch(
       //   {
-      //     type: Client.ActionType.GET_SESSION,
+      //     type: Client.ActionType.REFRESH_SESSION,
       //   },
       //   revocationRequestProcessorId
       // );
@@ -377,7 +377,7 @@ export const testRemoveUser = async (
 
     //     await dispatch(
     //       {
-    //         type: Client.ActionType.GET_SESSION,
+    //         type: Client.ActionType.REFRESH_SESSION,
     //       },
     //       uninvolvedUserId
     //     );

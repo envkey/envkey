@@ -61,7 +61,7 @@ export const authenticate = async <
         let accountState = await refreshState(acct.userId);
         if (!accountState.graphUpdatedAt) {
           const res = await dispatch({
-            type: Client.ActionType.GET_SESSION,
+            type: Client.ActionType.REFRESH_SESSION,
           });
           if (res.success) {
             accountState = res.state;

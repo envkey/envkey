@@ -545,8 +545,24 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
             diffs: shouldIncludeEnvsInDiffs
               ? createPatch(initialClientState, afterDispatchClientState)
               : createPatch(
-                  R.omit(["envs", "changesets"], initialClientState),
-                  R.omit(["envs", "changesets"], afterDispatchClientState)
+                  R.omit(
+                    [
+                      "envs",
+                      "changesets",
+                      "envsFetchedAt",
+                      "changesetsFetchedAt",
+                    ],
+                    initialClientState
+                  ),
+                  R.omit(
+                    [
+                      "envs",
+                      "changesets",
+                      "envsFetchedAt",
+                      "changesetsFetchedAt",
+                    ],
+                    afterDispatchClientState
+                  )
                 ),
           });
         }
@@ -581,8 +597,14 @@ const initMaster = async (port: number, wsport: number, statusPort: number) => {
         const finalDiffs = shouldIncludeEnvsInDiffs
           ? createPatch(finalDiffsPreviousState, dispatchRes.state)
           : createPatch(
-              R.omit(["envs", "changesets"], finalDiffsPreviousState),
-              R.omit(["envs", "changesets"], dispatchRes.state)
+              R.omit(
+                ["envs", "changesets", "envsFetchedAt", "changesetsFetchedAt"],
+                finalDiffsPreviousState
+              ),
+              R.omit(
+                ["envs", "changesets", "envsFetchedAt", "changesetsFetchedAt"],
+                dispatchRes.state
+              )
             );
 
         if (

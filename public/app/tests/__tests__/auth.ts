@@ -137,7 +137,7 @@ describe("get session", () => {
     test("with token session", async () => {
       const fetchPromise = dispatch(
         {
-          type: Client.ActionType.GET_SESSION,
+          type: Client.ActionType.REFRESH_SESSION,
         },
         ownerId
       );

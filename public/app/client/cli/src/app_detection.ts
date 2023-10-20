@@ -200,7 +200,7 @@ const dotEnvkeyFileToDetectedApp = async (
   if (account.token) {
     if (!updatedState.graphUpdatedAt) {
       const res = await dispatch({
-        type: Client.ActionType.GET_SESSION,
+        type: Client.ActionType.REFRESH_SESSION,
       });
 
       if (!res.success) {
@@ -264,7 +264,7 @@ const envkeyToDetectedApp = async (
     updatedState = await fetchState(accountId, encryptedAuthToken);
     if (!updatedState.graphUpdatedAt) {
       const res = await dispatch({
-        type: Client.ActionType.GET_SESSION,
+        type: Client.ActionType.REFRESH_SESSION,
       });
       if (!res.success) {
         logVerbose(
@@ -388,7 +388,7 @@ const envkeyToDetectedApp = async (
   updatedState = await fetchState(account.userId, encryptedAuthToken);
   if (!updatedState.graphUpdatedAt) {
     const res = await dispatch({
-      type: Client.ActionType.GET_SESSION,
+      type: Client.ActionType.REFRESH_SESSION,
     });
     if (!res.success) {
       logVerbose(

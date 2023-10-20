@@ -255,7 +255,9 @@ const clientParams: Client.ClientParams<"app"> = {
       ) => {
         console.log(new Date().toISOString(), "dispatch:", action.type);
 
-        const returnFullState = action.type == Client.ActionType.GET_SESSION;
+        const returnFullState =
+          action.type == Client.ActionType.REFRESH_SESSION ||
+          action.type == Client.ActionType.FETCH_ENVS;
 
         const res = await dispatchCore(
           action,

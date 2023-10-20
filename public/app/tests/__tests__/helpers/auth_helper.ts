@@ -297,7 +297,7 @@ export const getEmailToken = async (
 
     sessionRes = await dispatch(
       {
-        type: Client.ActionType.GET_SESSION,
+        type: Client.ActionType.REFRESH_SESSION,
       },
       userId,
       deviceStoreId

@@ -2,6 +2,8 @@ enum ActionType {
   REGISTER = "envkey/client/REGISTER",
   CREATE_SESSION = "envkey/client/CREATE_SESSION",
   GET_SESSION = "envkey/client/GET_SESSION",
+  REFRESH_SESSION = "envkey/client/REFRESH_SESSION",
+  QUEUE_REFRESH_SESSION = "envkey/client/QUEUE_REFRESH_SESSION",
   AUTHENTICATE_CLI_KEY = "envkey/client/AUTHENTICATE_CLI_KEY",
 
   SELECT_DEFAULT_ACCOUNT = "envkey/client/SELECT_DEFAULT_ACCOUNT",

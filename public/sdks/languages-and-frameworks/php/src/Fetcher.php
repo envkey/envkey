@@ -57,6 +57,14 @@ class Fetcher {
     $composerData = json_decode($composerJson, true); // Decode the JSON into an associative array
     $version = $composerData['version']; // Access the 'version' property
 
+    // Check if ENVKEY is available in $_SERVER or $_ENV and set it as an environment variable
+    // ensures it gets passed through to envkey-source call
+    if (isset($_SERVER['ENVKEY'])) {
+      putenv("ENVKEY={$_SERVER['ENVKEY']}");
+    } elseif (isset($_ENV['ENVKEY'])) {
+      putenv("ENVKEY={$_ENV['ENVKEY']}");
+    }
+
     $cmd = self::libPath().' --json --mem-cache --client-name envkey-php --client-version '.$version;
     $res = rtrim(shell_exec($cmd));
 

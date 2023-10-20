@@ -173,7 +173,7 @@ export const V1Upgrade: Component = (props) => {
           if (!(accountState.graph && accountState.graph[account.userId])) {
             const res = await props.dispatch(
               {
-                type: Client.ActionType.GET_SESSION,
+                type: Client.ActionType.REFRESH_SESSION,
                 payload: {},
               },
               undefined,

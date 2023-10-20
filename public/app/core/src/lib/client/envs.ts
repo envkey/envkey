@@ -899,7 +899,6 @@ export const getEnvWithMeta = memoize(
   envsNeedFetch = (state: Client.State, envParentId: string) => {
     const envParent = state.graph[envParentId] as Model.EnvParent;
     const fetchedAt = state.envsFetchedAt[envParentId];
-
     const envsOrLocalsUpdatedAt = envParent.envsOrLocalsUpdatedAt;
 
     if (!envsOrLocalsUpdatedAt) {

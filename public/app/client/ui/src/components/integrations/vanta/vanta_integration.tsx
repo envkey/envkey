@@ -40,7 +40,7 @@ export const VantaIntegration: OrgComponent = (props) => {
     });
 
     props.dispatch({
-      type: Client.ActionType.GET_SESSION,
+      type: Client.ActionType.REFRESH_SESSION,
     });
 
     return () => {

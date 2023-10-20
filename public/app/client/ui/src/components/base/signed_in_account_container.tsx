@@ -219,7 +219,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         }
         await props.dispatch(
           {
-            type: Client.ActionType.GET_SESSION,
+            type: Client.ActionType.REFRESH_SESSION,
             payload: { omitGraphUpdatedAt: true },
           },
           undefined,
@@ -501,7 +501,7 @@ export const SignedInAccountContainer: Component<{ orgId: string }> = (
         console.log(new Date().toISOString(), "Retry GET_SESSION");
         const res = await props.dispatch(
           {
-            type: Client.ActionType.GET_SESSION,
+            type: Client.ActionType.REFRESH_SESSION,
           },
           undefined,
           undefined,

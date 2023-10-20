@@ -188,7 +188,7 @@ describe("envs", () => {
 
       await dispatch(
         {
-          type: Client.ActionType.GET_SESSION,
+          type: Client.ActionType.REFRESH_SESSION,
         },
         ownerId
       );

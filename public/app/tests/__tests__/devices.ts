@@ -171,7 +171,7 @@ describe("devices", () => {
 
       await dispatch(
         {
-          type: Client.ActionType.GET_SESSION,
+          type: Client.ActionType.REFRESH_SESSION,
         },
         granteeId
       );
@@ -294,7 +294,7 @@ describe("devices", () => {
       // ensure revoked device can't authenticate
       const authRes = await dispatch(
         {
-          type: Client.ActionType.GET_SESSION,
+          type: Client.ActionType.REFRESH_SESSION,
         },
         granteeId
       );

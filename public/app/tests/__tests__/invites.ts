@@ -126,7 +126,7 @@ describe("invites", () => {
 
       await dispatch(
         {
-          type: Client.ActionType.GET_SESSION,
+          type: Client.ActionType.REFRESH_SESSION,
         },
         inviteParams.user.id
       );

@@ -112,16 +112,28 @@ export const clientAction = <
     }
 
     if (
-      action.type == Client.ActionType.GET_SESSION &&
-      accountState.isFetchingSession
+      action.type == Client.ActionType.REFRESH_SESSION &&
+      accountState.isRefreshingSession
     ) {
-      await waitForStateCondition(
-        store,
-        context,
-        (state) => !state.isFetchingSession,
-        20000
-      );
-      action.payload = { ...(action.payload ?? {}), noop: true };
+      if (
+        !accountState.refreshSessionQueued ||
+        (action.payload?.omitGraphUpdatedAt &&
+          !accountState.refreshSessionQueued.payload?.omitGraphUpdatedAt)
+      ) {
+        await dispatch(
+          {
+            type: Client.ActionType.QUEUE_REFRESH_SESSION,
+            payload: action,
+          },
+          context
+        );
+      }
+
+      return {
+        success: true,
+        resultAction: action,
+        state: getState(store, context),
+      };
     }
 
     const handleSuccess = getHandleSuccess(actionParams, action, store, tempId),

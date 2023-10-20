@@ -777,6 +777,8 @@ const apiActions: {
       !(
         action.type == Api.ActionType.UPDATE_LICENSE ||
         action.type == Api.ActionType.FETCH_ORG_STATS ||
+        ("loggableType2" in action.meta &&
+          action.meta.loggableType2 == "billingAction") ||
         (action.type == Api.ActionType.GET_SESSION &&
           auth.type == "tokenAuthContext" &&
           auth.orgPermissions.has("org_manage_billing"))
@@ -2006,6 +2008,8 @@ const apiActions: {
       // give enough access in throttling scenarios for the license to be updated
       !(
         action.type == Api.ActionType.UPDATE_LICENSE ||
+        ("loggableType2" in action.meta &&
+          action.meta.loggableType2 == "billingAction") ||
         action.type == Api.ActionType.FETCH_ORG_STATS ||
         (action.type == Api.ActionType.GET_SESSION &&
           auth.type == "tokenAuthContext" &&

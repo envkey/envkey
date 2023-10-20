@@ -43,8 +43,10 @@ export const refreshSessions = async (
     restToFetch,
   });
 
-  const getFetchFn =
-    (skipJitter?: boolean) => (accountId: string, i: number) => {
+  const getFetchFn: (
+    skipJitter?: boolean
+  ) => (accountId: string, i: number) => Promise<any> =
+    (skipJitter) => (accountId, i) => {
       const baseWait = i * 50;
       const toWait = skipJitter
         ? baseWait
@@ -53,7 +55,7 @@ export const refreshSessions = async (
       return wait(toWait).then(() => {
         dispatch(
           {
-            type: Client.ActionType.GET_SESSION,
+            type: Client.ActionType.REFRESH_SESSION,
           },
           getContext(accountId)
         ).finally(() => localSocketUpdate({ type: "update", accountId }));

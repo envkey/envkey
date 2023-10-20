@@ -171,6 +171,12 @@ export namespace Action {
       type: ActionType.SET_AUTH;
       payload: Client.ClientUserAuth;
     };
+    RefreshSession: {
+      type: ActionType.REFRESH_SESSION;
+      payload?: {
+        omitGraphUpdatedAt?: true;
+      };
+    };
     GetSession: {
       type: ActionType.GET_SESSION;
       payload?: {
@@ -178,6 +184,10 @@ export namespace Action {
         noop?: true;
         omitGraphUpdatedAt?: true;
       };
+    };
+    QueueRefreshSession: {
+      type: ActionType.QUEUE_REFRESH_SESSION;
+      payload: ClientActions["RefreshSession"];
     };
     AuthenticateCliKey: {
       type: ActionType.AUTHENTICATE_CLI_KEY;
