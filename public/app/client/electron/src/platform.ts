@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as os from "os";
+import { version as cliVersion } from "../../cli/package.json";
 
 export const arch = os.arch() == "arm64" ? "arm64" : "amd64";
 export const platform = os.platform() as "win32" | "darwin" | "linux";
@@ -19,7 +20,11 @@ export const ELECTRON_BIN_DIR = path.join(
     }[platform] ?? []),
   ]
 );
-export const BUNDLED_CLI_PATH = path.resolve(ELECTRON_BIN_DIR, "envkey" + ext);
+export const BUNDLED_CLI_PATH = path.resolve(
+  ELECTRON_BIN_DIR,
+  `cli-${cliVersion}`,
+  "envkey" + ext
+);
 
 export const BUNDLED_ENVKEYSOURCE_PATH = path.resolve(
   ELECTRON_BIN_DIR,
