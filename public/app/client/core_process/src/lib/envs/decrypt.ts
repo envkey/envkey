@@ -467,15 +467,15 @@ export const decryptEnvs = async (
           continue;
         }
 
-        updatedEnvParentIds.add(envParentId);
-
-        // if (!draft.graph[envParentId]) {
-        //   log("missing env parent", {
-        //     envParentId,
-        //     composite,
-        //     "envs[composite]": envs[composite],
-        //   });
-        // }
+        if (draft.graph[envParentId]) {
+          updatedEnvParentIds.add(envParentId);
+        } else {
+          log("missing env parent", {
+            envParentId,
+            composite,
+            "envs[composite]": envs[composite],
+          });
+        }
 
         draft.envs[composite] = envs[composite];
       }
@@ -483,9 +483,9 @@ export const decryptEnvs = async (
       for (let envParentId of updatedEnvParentIds) {
         const envParent = draft.graph[envParentId] as Model.EnvParent;
 
-        // if (!envParent) {
-        //   continue;
-        // }
+        if (!envParent) {
+          continue;
+        }
 
         if (envParent.envsOrLocalsUpdatedAt) {
           draft.envsFetchedAt[envParentId] = envParent.envsOrLocalsUpdatedAt;

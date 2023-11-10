@@ -13,6 +13,7 @@ export const getEnvEncryptedKeys = (
   params:
     | Blob.UserEncryptedKeyPkeyWithScopeParams
     | Blob.UserEncryptedKeyPkeyWithScopeParams[],
+  orgGraph: Api.Graph.OrgGraph,
   queryParams: Pick<Api.Db.TxnQueryParams, "transactionConnOrPool">
 ) =>
   getUserEncryptedKeys(
@@ -23,12 +24,16 @@ export const getEnvEncryptedKeys = (
           blobType: "env",
         },
     queryParams
-  ).then((encryptedKeys) => {
-    return indexBy(
-      getUserEncryptedKeyOrBlobComposite,
-      encryptedKeys.map(R.omit(["pkey", "skey"]))
-    );
-  }) as Promise<Blob.UserEncryptedKeysByEnvironmentIdOrComposite>;
+  )
+    .then((encryptedKeys) =>
+      filterOrphanedUserEncryptedKeys(orgGraph, encryptedKeys)
+    )
+    .then((encryptedKeys) => {
+      return indexBy(
+        getUserEncryptedKeyOrBlobComposite,
+        encryptedKeys.map(R.omit(["pkey", "skey"]))
+      );
+    }) as Promise<Blob.UserEncryptedKeysByEnvironmentIdOrComposite>;
 
 type ChangesetEncryptedKeysScopeParams = Omit<
   Blob.UserEncryptedKeyPkeyWithScopeParams,
@@ -39,6 +44,7 @@ export const getChangesetEncryptedKeys = (
   params:
     | ChangesetEncryptedKeysScopeParams
     | ChangesetEncryptedKeysScopeParams[],
+  orgGraph: Api.Graph.OrgGraph,
   queryParams: Pick<Api.Db.TxnQueryParams, "transactionConnOrPool">
 ) => {
   const paramsWithBlobType = Array.isArray(params)
@@ -58,12 +64,16 @@ export const getChangesetEncryptedKeys = (
     ...queryParams,
     createdAfter: undefined,
     sortBy: "createdAt",
-  }).then((encryptedKeys) =>
-    indexBy(
-      ({ environmentId }) => environmentId!,
-      encryptedKeys.map(R.omit(["pkey", "skey"]))
+  })
+    .then((encryptedKeys) =>
+      filterOrphanedUserEncryptedKeys(orgGraph, encryptedKeys)
     )
-  ) as Promise<Blob.UserEncryptedChangesetKeysByEnvironmentId>;
+    .then((encryptedKeys) =>
+      indexBy(
+        ({ environmentId }) => environmentId!,
+        encryptedKeys.map(R.omit(["pkey", "skey"]))
+      )
+    ) as Promise<Blob.UserEncryptedChangesetKeysByEnvironmentId>;
 };
 
 export const getEnvEncryptedBlobs = (
@@ -204,4 +214,36 @@ export const getEncryptedBlobs = async (
   }
 
   return query<Api.Db.EncryptedBlob>(toQuery);
+};
+
+const filterOrphanedUserEncryptedKeys = (
+  orgGraph: Api.Graph.OrgGraph,
+  encryptedKeys: Api.Db.UserEncryptedKey[]
+) => {
+  return encryptedKeys.filter((k) => {
+    if (k.envParentId && !orgGraph[k.envParentId]) {
+      return false;
+    }
+
+    const environmentId = k.environmentId;
+    const inheritsEnvironmentId = k.inheritsEnvironmentId;
+
+    if (environmentId) {
+      const split = environmentId.split("|");
+      if (split.length > 1) {
+        const [_, localsUserId] = split;
+        if (!orgGraph[localsUserId]) {
+          return false;
+        }
+      } else if (!orgGraph[environmentId]) {
+        return false;
+      }
+    }
+
+    if (inheritsEnvironmentId && !orgGraph[inheritsEnvironmentId]) {
+      return false;
+    }
+
+    return true;
+  });
 };

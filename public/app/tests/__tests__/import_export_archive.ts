@@ -126,7 +126,7 @@ describe("import/export archive", () => {
 
     await dispatch(
       {
-        type: Api.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
+        type: Client.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
         payload: {
           name: "New Role",
           description: "",

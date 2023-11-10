@@ -13,6 +13,7 @@ import { pickDefined } from "@core/lib/utils/object";
 import produce, { Draft } from "immer";
 import * as R from "ramda";
 import * as graphKey from "../graph_key";
+import { getScope } from "@core/lib/blob";
 import { log } from "@core/lib/utils/logger";
 
 apiAction<
@@ -228,6 +229,27 @@ apiAction<
             envParentId: environment.envParentId,
             environmentId: environment.id,
             blobType: "changeset",
+          },
+        ]),
+
+        hardDeleteScopes: environments.flatMap((environment) => [
+          {
+            pkey: `encryptedKeys|${auth.org.id}`,
+            pkeyPrefix: true,
+            scope: getScope({
+              envParentId: environment.envParentId,
+              environmentId: environment.id,
+              blobType: "env",
+            }),
+          },
+          {
+            pkey: `encryptedKeys|${auth.org.id}`,
+            pkeyPrefix: true,
+            scope: getScope({
+              envParentId: environment.envParentId,
+              environmentId: environment.id,
+              blobType: "changeset",
+            }),
           },
         ]),
       },

@@ -264,6 +264,14 @@ export const ManageEnvParentEnvironments: OrgComponent<
             }
 
             if (included && includedEnvironment) {
+              if (
+                !confirm(
+                  "Removing this environment will also delete any variables or version history associated with it. This can't be undone."
+                )
+              ) {
+                return;
+              }
+
               setRemovingEnvironmentsByRoleId({
                 ...removingEnvironmentsByRoleId,
                 [role.id]: true,
@@ -276,9 +284,8 @@ export const ManageEnvParentEnvironments: OrgComponent<
 
                 const inheritingEnvironmentIds = getInheritingEnvironmentIds(
                   props.core,
-                  { environmentId: includedEnvironment.id, envParentId },
-                  true
-                );
+                  { environmentId: includedEnvironment.id, envParentId }
+                ); // not pending
 
                 if (inheritingEnvironmentIds.size > 0) {
                   alert(

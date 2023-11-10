@@ -1621,6 +1621,7 @@ const apiActions: {
                       deviceId: deviceId!,
                       blobType: "env",
                     },
+                    orgGraph,
                     { transactionConnOrPool: transactionConn }
                   ).then((res) => {
                     logWithElapsed(
@@ -1636,6 +1637,7 @@ const apiActions: {
                       userId: auth.user.id,
                       deviceId: deviceId!,
                     },
+                    orgGraph,
                     { transactionConnOrPool: transactionConn }
                   ).then((res) => {
                     logWithElapsed(
@@ -1673,6 +1675,7 @@ const apiActions: {
                       deviceId: deviceId!,
                       ...scope,
                     })),
+                    orgGraph,
                     { transactionConnOrPool: transactionConn }
                   ).then((res) => {
                     logWithElapsed(
@@ -1690,6 +1693,7 @@ const apiActions: {
                       deviceId: deviceId!,
                       ...scope,
                     })),
+                    orgGraph,
                     { transactionConnOrPool: transactionConn }
                   ).then((res) => {
                     logWithElapsed(
@@ -1773,6 +1777,7 @@ const apiActions: {
                         userId: auth.user.id,
                         deviceId: deviceId!,
                       },
+                      orgGraph,
                       { transactionConnOrPool: transactionConn }
                     ).then((res) => {
                       logWithElapsed(
@@ -1809,6 +1814,7 @@ const apiActions: {
                     deviceId: deviceId!,
                     ...scope,
                   })),
+                  orgGraph,
                   { transactionConnOrPool: transactionConn }
                 ).then((res) => {
                   logWithElapsed(

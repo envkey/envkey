@@ -954,7 +954,7 @@ clientAction<
 
         const res = await dispatch(
           {
-            type: Api.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
+            type: Client.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
             payload: {
               ...R.omit(["id"], role),
               importId: role.id,

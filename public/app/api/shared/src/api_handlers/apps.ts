@@ -20,6 +20,7 @@ import { v4 as uuid } from "uuid";
 import * as R from "ramda";
 import produce, { Draft } from "immer";
 import { log, logStderr } from "@core/lib/utils/logger";
+import { getScope } from "@core/lib/blob";
 
 apiAction<
   Api.Action.RequestActions["CreateApp"],
@@ -217,6 +218,24 @@ apiAction<
             orgId: auth.org.id,
             envParentId: action.payload.id,
             blobType: "changeset",
+          },
+        ],
+        hardDeleteScopes: [
+          {
+            pkey: `encryptedKeys|${auth.org.id}`,
+            pkeyPrefix: true,
+            scope: getScope({
+              blobType: "env",
+              envParentId: action.payload.id,
+            }),
+          },
+          {
+            pkey: `encryptedKeys|${auth.org.id}`,
+            pkeyPrefix: true,
+            scope: getScope({
+              blobType: "changeset",
+              envParentId: action.payload.id,
+            }),
           },
         ],
       },

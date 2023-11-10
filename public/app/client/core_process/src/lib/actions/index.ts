@@ -10,7 +10,7 @@ const TIMEOUTS = {
   lookup: 3000,
   connect: 10000,
   secureConnect: 10000,
-  request: 180 * 1000,
+  request: 10 * 60 * 1000,
 };
 
 export const postApiAction = async <

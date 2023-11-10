@@ -81,6 +81,34 @@ clientAction<Client.Action.ClientActions["RbacUpdateEnvironmentRole"]>({
   }),
 });
 
+clientAction<Client.Action.ClientActions["RbacCreateEnvironmentRole"]>({
+  type: "asyncClientAction",
+  serialAction: true,
+  actionType: Client.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
+  ...statusProducers(
+    "isCreatingRbacEnvironmentRole",
+    "createRbacEnvironmentRoleError"
+  ),
+  apiActionCreator: async (payload) => ({
+    action: {
+      type: Api.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
+      payload,
+    },
+  }),
+  successHandler: async (state, action, res, context) => {
+    const auth = getAuth(state, context.accountIdOrCliKey);
+    if (!auth || ("token" in auth && !auth.token)) {
+      throw new Error("Action requires authentication");
+    }
+
+    await initEnvironmentsIfNeeded(state, auth.userId, context).catch((err) => {
+      log("Error initializing locals", { err });
+    });
+
+    await dispatch({ type: Client.ActionType.CLEAR_CACHED }, context);
+  },
+});
+
 clientAction<Client.Action.ClientActions["IncludeAppRoles"]>({
   type: "asyncClientAction",
   serialAction: true,
@@ -207,11 +235,6 @@ clientAction<
   loggableType: "orgAction",
   authenticated: true,
   graphAction: true,
-  serialAction: true,
-  ...statusProducers(
-    "isCreatingRbacEnvironmentRole",
-    "createRbacEnvironmentRoleError"
-  ),
 });
 
 clientAction<

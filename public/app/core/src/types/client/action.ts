@@ -569,6 +569,10 @@ export namespace Action {
         "envs" | "encryptedByTrustChain"
       >;
     };
+    RbacCreateEnvironmentRole: {
+      type: ActionType.RBAC_CREATE_ENVIRONMENT_ROLE;
+      payload: Api.Net.ApiParamTypes["RbacCreateEnvironmentRole"];
+    };
 
     IncludeAppRoles: {
       type: ActionType.INCLUDE_APP_ROLES;

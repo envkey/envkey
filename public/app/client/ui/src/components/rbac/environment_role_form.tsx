@@ -540,7 +540,7 @@ export const EnvironmentRoleForm: OrgComponent<{
                       payload: { ...basePayload, id: editing.id },
                     }
                   : {
-                      type: Api.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
+                      type: Client.ActionType.RBAC_CREATE_ENVIRONMENT_ROLE,
                       payload: basePayload,
                     }
               )

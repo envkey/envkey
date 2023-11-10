@@ -614,6 +614,10 @@ export const getEnvWithMeta = memoize(
         currentEnvironmentId
       ] as Model.Environment;
 
+      if (!currentEnvironment) {
+        break;
+      }
+
       if ("key" in params) {
         let keyableEnv = getKeyableEnv(
           state,
@@ -880,6 +884,11 @@ export const getEnvWithMeta = memoize(
   ensureEnvsFetched = (state: Client.State, envParentId: string) => {
     if (envsNeedFetch(state, envParentId)) {
       const envParent = state.graph[envParentId] as Model.EnvParent;
+
+      if (!envParent) {
+        return;
+      }
+
       const msg = `latest envs not fetched for ${envParent.name} - ${envParent.id}`;
       console.log(msg);
       throw new Error(msg);
@@ -888,6 +897,11 @@ export const getEnvWithMeta = memoize(
   ensureChangesetsFetched = (state: Client.State, envParentId: string) => {
     if (changesetsNeedFetch(state, envParentId)) {
       const envParent = state.graph[envParentId] as Model.EnvParent;
+
+      if (!envParent) {
+        return;
+      }
+
       const msg = `latest changesets not fetched for ${envParent.name} - ${envParent.id}`;
 
       const fetchedAt = state.changesetsFetchedAt[envParentId];
@@ -898,6 +912,11 @@ export const getEnvWithMeta = memoize(
   },
   envsNeedFetch = (state: Client.State, envParentId: string) => {
     const envParent = state.graph[envParentId] as Model.EnvParent;
+
+    if (!envParent) {
+      return false;
+    }
+
     const fetchedAt = state.envsFetchedAt[envParentId];
     const envsOrLocalsUpdatedAt = envParent.envsOrLocalsUpdatedAt;
 
@@ -913,6 +932,11 @@ export const getEnvWithMeta = memoize(
   },
   changesetsNeedFetch = (state: Client.State, envParentId: string) => {
     const envParent = state.graph[envParentId] as Model.EnvParent;
+
+    if (!envParent) {
+      return false;
+    }
+
     const fetchedAt = state.changesetsFetchedAt[envParentId];
     const envsOrLocalsUpdatedAt = envParent.envsOrLocalsUpdatedAt ?? 0;
 

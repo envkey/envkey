@@ -453,6 +453,10 @@ clientAction<
       }
       const envParent = draft.graph[envParentId] as Model.EnvParent;
 
+      if (!envParent) {
+        continue;
+      }
+
       draft.envsFetchedAt[envParentId] = envParent.envsOrLocalsUpdatedAt!;
     }
 
