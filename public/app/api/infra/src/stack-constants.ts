@@ -75,6 +75,7 @@ export enum CfStack {
   ENVKEY_CLOUD_INTEGRATION_VANTA = "envkey-cloud-integration-vanta",
   ENVKEY_CLOUD_ERROR_REPORTING = "envkey-cloud-error-reporting",
   ENVKEY_CLOUD_REPLICATION = "envkey-cloud-replication",
+  ENVKEY_CLOUD_BG_LOGS = "envkey-cloud-bg-logs",
 }
 
 export const CAPABILITIES = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"];

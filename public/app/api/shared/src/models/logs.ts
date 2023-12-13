@@ -10,11 +10,16 @@ import {
   environmentCompositeId,
   getGroupObjectTypeLabel,
 } from "@core/lib/graph";
-import { poolQuery, getPool } from "../db";
+import {
+  logsPoolQuery,
+  getPool,
+  getNewLogsTransactionConn,
+  executeTransactionStatements,
+} from "../db";
 import { objectPaths, pick } from "@core/lib/utils/object";
 import moment from "moment";
 import { PoolConnection } from "mysql2/promise";
-import { log } from "@core/lib/utils/logger";
+import { log, logStderr } from "@core/lib/utils/logger";
 
 const MAX_IP_RESULTS = 1000;
 
@@ -213,7 +218,7 @@ export const registerLimitLogsFn = (fn: Api.LimitLogsFn) => {
   ) => {
     let logs: Logs.LoggedAction[] = [];
     if (transactionIds.length) {
-      const [logRows] = (await poolQuery(
+      const [logRows] = (await logsPoolQuery(
         `SELECT * FROM logs WHERE transactionId IN (?) ORDER BY createdAt ${sortDir};`,
         [transactionIds]
       )) as any[][];
@@ -224,10 +229,33 @@ export const registerLimitLogsFn = (fn: Api.LimitLogsFn) => {
     }
 
     return logs;
+  },
+  commitLogStatements: Api.CommitLogsFn = async (
+    asyncStatements,
+    backgroundLogStatements,
+    orgId
+  ) => {
+    getNewLogsTransactionConn().then((transactionConn) => {
+      executeTransactionStatements(
+        asyncStatements.concat(backgroundLogStatements),
+        transactionConn
+      )
+        .then(() => {
+          log("executed async log statements");
+        })
+        .catch((err) => {
+          logStderr("error executing async log statements:", {
+            err,
+            orgId,
+          });
+          throw err;
+        })
+        .finally(() => transactionConn.release());
+    });
   };
 
 const getIps = async (orgId: string, startsAt: number, endsAt: number) => {
-    const [rows] = (await poolQuery(
+    const [rows] = (await logsPoolQuery(
       `SELECT ip FROM ips WHERE orgId = ? AND createdAt <= ? AND lastRequestAt >= ? ORDER BY ip LIMIT ${MAX_IP_RESULTS}`,
       [orgId, endsAt, startsAt]
     )) as [{ ip: string }[], any];
@@ -341,9 +369,9 @@ const getIps = async (orgId: string, startsAt: number, endsAt: number) => {
     let countQs = `SELECT COUNT(Distinct sub.transactionId) as totalCount, COUNT(sub.transactionId) >= ${countLimit} as countReachedLimit FROM (SELECT transactionId FROM ${table} t ${whereClause} LIMIT ${countLimit}) AS sub;`;
 
     const [[rows], [[{ totalCount, countReachedLimit }]]] = (await Promise.all([
-      poolQuery(qs, qargs),
+      logsPoolQuery(qs, qargs),
       params.pageNum == 0
-        ? poolQuery(countQs, qargs)
+        ? logsPoolQuery(countQs, qargs)
         : Promise.resolve([[{}]] as any),
     ])) as [any[][], any];
 
@@ -684,7 +712,7 @@ export const getLogTransactionStatement = ({
   mainQs += `INSERT INTO logs (${mainFields.join(", ")}) VALUES (${R.repeat(
     "?",
     mainFields.length
-  ).join(", ")});`;
+  ).join(", ")}) ON DUPLICATE KEY UPDATE id=id;`; // id=id prevents error for duplicate keys during background logs ingestion
 
   for (let field of mainFields) {
     if (field == "body") {

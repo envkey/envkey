@@ -2,6 +2,7 @@ import { apiAction } from "../handler";
 import { Api, Logs } from "@core/types";
 import { fetchLogs, getDeletedGraphForRange } from "../models/logs";
 import { authz } from "@core/lib/graph";
+import { log } from "@core/lib/utils/logger";
 
 apiAction<
   Api.Action.RequestActions["FetchLogs"],

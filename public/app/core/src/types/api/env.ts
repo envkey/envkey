@@ -11,6 +11,11 @@ export type Env = {
   // '{"user": "root", "password": ""}'
   DATABASE_CREDENTIALS_JSON: string;
 
+  // Logs DB is optional; if not provided, logs will use main DB
+  LOGS_DB_HOST?: string;
+  LOGS_DB_PORT?: string;
+  LOGS_DB_NAME?: string;
+
   DATABASE_URI?: string;
 
   SOCKET_CLUSTER_AUTH?: string;
@@ -23,7 +28,6 @@ export type Env = {
 
   FAILOVER_SIGNING_PUBKEY?: string;
   FAILOVER_BUCKET?: string;
-  LOGS_BUCKET?: string;
   FAILOVER_LOGS_INTERVAL?: string;
 
   IS_CLOUD?: boolean;

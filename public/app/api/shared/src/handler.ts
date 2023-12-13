@@ -8,6 +8,7 @@ import { authenticate, authorizeEnvsUpdate } from "./auth";
 import * as R from "ramda";
 import {
   getNewTransactionConn,
+  getNewLogsTransactionConn,
   objectTransactionItemsEmpty,
   mergeObjectTransactionItems,
   objectTransactionStatements,
@@ -58,6 +59,7 @@ let replicationFn: Api.ReplicationFn | undefined;
 let updateOrgStatsFn: Api.UpdateOrgStatsFn | undefined;
 let throttleRequestFn: Api.ThrottleRequestFn | undefined;
 let throttleResponseFn: Api.ThrottleResponseFn | undefined;
+let commitLogsFn: Api.CommitLogsFn | undefined;
 
 export const apiAction = <
     ActionType extends Api.Action.RequestAction,
@@ -89,11 +91,15 @@ export const apiAction = <
   registerThrottleRequestFn = (fn: Api.ThrottleRequestFn) => {
     throttleRequestFn = fn;
   },
+  registerCommitLogsFn = (fn: Api.CommitLogsFn) => {
+    commitLogsFn = fn;
+  },
   getThrottleRequestFn = () => throttleRequestFn,
   registerThrottleResponseFn = (fn: Api.ThrottleResponseFn) => {
     throttleResponseFn = fn;
   },
   getThrottleResponseFn = () => throttleResponseFn,
+  getCommitLogsFn = () => commitLogsFn,
   handleAction = async (
     action: Api.Action.RequestAction | Api.Action.BulkGraphAction,
     requestParams: Api.RequestParams
@@ -301,7 +307,8 @@ export const apiAction = <
     let response: Api.Net.ApiResult | undefined,
       responseBytes: number | undefined,
       transactionStatements: Api.Db.SqlStatement[] = [],
-      backgroundStatements: Api.Db.SqlStatement[] = [],
+      asyncStatements: Api.Db.SqlStatement[] = [],
+      backgroundLogStatements: Api.Db.SqlStatement[] = [],
       postUpdateActions: Api.HandlerPostUpdateActions | undefined,
       clearUserSockets: Api.ClearUserSocketParams[] = [],
       clearEnvkeySockets: Api.ClearEnvkeySocketParams[] = [],
@@ -442,11 +449,11 @@ export const apiAction = <
         }
 
         if (res.logTransactionStatement) {
-          backgroundStatements.push(res.logTransactionStatement);
+          asyncStatements.push(res.logTransactionStatement);
         }
 
         if (res.backgroundLogStatement) {
-          backgroundStatements.push(res.backgroundLogStatement);
+          backgroundLogStatements.push(res.backgroundLogStatement);
         }
 
         postUpdateActions = postUpdateActions
@@ -526,11 +533,11 @@ export const apiAction = <
       }
 
       if (res.logTransactionStatement) {
-        backgroundStatements.push(res.logTransactionStatement);
+        asyncStatements.push(res.logTransactionStatement);
       }
 
       if (res.backgroundLogStatement) {
-        backgroundStatements.push(res.backgroundLogStatement);
+        backgroundLogStatements.push(res.backgroundLogStatement);
       }
     }
 
@@ -687,20 +694,31 @@ export const apiAction = <
         });
       }
 
-      if (backgroundStatements.length > 0) {
-        logWithElapsed("execute background SQL statements", requestStart);
+      if (asyncStatements.length > 0 || backgroundLogStatements.length > 0) {
+        if (!commitLogsFn) {
+          throw new Error("commitLogsFn not registered");
+        }
 
-        // don't await result, log/alert on error
-        getNewTransactionConn().then((backgroundConn) => {
-          executeTransactionStatements(backgroundStatements, backgroundConn)
-            .catch((err) => {
-              logStderr("error executing background SQL statements:", {
-                err,
-                orgId: auth?.org.id,
-              });
-            })
-            .finally(() => backgroundConn.release());
+        logWithElapsed(
+          transactionId + " - committing log statements asynchronously",
+          requestStart
+        );
+
+        commitLogsFn(
+          asyncStatements,
+          backgroundLogStatements,
+          auth?.org.id
+        ).catch((err) => {
+          logStderr("Error committing log statements:", {
+            err,
+            orgId: auth?.org.id,
+          });
         });
+      } else {
+        logWithElapsed(
+          transactionId + " - no async or background log statements to commit",
+          requestStart
+        );
       }
 
       if (updateOrgStatsFn && response.type != "notModified") {

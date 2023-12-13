@@ -15,9 +15,13 @@ if (process.env.NODE_ENV !== "production") {
 import { log } from "@core/lib/utils/logger";
 import { registerVerifyLicenseFn } from "../../../shared/src/billing";
 import startup from "./startup";
-import { registerSocketServer } from "../../../shared/src/handler";
+import {
+  registerCommitLogsFn,
+  registerSocketServer,
+} from "../../../shared/src/handler";
 import socketServer, { clearAllSockets } from "./socket";
 import { ensureEnv } from "./../../../shared/src/env";
+import { commitLogStatements } from "../../../shared/src/models/logs";
 
 ensureEnv("COMMUNITY_AUTH_HASH", "SMTP_TRANSPORT_JSON");
 
@@ -34,6 +38,7 @@ startup(
     registerEmailTransporter(getCommunityTransporter());
     socketServer.start();
     registerSocketServer(socketServer);
+    registerCommitLogsFn(commitLogStatements);
   },
   async () => {
     clearAllSockets(false);

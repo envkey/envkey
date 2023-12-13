@@ -9,28 +9,34 @@ import {
 import { log } from "@core/lib/utils/logger";
 import * as db_fns from "./db_fns";
 
+const LOGS_DB_ACTIVE = Boolean(env.LOGS_DB_HOST && env.LOGS_DB_NAME);
+
 type SecondaryIndex = string;
 
 let pool: Pool;
 let poolConfig: ConnectionOptions;
-let initalized = false;
+let logsPool: Pool;
+let logsPoolConfig: ConnectionOptions;
+let initialized = false;
 
 export const getPoolConfig = () => poolConfig;
+export const getLogsPoolConfig = () =>
+  LOGS_DB_ACTIVE ? logsPoolConfig : poolConfig;
 
 export const initIfNeeded = (lambdaConfig?: ConnectionOptions) => {
   if (process.env.NODE_ENV !== "test") {
     log("Initializing DB pool");
   }
-  if (initalized) {
+  if (initialized) {
     if (process.env.NODE_ENV !== "test") {
       log("DB pool already initialized");
     }
     return;
   }
-  initalized = true;
+  initialized = true;
 
   if (lambdaConfig && env.AWS_LAMBDA_FUNCTION_NAME) {
-    log("Initializing DB pool for lambda");
+    log("Initializing DB pool for lambda", { lambdaConfig });
     poolConfig = {
       ...lambdaConfig,
       multipleStatements: true,
@@ -82,9 +88,24 @@ export const initIfNeeded = (lambdaConfig?: ConnectionOptions) => {
   };
 
   pool = createPool(poolConfig);
+
+  if (LOGS_DB_ACTIVE) {
+    logsPoolConfig = {
+      ...dbCredentials,
+      host: env.LOGS_DB_HOST,
+      database: env.LOGS_DB_NAME,
+      port: env.LOGS_DB_PORT ? parseInt(env.LOGS_DB_PORT) : undefined,
+      multipleStatements: true,
+      charset: "utf8mb4",
+      connectionLimit: 100,
+    };
+
+    logsPool = createPool(logsPoolConfig);
+  }
 };
 
 export const getPool = () => pool;
+export const getLogsPool = () => (LOGS_DB_ACTIVE ? logsPool : pool);
 
 // in AWS lambda, don't auto-init pool
 if (!env.AWS_LAMBDA_FUNCTION_NAME) {
@@ -95,9 +116,14 @@ if (!env.AWS_LAMBDA_FUNCTION_NAME) {
 }
 
 export const getPoolConn = async () => db_fns.getPoolConn(pool),
+  getLogsPoolConn = async () => db_fns.getPoolConn(getLogsPool()),
   getNewTransactionConn = async () => db_fns.getNewTransactionConn(pool),
+  getNewLogsTransactionConn = async () =>
+    db_fns.getNewTransactionConn(getLogsPool()),
   poolQuery = async (qs: string, qargs?: any[]) =>
     db_fns.poolQuery(pool, qs, qargs),
+  logsPoolQuery = async (qs: string, qargs?: any[]) =>
+    db_fns.poolQuery(getLogsPool(), qs, qargs),
   execQuery = async (
     transactionConn: PoolConnection | undefined,
     qs: string,

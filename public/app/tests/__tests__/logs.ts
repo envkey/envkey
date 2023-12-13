@@ -13,7 +13,7 @@ import {
   updateLocals,
   getEnvironments,
 } from "./helpers/envs_helper";
-
+import { wait } from "@core/lib/utils/wait";
 import { acceptInvite } from "./helpers/invites_helper";
 import { acceptDeviceGrant } from "./helpers/device_grants_helper";
 import { log } from "@core/lib/utils/logger";
@@ -210,6 +210,8 @@ describe("fetching logs", () => {
       envkeyFetch(developmentEnvkeyIdPart, developmentEncryptionKey),
       envkeyFetch(stagingEnvkeyIdPart, stagingEncryptionKey),
     ]);
+
+    await wait(1000);
   });
 
   test("paging, filtering, sorting, clearing", async () => {

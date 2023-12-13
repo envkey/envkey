@@ -740,7 +740,7 @@ export const setMaxPacketSize = (n: number) => {
 
     let packetSize = 0;
 
-    // const totalSize = Buffer.byteLength(JSON.stringify(statements), "utf8");
+    const totalSize = Buffer.byteLength(JSON.stringify(statements), "utf8");
     // log(
     //   `executing SQL statements | ${statements.length} statements | total size ${totalSize} bytes`
     // );
@@ -774,6 +774,7 @@ export const setMaxPacketSize = (n: number) => {
     }
 
     qs += "COMMIT;";
+
     return execQuery(transactionConn, qs, qargs);
   },
   mergeObjectTransactionItems = (

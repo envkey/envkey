@@ -30,7 +30,7 @@ func Load(shouldCache bool, firstAttempt bool) {
 		panic(errors.New("missing ENVKEY"))
 	}
 
-	resMap, err := fetch.FetchMap(envkey, fetch.FetchOptions{shouldCache, "", "envkeygo", "", false, 15.0, 3, 1})
+	resMap, err := fetch.FetchMap(envkey, fetch.FetchOptions{shouldCache, "", "envkeygo", "2.4.3", false, 15.0, 3, 1})
 
 	if err != nil && err.Error() == "ENVKEY invalid" && appConfig.AppId != "" {
 		// clear out incorrect ENVKEY and try again

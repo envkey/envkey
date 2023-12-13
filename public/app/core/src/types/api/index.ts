@@ -344,6 +344,12 @@ namespace Api {
     clearDeviceSocketFn: SocketServer["clearDeviceSocket"],
     clearEnvkeyConnectionSocketFn: ClearEnvkeyConnectionSocketFn
   ) => Promise<void>;
+
+  export type CommitLogsFn = (
+    asyncLogStatements: Api.Db.SqlStatement[],
+    backgroundLogStatements: Api.Db.SqlStatement[],
+    orgId?: string
+  ) => Promise<void>;
 }
 
 export default Api;
