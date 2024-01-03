@@ -9,7 +9,7 @@ export const up = async (knex: Knex) => {
   console.log("Added fullKey column. Now adding fullKey to existing rows...");
 
   await transactionQuery(
-    `UPDATE objects SET fullKey = CONCAT_WS("|",pkey, skey);`
+    `UPDATE objects SET fullKey = CONCAT_WS('|',pkey, skey);`
   );
 };
 
