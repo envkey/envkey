@@ -34,7 +34,7 @@ export const builder = (yargs: Argv<BaseArgs>) =>
       type: "string",
       describe: "server name",
     })
-    .positional("app", { type: "string", describe: "app name" })
+    .positional("app", { type: "string", describe: "app name or id" })
     .positional("environment", {
       type: "string",
       describe: "environment name",

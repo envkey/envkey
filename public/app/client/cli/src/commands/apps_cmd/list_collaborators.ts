@@ -14,7 +14,7 @@ import { tryApplyDetectedAppOverride } from "../../app_detection";
 export const command = ["collaborators [app]", "people [app]"];
 export const desc = "List people with access to a specific app.";
 export const builder = (yargs: Argv<BaseArgs>) =>
-  yargs.positional("app", { type: "string", describe: "app name" });
+  yargs.positional("app", { type: "string", describe: "app name or id" });
 export const handler = async (
   argv: BaseArgs & { app?: string }
 ): Promise<void> => {

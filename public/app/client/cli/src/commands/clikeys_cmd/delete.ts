@@ -6,7 +6,7 @@ import chalk from "chalk";
 import { Api } from "@core/types";
 import { findCliUser, logAndExitIfActionFailed } from "../../lib/args";
 import { authz } from "@core/lib/graph";
-import { getPrompt, isAutoMode } from "../../lib/console_io";
+import { getPrompt, isAutoMode, autoModeOut } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
 export const command = ["delete [cli-key]"];
@@ -83,6 +83,8 @@ export const handler = async (
   console.log(
     chalk.bold(`Deleting the CLI key ${cliUser.name} was successful.`)
   );
+
+  autoModeOut({});
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

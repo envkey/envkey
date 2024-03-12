@@ -13,7 +13,7 @@ import {
 } from "../../lib/args";
 import { findEnvironment } from "../../lib/envs";
 import * as R from "ramda";
-import { getPrompt, isAutoMode } from "../../lib/console_io";
+import { getPrompt, isAutoMode, autoModeOut } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
 export const command = "delete [app-or-block] [parent-environment] [branch]";
@@ -172,8 +172,10 @@ export const handler = async (
   await logAndExitIfActionFailed(res, "The branch could not be deleted.");
 
   console.log(
-    `Branch ${chalk.bold(getObjectName(state.graph, subEnv.id))} was deleted!`
+    `Branch ${chalk.bold(getObjectName(state.graph, subEnv.id))} was deleted.`
   );
+
+  autoModeOut({});
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

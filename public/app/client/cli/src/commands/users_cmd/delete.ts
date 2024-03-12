@@ -7,7 +7,7 @@ import { Api } from "@core/types";
 import { findUser, logAndExitIfActionFailed } from "../../lib/args";
 import { authz, graphTypes } from "@core/lib/graph";
 import * as R from "ramda";
-import { getPrompt, isAutoMode } from "../../lib/console_io";
+import { getPrompt, isAutoMode, autoModeOut } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
 export const command = ["delete [person]"];
@@ -15,7 +15,7 @@ export const desc = "Remove a person from the org.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs.positional("person", {
     type: "string",
-    describe: "email address",
+    describe: "email address or id",
   });
 export const handler = async (
   argv: BaseArgs & { person?: string }
@@ -93,6 +93,8 @@ export const handler = async (
   await logAndExitIfActionFailed(res, "Deleting the user failed");
 
   console.log(chalk.bold("Deleting the user was successful."));
+
+  autoModeOut({});
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

@@ -7,7 +7,7 @@ import * as R from "ramda";
 import { authz } from "@core/lib/graph";
 import { Argv } from "yargs";
 import { BaseArgs } from "../../types";
-import { getPrompt } from "../../lib/console_io";
+import { getPrompt, autoModeOut } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
 export const command = ["revoke [device]"];
@@ -73,6 +73,8 @@ export const handler = async (
   await logAndExitIfActionFailed(res, "Device revocation failed.");
 
   console.log(chalk.bold("The device was revoked."));
+
+  autoModeOut({});
 
   return exit();
 };

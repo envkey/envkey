@@ -7,7 +7,7 @@ import { exit } from "./process";
 import { dispatch } from "./core";
 import { Client, Model } from "@core/types";
 import { logAndExitIfActionFailed } from "./args";
-import { getPrompt } from "./console_io";
+import { getPrompt, isAutoMode } from "./console_io";
 
 export const createApp = async (
   auth: Client.ClientUserAuth | Client.ClientCliAuth,
@@ -37,8 +37,15 @@ export const createApp = async (
         ).name
       : nameArg;
 
-  const path =
-    dirArg ??
+  for (let app of graphTypes(state.graph).apps) {
+    if (app.name === name) {
+      return exit(1, chalk.red.bold("An app with that name already exists."));
+    }
+  }
+
+  let path = dirArg;
+
+  if (!path && !isAutoMode()) {
     (
       await prompt<{ dir: string }>({
         type: "input",
@@ -46,6 +53,7 @@ export const createApp = async (
         message: "App Directory (absolute path, optional--enter to skip):",
       })
     ).dir;
+  }
 
   const res = await dispatch({
     type: Client.ActionType.CREATE_APP,

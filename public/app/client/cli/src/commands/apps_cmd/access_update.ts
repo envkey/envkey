@@ -3,7 +3,11 @@ import { Argv } from "yargs";
 import { initCore, dispatch } from "../../lib/core";
 import { BaseArgs } from "../../types";
 import { Client, Model, Rbac } from "@core/types";
-import { authz, graphTypes } from "@core/lib/graph";
+import {
+  authz,
+  graphTypes,
+  getAppUserGroupsByComposite,
+} from "@core/lib/graph";
 import chalk from "chalk";
 import {
   findApp,
@@ -16,20 +20,27 @@ import * as R from "ramda";
 import { autoModeOut, getPrompt } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
-export const command = ["update-access [app] [person] [app-role]"];
+export const command = ["update-access [app] [person-or-team] [app-role]"];
 export const desc = "Update app access level.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
-    .positional("person", { type: "string", describe: "email address" })
+    .positional("app", { type: "string", describe: "app name or id" })
+    .positional("person-or-team", {
+      type: "string",
+      describe: "email address or team name or id",
+    })
     .positional("app-role", { type: "string", describe: "app role" });
 export const handler = async (
-  argv: BaseArgs & { app?: string; person?: string; "app-role"?: string }
+  argv: BaseArgs & {
+    app?: string;
+    "person-or-team"?: string;
+    "app-role"?: string;
+  }
 ): Promise<void> => {
   const prompt = getPrompt();
   const { state, auth } = await initCore(argv, true);
   let app: Model.App | undefined;
-  let userEmail: string | undefined = argv["person"];
+  let emailOrTeamNameOrId: string | undefined = argv["person-or-team"];
   let appRoleId: string | undefined;
   const appRoles = graphTypes(state.graph).appRoles;
   const appRoleNameOrId = argv["app-role"];
@@ -47,6 +58,11 @@ export const handler = async (
     }
   }
 
+  const teamsByName = R.indexBy(
+    R.prop("name"),
+    graphTypes(state.graph).groups.filter((g) => g.objectType === "orgUser")
+  );
+
   if (argv["app"]) {
     app = findApp(state.graph, argv["app"]);
   }
@@ -58,17 +74,22 @@ export const handler = async (
     }
     const appId = argv["detectedApp"]?.appId?.toLowerCase();
     if (appId) {
-      const userEmailIsFirst = argv["app"]?.includes("@");
-      const otherArgsValid = !argv["app"] || userEmailIsFirst;
+      const emailOrTeamNameOrIdIsFirst =
+        argv["app"]?.includes("@") ||
+        state.graph[argv["app"] ?? ""]?.type === "orgUser" ||
+        state.graph[argv["app"] ?? ""]?.type === "cliUser" ||
+        state.graph[argv["app"] ?? ""]?.type === "group" ||
+        teamsByName[argv["app"] ?? ""];
+      const otherArgsValid = !argv["app"] || emailOrTeamNameOrIdIsFirst;
       if (otherArgsValid) {
         app = state.graph[appId] as Model.App | undefined;
         if (app) {
           console.log("Detected app", chalk.bold(app.name), "\n");
           // shuffle left
-          if (userEmailIsFirst) {
-            userEmail = argv["app"];
-            if (argv["person"]) {
-              appRoleId = argv["person"];
+          if (emailOrTeamNameOrIdIsFirst) {
+            emailOrTeamNameOrId = argv["app"];
+            if (argv["person-or-team"]) {
+              appRoleId = argv["person-or-team"];
             }
           }
         }
@@ -120,30 +141,62 @@ export const handler = async (
             : `${u.email} - ${u.firstName} ${u.lastName}`,
       }))
   );
-  if (!updateableUsers.length) {
+
+  const updateableTeams = R.sortBy(
+    R.prop("message"),
+    authz
+      .getAccessRemoveableUserGroupsForApp(state.graph, auth.userId, app.id)
+      .map((g) => ({
+        name: g.id,
+        message: `Team - ${g.name}`,
+      }))
+  );
+
+  if (updateableUsers.length + updateableTeams.length === 0) {
     return exit(
       1,
       chalk.red.bold(
-        "You can't update any person or CLI key's access level for this app."
+        "You can't update any person, CLI key, or team's access level for this app."
       )
     );
   }
 
-  const userId = (userEmail ??
+  emailOrTeamNameOrId = (emailOrTeamNameOrId ??
     (
       await prompt<{ person: string }>({
         type: "autocomplete",
-        name: "person",
-        message: "User:",
-        choices: updateableUsers,
+        name: "person-or-team",
+        message: "User or team:",
+        choices: updateableTeams.concat(updateableUsers),
       })
     ).person) as string;
-  const user = findUser(state.graph, userId);
+  const user = findUser(state.graph, emailOrTeamNameOrId);
+  let team: Model.Group | undefined;
   if (!user) {
-    return exit(1, chalk.red.bold("User not found"));
+    team =
+      teamsByName[emailOrTeamNameOrId] ??
+      (state.graph[emailOrTeamNameOrId] as Model.Group);
+
+    if (!team) {
+      return exit(1, chalk.red.bold("User or team not found"));
+    }
+
+    if (!authz.canManageUserGroups(state.graph, auth.userId)) {
+      return exit(1, chalk.red("You don't have permission to manage teams."));
+    }
   }
 
-  requireUserAppRoleAndGrant(state.graph, app.id, user.id);
+  if (user) {
+    requireUserAppRoleAndGrant(state.graph, app.id, user.id);
+  } else if (team) {
+    const appUserGroup = getAppUserGroupsByComposite(state.graph)[
+      [app.id, team.id].join("|")
+    ];
+
+    if (!appUserGroup) {
+      return exit(1, chalk.red.bold("Team does not have access to this app."));
+    }
+  }
 
   if (!appRoleId) {
     appRoleId = (
@@ -155,7 +208,7 @@ export const handler = async (
           state.graph,
           app.id,
           auth.userId,
-          user.id
+          user?.id ?? team!.id
         ),
       })
     ).appRoleId as string;
@@ -168,17 +221,23 @@ export const handler = async (
   const res = await dispatch({
     type: Client.ActionType.GRANT_APPS_ACCESS,
     payload: [
-      {
-        appId: app.id,
-        appRoleId: appRole.id,
-        userId: user.id,
-      },
+      user
+        ? {
+            appId: app.id,
+            appRoleId: appRole.id,
+            userId: user.id,
+          }
+        : {
+            appId: app.id,
+            appRoleId: appRole.id,
+            userGroupId: team!.id,
+          },
     ],
   });
 
   await logAndExitIfActionFailed(
     res,
-    "Failed changing the user access to the app role."
+    `Failed changing the ${user ? "user" : "team"} access to the app role.`
   );
 
   console.log(chalk.bold("App access was updated."));
@@ -187,7 +246,13 @@ export const handler = async (
     appId: app.id,
     appRoleId: appRole.id,
     appRoleName: appRole.name,
-    userId: user.id,
+    ...(user
+      ? {
+          userId: user.id,
+        }
+      : {
+          userGroupId: team!.id,
+        }),
   });
 
   // need to manually exit process since yargs doesn't properly wait for async handlers

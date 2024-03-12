@@ -7,7 +7,7 @@ import { authz } from "@core/lib/graph";
 import { spinnerWithText } from "../../lib/spinner";
 import { Api, Model } from "@core/types";
 import { logAndExitIfActionFailed } from "../../lib/args";
-import { getPrompt } from "../../lib/console_io";
+import { getPrompt, autoModeOut } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
 export const command = ["delete"];

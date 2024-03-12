@@ -12,14 +12,14 @@ import {
   getServerChoices,
   logAndExitIfActionFailed,
 } from "../../lib/args";
-import { getPrompt, isAutoMode } from "../../lib/console_io";
+import { getPrompt, isAutoMode, autoModeOut } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
 export const command = ["delete [app] [server]"];
 export const desc = "Delete a server ENVKEY.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
+    .positional("app", { type: "string", describe: "app name or id" })
     .positional("server", {
       type: "string",
       describe: "server name",
@@ -141,7 +141,9 @@ export const handler = async (
 
   await logAndExitIfActionFailed(res, "Deleting the server failed.");
 
-  console.log(chalk.bold(`Server ${server.name} (${server.id}) was deleted!`));
+  console.log(chalk.bold(`Server ${server.name} (${server.id}) was deleted.`));
+
+  autoModeOut({});
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

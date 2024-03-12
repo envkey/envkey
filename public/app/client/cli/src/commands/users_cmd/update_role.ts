@@ -20,7 +20,7 @@ export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
     .positional("person", {
       type: "string",
-      describe: "email address",
+      describe: "email address or id",
     })
     .positional("org_role", {
       type: "string",

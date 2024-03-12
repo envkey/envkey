@@ -10,25 +10,37 @@ import {
   getAppRoleInviteChoices,
   logAndExitIfActionFailed,
 } from "../../lib/args";
-import { authz, getAppRoleForUserOrInvitee, graphTypes } from "@core/lib/graph";
+import {
+  authz,
+  getAppRoleForUserOrInvitee,
+  getAppUserGroupsByComposite,
+  graphTypes,
+} from "@core/lib/graph";
 import * as R from "ramda";
 import { autoModeOut, getPrompt } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
-export const command = ["grant-access [app] [person] [app-role]"];
+export const command = ["grant-access [app] [person-or-team] [app-role]"];
 export const desc = "Grant access to an app.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
-    .positional("person", { type: "string", describe: "email address" })
+    .positional("app", { type: "string", describe: "app name or id" })
+    .positional("person-or-team", {
+      type: "string",
+      describe: "email address, team name, or id",
+    })
     .positional("app-role", { type: "string", describe: "app role" });
 export const handler = async (
-  argv: BaseArgs & { app?: string; person?: string; "app-role"?: string }
+  argv: BaseArgs & {
+    app?: string;
+    "person-or-team"?: string;
+    "app-role"?: string;
+  }
 ): Promise<void> => {
   const prompt = getPrompt();
   const { state, auth } = await initCore(argv, true);
   let app: Model.App | undefined;
-  let userEmail: string | undefined = argv["person"];
+  let emailOrTeamNameOrId: string | undefined = argv["person-or-team"];
 
   let appRoleId: string | undefined;
   const appRoles = graphTypes(state.graph).appRoles;
@@ -47,6 +59,11 @@ export const handler = async (
     }
   }
 
+  const teamsByName = R.indexBy(
+    R.prop("name"),
+    graphTypes(state.graph).groups.filter((g) => g.objectType === "orgUser")
+  );
+
   if (argv["app"]) {
     app = findApp(state.graph, argv["app"]);
   }
@@ -58,17 +75,22 @@ export const handler = async (
     }
     const appId = argv["detectedApp"]?.appId?.toLowerCase();
     if (appId) {
-      const userEmailIsFirst = argv["app"]?.includes("@");
-      const otherArgsValid = !argv["app"] || userEmailIsFirst;
+      const emailOrTeamNameOrIdIsFirst =
+        argv["app"]?.includes("@") ||
+        state.graph[argv["app"] ?? ""]?.type === "orgUser" ||
+        state.graph[argv["app"] ?? ""]?.type === "cliUser" ||
+        state.graph[argv["app"] ?? ""]?.type === "group" ||
+        teamsByName[argv["app"] ?? ""];
+      const otherArgsValid = !argv["app"] || emailOrTeamNameOrIdIsFirst;
       if (otherArgsValid) {
         app = state.graph[appId] as Model.App | undefined;
         if (app) {
           console.log("Detected app", chalk.bold(app.name), "\n");
           // shuffle left
-          if (userEmailIsFirst) {
-            userEmail = argv["app"];
-            if (argv["person"]) {
-              appRoleId = argv["person"];
+          if (emailOrTeamNameOrIdIsFirst) {
+            emailOrTeamNameOrId = argv["app"];
+            if (argv["person-or-team"]) {
+              appRoleId = argv["person-or-team"];
             }
           }
         }
@@ -107,7 +129,7 @@ export const handler = async (
     return exit(1, chalk.red.bold("App not found"));
   }
 
-  const invitableUsers = R.sortBy(
+  const grantableUsers = R.sortBy(
     R.prop("message"),
     authz
       .getAccessGrantableUsersForApp(state.graph, auth.userId, app.id)
@@ -119,31 +141,71 @@ export const handler = async (
             : `${u.email} - ${u.firstName} ${u.lastName}`,
       }))
   );
-  if (!invitableUsers.length) {
-    return exit(1, chalk.red.bold("No users are available to invite."));
-  }
-  const userName = (userEmail ??
-    (
-      await prompt<{ person: string }>({
-        type: "autocomplete",
-        name: "person",
-        message: "User:",
-        choices: invitableUsers,
-      })
-    ).person) as string;
-  const user = findUser(state.graph, userName);
-  if (!user) {
-    return exit(1, chalk.red.bold("User not found"));
-  }
-  const existingAppRole = getAppRoleForUserOrInvitee(
-    state.graph,
-    app.id,
-    user.id
+
+  const grantableTeams = R.sortBy(
+    R.prop("message"),
+    authz
+      .getAccessGrantableUserGroupsForApp(state.graph, auth.userId, app.id)
+      .map((g) => ({
+        name: g.id,
+        message: `Team - ${g.name}`,
+      }))
   );
+
+  if (grantableUsers.length + grantableTeams.length == 0) {
+    return exit(
+      1,
+      chalk.red.bold(
+        "No users, CLI keys, or teams are available to grant access to."
+      )
+    );
+  }
+  emailOrTeamNameOrId = (emailOrTeamNameOrId ??
+    (
+      await prompt<{ personOrTeam: string }>({
+        type: "autocomplete",
+        name: "personOrTeam",
+        message: "User, CLI key, or team:",
+        choices: grantableTeams.concat(grantableUsers),
+      })
+    ).personOrTeam) as string;
+  const user = findUser(state.graph, emailOrTeamNameOrId);
+  let team: Model.Group | undefined;
+  if (!user) {
+    team =
+      teamsByName[emailOrTeamNameOrId] ??
+      (state.graph[emailOrTeamNameOrId] as Model.Group);
+
+    if (!team) {
+      console.log("emailOrTeamNameOrId", emailOrTeamNameOrId);
+
+      return exit(1, chalk.red.bold("User or team not found"));
+    }
+
+    if (!authz.canManageUserGroups(state.graph, auth.userId)) {
+      return exit(1, chalk.red("You don't have permission to manage teams."));
+    }
+  }
+
+  let existingAppRole: Rbac.AppRole | undefined;
+
+  if (user) {
+    existingAppRole = getAppRoleForUserOrInvitee(state.graph, app.id, user.id);
+  } else if (team) {
+    const appRoleId = getAppUserGroupsByComposite(state.graph)[
+      app.id + "|" + team.id
+    ]?.appRoleId;
+    if (appRoleId) {
+      existingAppRole = state.graph[appRoleId] as Rbac.AppRole;
+    }
+  }
+
   if (existingAppRole) {
     return exit(
       1,
-      `User already has access to this app with the app role ${chalk.red.bold(
+      `${
+        user ? "User" : "Team"
+      } already has access to this app with the app role ${chalk.red.bold(
         existingAppRole.name
       )}`
     );
@@ -159,7 +221,7 @@ export const handler = async (
           state.graph,
           app.id,
           auth.userId,
-          user.id
+          user?.id ?? team!.id
         ),
       })
     ).appRoleId as string;
@@ -172,25 +234,38 @@ export const handler = async (
   const res = await dispatch({
     type: Client.ActionType.GRANT_APPS_ACCESS,
     payload: [
-      {
-        appId: app.id,
-        appRoleId: appRole.id,
-        userId: user.id,
-      },
+      user
+        ? {
+            appId: app.id,
+            appRoleId: appRole.id,
+            userId: user.id,
+          }
+        : {
+            appId: app.id,
+            appRoleId: appRole.id,
+            userGroupId: team!.id,
+          },
     ],
   });
 
   await logAndExitIfActionFailed(
     res,
-    "Failed giving the user access to the app role."
+    `Failed giving the ${user ? "user" : "team"} access to the app role.`
   );
 
-  console.log(chalk.bold("App role access was added."));
+  console.log(chalk.bold("App access granted."));
   autoModeOut({
-    id: (res.resultAction as any)?.payload?.id,
+    id: (res.resultAction as any)?.id,
     appId: app.id,
     appRoleId: appRole.id,
-    userId: user.id,
+    appRoleName: appRole.name,
+    ...(user
+      ? {
+          userId: user.id,
+        }
+      : {
+          userGroupId: team!.id,
+        }),
   });
 
   // need to manually exit process since yargs doesn't properly wait for async handlers

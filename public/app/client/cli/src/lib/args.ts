@@ -200,16 +200,29 @@ export const getAppRoleInviteChoices = (
   graph: Graph.UserGraph,
   appId: string,
   fromUserId: string,
-  toUserId: string
+  toUserOrTeamId: string
 ): EnquirerChoice[] => {
+  const type = graph[toUserOrTeamId]?.type;
+
   return R.sortBy(
     R.prop("name"),
-    authz
-      .getAccessGrantableAppRolesForUser(graph, fromUserId, appId, toUserId)
-      .map((ar) => ({
-        name: ar.id,
-        message: `${ar.name} - ${ar.description}`,
-      }))
+    (type == "orgUser"
+      ? authz.getAccessGrantableAppRolesForUser(
+          graph,
+          fromUserId,
+          appId,
+          toUserOrTeamId
+        )
+      : authz.getAccessGrantableAppRolesForUserGroup(
+          graph,
+          fromUserId,
+          appId,
+          toUserOrTeamId
+        )
+    ).map((ar) => ({
+      name: ar.id,
+      message: `${ar.name} - ${ar.description}`,
+    }))
   );
 };
 

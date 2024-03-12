@@ -21,7 +21,7 @@ export const command = "connect [app] [block]";
 export const desc = "Connect a config block to an app.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
+    .positional("app", { type: "string", describe: "app name or id" })
     .positional("block", { type: "string", describe: "block name" });
 export const handler = async (
   argv: BaseArgs & { app?: string; block?: string }

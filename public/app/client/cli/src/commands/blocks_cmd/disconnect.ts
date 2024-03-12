@@ -20,7 +20,7 @@ export const command = "disconnect [app] [block]";
 export const desc = "Disconnect a block from an app.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
+    .positional("app", { type: "string", describe: "app name or id" })
     .positional("block", { type: "string", describe: "block name" });
 export const handler = async (
   argv: BaseArgs & { app?: string; block?: string }
@@ -131,9 +131,7 @@ export const handler = async (
     "Disconnecting the block and app failed."
   );
 
-  console.log(
-    chalk.bold("The block and app have been disconnected.")
-  );
+  console.log(chalk.bold("The block and app have been disconnected."));
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

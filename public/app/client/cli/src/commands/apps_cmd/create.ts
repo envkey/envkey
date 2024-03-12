@@ -10,7 +10,7 @@ export const command = "create [name]";
 export const desc = "Create a new app.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("name", { type: "string", describe: "app name" })
+    .positional("name", { type: "string", describe: "app name or id" })
     .option("dir", {
       type: "string",
       describe: "root directory of app (to create .envkey file)",

@@ -7,13 +7,13 @@ import { BaseArgs } from "../../types";
 import { authz } from "@core/lib/graph";
 import { Api, Model } from "@core/types";
 import { findApp, logAndExitIfActionFailed } from "../../lib/args";
-import { getPrompt, isAutoMode } from "../../lib/console_io";
+import { getPrompt, isAutoMode, autoModeOut } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
 export const command = ["delete [app]"];
 export const desc = "Delete an app and all its environments.";
 export const builder = (yargs: Argv<BaseArgs>) =>
-  yargs.positional("app", { type: "string", describe: "app name" });
+  yargs.positional("app", { type: "string", describe: "app name or id" });
 export const handler = async (
   argv: BaseArgs & { app: string | undefined }
 ): Promise<void> => {
@@ -104,7 +104,9 @@ export const handler = async (
 
   await logAndExitIfActionFailed(res, "Deleting the app failed.");
 
-  console.log(chalk.bold(`App ${app.name} (${app.id}) was deleted!`));
+  console.log(chalk.bold(`App ${app.name} (${app.id}) was deleted.`));
+
+  autoModeOut({});
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

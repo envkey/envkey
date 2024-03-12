@@ -20,3 +20,4 @@ import "./rbac";
 import "./core";
 import "./host";
 import "./completion";
+import "./teams";

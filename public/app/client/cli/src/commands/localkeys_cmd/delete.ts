@@ -22,7 +22,7 @@ export const command = ["delete [app] [key-name]"];
 export const desc = "Delete a local ENVKEY.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
+    .positional("app", { type: "string", describe: "app name or id" })
     .positional("key-name", {
       type: "string",
       describe: "local key name",
@@ -149,6 +149,8 @@ export const handler = async (
   await logAndExitIfActionFailed(res, "Deleting the local key failed.");
 
   console.log(chalk.bold(`Local key ${localKey.name} was deleted.`));
+
+  autoModeOut({});
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

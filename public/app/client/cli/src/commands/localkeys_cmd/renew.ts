@@ -25,7 +25,7 @@ export const command = ["regen [app] [key-name]"];
 export const desc = "Regenerate a local ENVKEY.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
+    .positional("app", { type: "string", describe: "app name or id" })
     .positional("key-name", {
       type: "string",
       describe: "local key name",

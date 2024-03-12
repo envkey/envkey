@@ -24,7 +24,7 @@ export const command = "export [app] [environment] [filepath]";
 export const desc = "Export environment variables to a file.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
+    .positional("app", { type: "string", describe: "app name or id" })
     .positional("environment", {
       type: "string",
       describe: "environment name",

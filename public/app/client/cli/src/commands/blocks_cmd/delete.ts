@@ -8,7 +8,7 @@ import { Api } from "@core/types";
 import chalk from "chalk";
 import * as R from "ramda";
 import { logAndExitIfActionFailed } from "../../lib/args";
-import { getPrompt } from "../../lib/console_io";
+import { getPrompt, autoModeOut } from "../../lib/console_io";
 import { tryApplyDetectedAppOverride } from "../../app_detection";
 
 export const command = "delete [name]";
@@ -70,7 +70,9 @@ export const handler = async (
 
   await logAndExitIfActionFailed(res, "Deleting the block failed.");
 
-  console.log(chalk.bold(`Block ${block.name} (${block.id}) was deleted!`));
+  console.log(chalk.bold(`Block ${block.name} (${block.id}) was deleted.`));
+
+  autoModeOut({});
 
   // need to manually exit process since yargs doesn't properly wait for async handlers
   return exit();

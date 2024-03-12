@@ -18,7 +18,7 @@ addCommand((yargs: Argv<BaseArgs> & { app?: string }) =>
     "init [app]",
     "Initialize the current directory to a new or existing EnvKey app.",
     (yargs) =>
-      yargs.positional("app", { type: "string", describe: "app name" }),
+      yargs.positional("app", { type: "string", describe: "app name or id" }),
     async (argv) => {
       const prompt = getPrompt();
       const { state, auth } = await initCore(argv, true, true);

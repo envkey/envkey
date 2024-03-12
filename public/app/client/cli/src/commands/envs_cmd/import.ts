@@ -24,7 +24,7 @@ export const command = "import [app] [environment] [filepath]";
 export const desc = "Import environment variables from a file.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
+    .positional("app", { type: "string", describe: "app name or id" })
     .positional("environment", {
       type: "string",
       describe: "environment name",

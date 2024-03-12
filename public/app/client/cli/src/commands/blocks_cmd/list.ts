@@ -21,7 +21,7 @@ export const command = ["list [app]", "$0"];
 export const desc = "List permitted reusable config blocks.";
 export const builder = (yargs: Argv<BaseArgs>) =>
   yargs
-    .positional("app", { type: "string", describe: "app name" })
+    .positional("app", { type: "string", describe: "app name or id" })
     .option("connected", {
       type: "boolean",
       conflicts: ["all", "unconnected"],

@@ -193,6 +193,17 @@ export const getAppsWithAllPermissions = memoize(
       );
     }
   ),
+  getAccessRemoveableUserGroupsForApp = memoize(
+    (graph: Graph.Graph, currentUserId: string, appId: string) =>
+      graphTypes(graph).groups.filter(
+        ({ objectType, id }) =>
+          objectType == "orgUser" &&
+          authz.canRemoveAppUserGroupAccess(graph, currentUserId, {
+            appId,
+            userGroupId: id,
+          })
+      )
+  ),
   getAppCollaborators = memoize(
     <UserType extends "orgUser" | "cliUser">(
       graph: Graph.Graph,
