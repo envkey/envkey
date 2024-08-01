@@ -1,3 +1,6 @@
+> [!IMPORTANT]  
+> Please note that as of August 1st, 2024, EnvKey Cloud is beginning a six month wind down. It will shut down on February 1st, 2025. New registrations are now disabled for EnvKey Cloud. [Click here](https://mailchi.mp/f2ee890e5e81/envkey-wind-down) for more details. 
+
 ## End-to-end encryption for app secrets. Superpowers for managing config.
 
 - Protects API keys and other secrets.
